@@ -13,8 +13,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-
-Route::get('/', fn(): Redirector|RedirectResponse => redirect('/admin'));
+ 
+Route::get('/',[HomeController::class, 'index'])->name('dashboard');
 
 Auth::routes();
 
