@@ -23,7 +23,7 @@ class LoginController extends Controller
     /**
      * Where to redirect users after login.
      */
-    protected string $redirectTo = '/admin/dashboard';
+    protected string $redirectTo = '/admin';
 
 
     public function redirectPath(): string
