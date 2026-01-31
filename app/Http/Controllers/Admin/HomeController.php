@@ -17,8 +17,9 @@ class HomeController extends Controller
 
 
      public function index(){
-        return view('home');
+        return view('welcome');
      }
+     
     public function __invoke(): Factory|View|\Illuminate\View\View
     {
         $orders = Order::with(['items', 'payments'])->get();
