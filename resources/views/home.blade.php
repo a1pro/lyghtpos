@@ -1,228 +1,133 @@
-@extends('layouts.admin')
-@section('content-header', __('dashboard.title'))
-@section('content')
-<div class="container-fluid">
-   <div class="row">
-      <div class="col-lg-3 col-6">
-         <!-- small box -->
-         <div class="small-box bg-info">
-            <div class="inner">
-               <h3>{{$orders_count}}</h3>
-               <p>{{ __('dashboard.Orders_Count') }}</p>
-            </div>
-            <div class="icon">
-               <i class="ion ion-bag"></i>
-            </div>
-            <a href="{{route('orders.index')}}" class="small-box-footer">{{ __('common.More_info') }} <i class="fas fa-arrow-circle-right"></i></a>
-         </div>
-      </div>
-      <!-- ./col -->
-      <div class="col-lg-3 col-6">
-         <!-- small box -->
-         <div class="small-box bg-success">
-            <div class="inner">
-               <h3>{{config('settings.currency_symbol')}} {{number_format($income, 2)}}</h3>
-               <p>{{ __('dashboard.Income') }}</p>
-            </div>
-            <div class="icon">
-               <i class="ion ion-stats-bars"></i>
-            </div>
-            <a href="{{route('orders.index')}}" class="small-box-footer">{{ __('common.More_info') }} <i class="fas fa-arrow-circle-right"></i></a>
-         </div>
-      </div>
-      <!-- ./col -->
-      <div class="col-lg-3 col-6">
-         <!-- small box -->
-         <div class="small-box bg-danger">
-            <div class="inner">
-               <h3>{{config('settings.currency_symbol')}} {{number_format($income_today, 2)}}</h3>
-               <p>{{ __('dashboard.Income_Today') }}</p>
-            </div>
-            <div class="icon">
-               <i class="ion ion-pie-graph"></i>
-            </div>
-            <a href="{{route('orders.index')}}" class="small-box-footer">{{ __('common.More_info') }} <i class="fas fa-arrow-circle-right"></i></a>
-         </div>
-      </div>
-      <!-- ./col -->
-      <div class="col-lg-3 col-6">
-         <!-- small box -->
-         <div class="small-box bg-warning">
-            <div class="inner">
-               <h3>{{$customers_count}}</h3>
-               <p>{{ __('dashboard.Customers_Count') }}</p>
-            </div>
-            <div class="icon">
-               <i class="ion ion-person-add"></i>
-            </div>
-            <a href="{{ route('customers.index') }}" class="small-box-footer">{{ __('common.More_info') }} <i class="fas fa-arrow-circle-right"></i></a>
-         </div>
-      </div>
-      <!-- ./col -->
-   </div>
-</div>
-<div class="container-fluid">
-   <div class="row">
-      <div class="col-6 my-2">
-         <h3>Low Stock Product</h3>
-         <section class="content">
-            <div class="card product-list">
-               <div class="card-body">
-                  <table class="table">
-                     <thead>
-                        <tr>
-                           <th>ID</th>
-                           <th>Name</th>
-                           <th>Image</th>
-                           <th>Barcode</th>
-                           <th>Price</th>
-                           <th>Quantity</th>
-                           <th>Status</th>
-                           <th>Updated At</th>
-                           <!-- <th>Actions</th> -->
-                        </tr>
-                     </thead>
-                     <tbody>
-                        @foreach ($low_stock_products as $product)
-                        <tr>
-                           <td>{{$product->id}}</td>
-                           <td>{{$product->name}}</td>
-                           <td><img class="product-img" src="{{ Storage::url($product->image) }}" alt=""></td>
-                           <td>{{$product->barcode}}</td>
-                           <td>{{$product->price}}</td>
-                           <td>{{$product->quantity}}</td>
-                           <td>
-                              <span class="right badge badge-{{ $product->status ? 'success' : 'danger' }}">{{$product->status ? __('common.Active') : __('common.Inactive') }}</span>
-                           </td>
-                           <td>{{$product->updated_at}}</td>
-                        </tr>
-                        @endforeach
-                     </tbody>
-                  </table>
-               </div>
-            </div>
-         </section>
-      </div>
-      <div class="col-6 my-2">
-         <h3>Hot Products</h3>
-         <section class="content">
-            <div class="card product-list">
-               <div class="card-body">
-                  <table class="table">
-                     <thead>
-                        <tr>
-                           <th>ID</th>
-                           <th>Name</th>
-                           <th>Image</th>
-                           <th>Barcode</th>
-                           <th>Price</th>
-                           <th>Quantity</th>
-                           <th>Status</th>
-                           <th>Updated At</th>
-                           <!-- <th>Actions</th> -->
-                        </tr>
-                     </thead>
-                     <tbody>
-                        @foreach ($current_month_products as $product)
-                        <tr>
-                           <td>{{$product->id}}</td>
-                           <td>{{$product->name}}</td>
-                           <td><img class="product-img" src="{{ Storage::url($product->image) }}" alt=""></td>
-                           <td>{{$product->barcode}}</td>
-                           <td>{{$product->price}}</td>
-                           <td>{{$product->quantity}}</td>
-                           <td>
-                              <span class="right badge badge-{{ $product->status ? 'success' : 'danger' }}">{{$product->status ? __('common.Active') : __('common.Inactive') }}</span>
-                           </td>
-                           <td>{{$product->updated_at}}</td>
-                        </tr>
-                        @endforeach
-                     </tbody>
-                  </table>
-               </div>
-            </div>
-         </section>
-      </div>
-      <div class="col-6 my-4">
-         <h3>Hot Products of the year</h3>
-         <section class="content">
-            <div class="card product-list">
-               <div class="card-body">
-                  <table class="table">
-                     <thead>
-                        <tr>
-                           <th>ID</th>
-                           <th>Name</th>
-                           <th>Image</th>
-                           <th>Barcode</th>
-                           <th>Price</th>
-                           <th>Quantity</th>
-                           <th>Status</th>
-                           <th>Updated At</th>
-                           <!-- <th>Actions</th> -->
-                        </tr>
-                     </thead>
-                     <tbody>
-                        @foreach ($past_months_products as $product)
-                        <tr>
-                           <td>{{$product->id}}</td>
-                           <td>{{$product->name}}</td>
-                           <td><img class="product-img" src="{{ Storage::url($product->image) }}" alt=""></td>
-                           <td>{{$product->barcode}}</td>
-                           <td>{{$product->price}}</td>
-                           <td>{{$product->quantity}}</td>
-                           <td>
-                              <span class="right badge badge-{{ $product->status ? 'success' : 'danger' }}">{{$product->status ? __('common.Active') : __('common.Inactive') }}</span>
-                           </td>
-                           <td>{{$product->updated_at}}</td>
-                        </tr>
-                        @endforeach
-                     </tbody>
-                  </table>
-               </div>
-            </div>
-         </section>
-      </div>
-      <div class="col-6 my-4">
-         <h3>Best Selling Products</h3>
-         <section class="content">
-            <div class="card product-list">
-               <div class="card-body">
-                  <table class="table">
-                     <thead>
-                        <tr>
-                           <th>ID</th>
-                           <th>Name</th>
-                           <th>Image</th>
-                           <th>Barcode</th>
-                           <th>Price</th>
-                           <th>Quantity</th>
-                           <th>Status</th>
-                           <th>Updated At</th>
-                           <!-- <th>Actions</th> -->
-                        </tr>
-                     </thead>
-                     <tbody>
-                        @foreach ($best_selling_products as $product)
-                        <tr>
-                           <td>{{$product->id}}</td>
-                           <td>{{$product->name}}</td>
-                           <td><img class="product-img" src="{{ Storage::url($product->image) }}" alt=""></td>
-                           <td>{{$product->barcode}}</td>
-                           <td>{{$product->price}}</td>
-                           <td>{{$product->quantity}}</td>
-                           <td>
-                              <span class="right badge badge-{{ $product->status ? 'success' : 'danger' }}">{{$product->status ? __('common.Active') : __('common.Inactive') }}</span>
-                           </td>
-                           <td>{{$product->updated_at}}</td>
-                        </tr>
-                        @endforeach
-                     </tbody>
-                  </table>
-               </div>
-            </div>
-         </section>
-      </div>
-   </div>
-</div>
-@endsection
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lyght POS | Coming Soon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            background: linear-gradient(135deg, #0f172a, #020617);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .login-btn {
+            padding: 10px 22px;
+            border-radius: 6px;
+            background: #22c55e;
+            color: #022c22;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background: #16a34a;
+            color: #ffffff;
+        }
+
+        /* Main Content */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .content h1 {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .content p {
+            font-size: 18px;
+            max-width: 600px;
+            opacity: 0.85;
+            line-height: 1.6;
+        }
+
+        .badge {
+            margin-top: 30px;
+            padding: 10px 20px;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .content h1 {
+                font-size: 36px;
+            }
+
+            .header {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">Lyght POS</div>
+        <a href="{{ url('login') }}" class="login-btn">Login</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <h1>Coming Soon 🚀</h1>
+        <p>
+            Lyght POS is almost here. A smarter, faster, and more reliable
+            point-of-sale experience designed to power your business.
+        </p>
+        <div class="badge">Launching Soon</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        © {{ date('Y') ?? '2026' }} Lyght POS. All rights reserved.
+    </div>
+
+</body>
+</html>
