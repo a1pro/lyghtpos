@@ -111,9 +111,24 @@
     <!-- Header -->
     <div class="header">
         <div class="logo">Lyght POS</div>
-    
+        
         @auth
-            <a href="{{ url('/admin') }}" class="login-btn">Admin</a>
+            @php
+                $user = Auth::user();
+            @endphp
+            
+            @if($user->role_id == 1)
+                <a href="{{ url('/admin') }}" class="login-btn">Admin</a>
+            @elseif($user->role_id == 2)
+                <a href="{{ route('merchant.dashboard') }}" class="login-btn">Merchant Dashboard</a>
+            @endif
+            
+            <!-- Optional: Add logout button -->
+            <form method="POST" action="{{ route('logout') }}" style="display: inline;">
+                @csrf
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+            
         @else
             <a href="{{ url('login') }}" class="login-btn">Login</a>
         @endauth

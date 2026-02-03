@@ -1,22 +1,22 @@
 <?php
 
-use App\Http\Controllers\Admin\HomeController;
-use App\Http\Controllers\Inventory\ProductController;
-use App\Http\Controllers\Inventory\PurchaseCartController;
-use App\Http\Controllers\Inventory\PurchaseController;
-use App\Http\Controllers\Management\CustomerController;
-use App\Http\Controllers\Management\SupplierController;
-use App\Http\Controllers\Pos\CartController;
-use App\Http\Controllers\Pos\OrderController;
-use App\Http\Controllers\Settings\SettingController;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Routing\Redirector;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
- 
-Route::get('/',[HomeController::class, 'index'])->name('dashboard');
+    use App\Http\Controllers\Admin\HomeController;
+    use App\Http\Controllers\Inventory\ProductController;
+    use App\Http\Controllers\Inventory\PurchaseCartController;
+    use App\Http\Controllers\Inventory\PurchaseController;
+    use App\Http\Controllers\Management\CustomerController;
+    use App\Http\Controllers\Management\SupplierController;
+    use App\Http\Controllers\Pos\CartController;
+    use App\Http\Controllers\Pos\OrderController;
+    use App\Http\Controllers\Settings\SettingController;
+    use Illuminate\Http\RedirectResponse;
+    use Illuminate\Routing\Redirector;
+    use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\Route;
+    
+    Route::get('/',[HomeController::class, 'index'])->name('dashboard');
 
-Auth::routes();
+    Auth::routes();
 
 Route::prefix('admin')->middleware(['auth', 'locale'])->group(function (): void {
     Route::get('/', HomeController::class)->name('home');
@@ -69,3 +69,6 @@ Route::prefix('admin')->middleware(['auth', 'locale'])->group(function (): void 
         return redirect()->back();
     })->name('lang.switch');
 });
+
+
+require __DIR__.'/merchant.php';
