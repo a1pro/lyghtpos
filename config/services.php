@@ -30,4 +30,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'procharge' => [
+        'base_url' => env('PROCHARGE_BASE_URL'),
+        'username' => env('PROCHARGE_USERNAME'),
+        'password' => env('PROCHARGE_PASSWORD'),
+        'merchant_id' => env('PROCHARGE_MERCHANT_ID'),
+    ],
+
 ];
