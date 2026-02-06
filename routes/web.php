@@ -16,6 +16,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 
+// Custom registration routes for 2-step registration
+Route::get('register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
+Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register'])->name('register.step1');
+Route::get('register/representation', [App\Http\Controllers\Auth\RegisterController::class, 'showRepresentationForm'])->name('register.representation');
+Route::post('register/final', [App\Http\Controllers\Auth\RegisterController::class, 'register'])->name('register.final');
+
 Auth::routes();
 
 Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(function (): void {
