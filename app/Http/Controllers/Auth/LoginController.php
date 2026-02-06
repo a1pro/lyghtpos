@@ -40,6 +40,8 @@ class LoginController extends Controller
             return redirect('/admin');
         } elseif ($user->role_id == 2) {
             return redirect()->route('merchant.dashboard'); // or use '/merchant/dashboard'
+        } elseif ($user->role_id == 5) {
+            return redirect()->route('subadmin.dashboard'); // or use '/subadmin/dashboard'
         }
         
         // Default redirect (fallback)
