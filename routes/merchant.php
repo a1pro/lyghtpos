@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Merchant\MerchantDashboardController;
 use App\Http\Controllers\ProchargePaymentController;
 
-Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale'])->group(function (): void {
+Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
 
     Route::get('/', [MerchantDashboardController::class, 'index'])->name('dashboard');
 });
