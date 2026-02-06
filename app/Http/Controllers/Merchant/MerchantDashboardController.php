@@ -11,7 +11,5 @@ class MerchantDashboardController extends Controller
         return view('merchant.pages.dashboard');
        }
 
-       public function governance(){
-        
-       }
+       
 }
