@@ -19,7 +19,10 @@ class RepresentationController extends Controller
         $representation = Representation::where('user_id', $userId)->with('user' , 'user.merchant')->first();
 
         // Check if it's been reviewed
-        $isReviewed = $representation->reviewer_user_id && $representation->last_reviewed;
+        $isReviewed = false;
+        if($representation){
+            $isReviewed = $representation->reviewer_user_id && $representation->last_reviewed;
+        }
 
         return view('subadmin.pages.merchants.representation-view', compact('representation', 'isReviewed'));
         

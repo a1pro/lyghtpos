@@ -51,6 +51,7 @@
         <div class="card product-list">
             <div class="card-body">
                 <!-- Current Status Display -->
+                @if($representation)
                 <div class="row mb-4">
                     <div class="col-md-12">
                         <div class="d-flex justify-content-between align-items-center">
@@ -72,6 +73,7 @@
                         @endif
                     </div>
                 </div>
+                @endif
 
                 <!-- Representation Table -->
                 <div class="table-responsive">
@@ -88,6 +90,7 @@
                             </tr>
                         </thead>
                         <tbody>
+                        @if($representation)
                             <tr>
                                 <td>{{ $representation->id }}</td>
                                 <td>{{ $representation->user->first_name }}</td>
@@ -97,11 +100,19 @@
                                 <td>{{ $representation->pledge_value ?? 'N/A' }}</td>
                                 <td>{{ $representation->currency ?? 'N/A' }}</td>
                             </tr>
+                            @else
+                            <tr>
+                                <td colspan="12" class="text-center">
+                                    Nothing found
+                                </td>
+                            </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Review Section -->
+                @if($representation)
                 <div class="review-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0">
@@ -169,6 +180,7 @@
                         </div>
                     </form>
                 </div>
+                @endif
 
                 <!-- Review History -->
                 @if($isReviewed)
@@ -206,6 +218,7 @@
 
 @section('js')
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+@if($representation)
 <script>
     $(document).ready(function() {
         // Function to handle status change
@@ -361,4 +374,6 @@
         }
     });
 </script>
+@endif
+
 @endsection
