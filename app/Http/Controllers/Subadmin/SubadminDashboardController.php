@@ -14,17 +14,10 @@ class SubadminDashboardController extends Controller
         return view('subadmin.pages.dashboard');
     }
 
-    public function renderUsers()
+    public function renderMerchants()
     {
-        $users = User::where('role_id', '2')->get();
+        $merchants = User::where('role_id', '2')->get();
         
-        return view('subadmin.pages.users.index', compact('users'));
-    }
-
-    public function renderUserRepresentation($userId)
-    {
-        $representation = Representation::where('user_id', $userId)->with('user')->first();
-
-        return view('subadmin.pages.users.representation-view', compact('representation'));
+        return view('subadmin.pages.merchants.index', compact('merchants'));
     }
 }

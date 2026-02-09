@@ -40,7 +40,7 @@ class RegisterController extends Controller
             'location'=> ['required','string','max:255'],
             'website'=>['required','string','max:255'],
             'consent_language_authorizing'=>['required','string','max:255'],
-            'Communyti_enrollment'=> ['required','string','max:255'],
+            'communyti_enrollment'=> ['required','string','max:255'],
             'advocate_contact'=> ['required','string','max:255'],
             'subject' => ['nullable', 'string', 'max:191'],
             'purpose' => ['nullable', 'string', 'max:191'],
@@ -135,7 +135,7 @@ class RegisterController extends Controller
             'location' => $data['location'],
             'website' => $data['website'],
             'consent_language_authorizing' => $data['consent_language_authorizing'],
-            'Communyti_enrollment' => $data['Communyti_enrollment'],
+            'communyti_enrollment' => $data['communyti_enrollment'],
             'advocate_contact' => $data['advocate_contact'],
         ]);
         

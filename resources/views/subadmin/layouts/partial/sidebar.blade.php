@@ -19,11 +19,12 @@
                     </a>
                 </li>
 
-                <!-- Users -->
+                <!-- Merchants -->
                 <li class="nav-item">
-                    <a href="{{route('subadmin.users')}}" class="nav-link {{ request()->routeIs('subadmin.users') ? 'active' : '' }}">
+                    <a href="{{route('subadmin.merchants')}}" class="nav-link {{ request()->routeIs('subadmin.merchants') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-tachometer-alt"></i>
-                        <p>Users</p>
+                        <p>Merchants</p>
+
                     </a>
                 </li>
 

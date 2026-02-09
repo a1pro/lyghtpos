@@ -141,8 +141,8 @@
    <div class="form-group row">
        <label for="Communyti_enrollment" class="col-md-4 col-form-label text-md-right">{{ __('Communyti Enrollment') }}</label>
        <div class="col-md-6">
-           <input id="Communyti_enrollment" type="text" class="form-control @error('Communyti_enrollment') is-invalid @enderror" name="Communyti_enrollment" value="{{ old('Communyti_enrollment') }}" required>
-           @error('Communyti_enrollment')
+           <input id="communyti_enrollment" type="text" class="form-control @error('communyti_enrollment') is-invalid @enderror" name="communyti_enrollment" value="{{ old('communyti_enrollment') }}" required>
+           @error('communyti_enrollment')
                <span class="invalid-feedback" role="alert">
                    <strong>{{ $message }}</strong>
                </span>
