@@ -43,7 +43,7 @@
                     <td>{{$merchant->communyti_enrollment ?? 'N/A'}}</td>
                     <td>{{$merchant->advocate_contact ?? 'N/A'}}</td>
                     <td>
-                        <a href="{{route('subadmin.representations.view',$merchant->id)}}" class="btn btn-primary">View<i class="fas fa-eye"></i></a>
+                        <a href="{{route('subadmin.representations.view', $merchant->id)}}" class="btn btn-primary">View<i class="fas fa-eye"></i></a>
                     </td>
                 </tr>
                 @empty

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RepresentationReviewLog extends Model
 {
@@ -14,4 +15,12 @@ class RepresentationReviewLog extends Model
         'after_status',
         'message',
     ];
+
+    /**
+     * Get the user who created this representation.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }
