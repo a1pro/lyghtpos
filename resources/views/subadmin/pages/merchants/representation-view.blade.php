@@ -42,6 +42,76 @@
     #reviewMessageGroup {
         transition: all 0.3s ease;
     }
+
+    .review-logs-section {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+
+    .compact-logs-list {
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+    }
+
+    .compact-log-item {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f1f3f4;
+    }
+
+    .compact-log-item:last-child {
+        border-bottom: none;
+    }
+
+    .log-info-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .log-reviewer {
+        font-size: 14px;
+        font-weight: 600;
+        color: #495057;
+        width: 25%;
+    }
+
+    .log-status-change {
+        width: 40%;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .log-status-change .badge {
+        padding: 2px 8px;
+        font-size: 11px;
+        margin: 0 3px;
+    }
+
+    .log-time {
+        width: 25%;
+        text-align: right;
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .log-message-row {
+        font-size: 13px;
+        color: #6c757d;
+        padding-left: 5px;
+        display: flex;
+        align-items: baseline;
+    }
+
+    .log-message-text {
+        color: #495057;
+    }
+
 </style>
 @endsection
 
@@ -157,12 +227,6 @@
                                     <label for="review_message" id="reviewMessageLabel">Message</label>
                                     <textarea class="form-control" id="review_message" name="review_message" 
                                               rows="3" placeholder="Enter your message...">{{ $representation->review_message ?? '' }}</textarea>
-                                    <small class="form-text text-muted">
-                                        This message will be visible to the merchant.
-                                        @if($representation->review_message)
-                                            <span class="text-info">Editing existing message.</span>
-                                        @endif
-                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -182,7 +246,7 @@
                 </div>
                 @endif
 
-                <!-- Review History -->
+                <!-- Review Details -->
                 @if($isReviewed)
                 <div class="review-history">
                     <h6><strong>Current Review Details:</strong></h6>
@@ -210,6 +274,50 @@
                     @endif
                 </div>
                 @endif
+
+                <!-- Review Logs Section -->
+              @if($representation && $representation->reviewLogs->count() > 0)
+              <div class="review-logs-section">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h6 class="mb-0">
+                          <i class="fas fa-history mr-1"></i> Review History
+                          <span class="badge badge-light border ml-1">{{ $representation->reviewLogs->count() }}</span>
+                      </h6>
+                  </div>
+
+                  <div class="compact-logs-list">
+                      @foreach($representation->reviewLogs->sortByDesc('created_at') as $log)
+                      <div class="compact-log-item">
+                          <div class="log-info-row">
+                              <span class="log-reviewer">{{ $log->user->first_name ?? 'System' }}</span>
+                              <span class="log-status-change">
+                                  @php
+                                  $beforeStatus = $log->before_status ?? 'new';
+                                  if($beforeStatus === null) $beforeStatus = 'new';
+                                  @endphp
+
+                                  @if($beforeStatus === 'new')
+                                  → <span class="badge status-badge status-{{ $log->after_status }}">{{ ucfirst($log->after_status) }}</span>
+                                  @else
+                                  <span class="badge status-badge status-{{ $beforeStatus }}">{{ ucfirst($beforeStatus) }}</span>
+                                  → <span class="badge status-badge status-{{ $log->after_status }}">{{ ucfirst($log->after_status) }}</span>
+                                  @endif
+                              </span>
+                              <span class="log-time">{{ $log->created_at->format('M d, H:i') }}</span>
+                          </div>
+
+                          @if($log->message)
+                          <div class="log-message-row">
+                              <small class="text-muted mr-1">Note:</small>
+                              <span class="log-message-text">{{ Str::limit($log->message, 80) }}</span>
+                          </div>
+                          @endif
+                      </div>
+                      @endforeach
+                  </div>
+              </div>
+              @endif
+
             </div>
         </div>
     </div>
@@ -221,7 +329,6 @@
 @if($representation)
 <script>
     $(document).ready(function() {
-        // Function to handle status change
         function handleStatusChange(statusValue = null) {
             const status = statusValue || $('#status').val();
             const messageGroup = $('#reviewMessageGroup');
@@ -241,36 +348,29 @@
                 
                 messageField.prop('required', true);
             } else {
-                messageGroup.show(); // Always show for approved too
+                messageGroup.show();
                 messageLabel.text('Additional Comments (Optional)');
                 messageField.attr('placeholder', 'You can add optional comments for approval...');
                 messageField.prop('required', false);
             }
         }
 
-        // Initialize on page load with current status
         const currentStatus = "{{ $representation->status }}";
         
         if (currentStatus) {
-            // Pre-select the dropdown
             $('#status').val(currentStatus);
             
-            // Handle UI based on current status
             handleStatusChange(currentStatus);
             
-            // Update button text for edit mode
             $('button[type="submit"]').html('<i class="fas fa-save"></i> Update Review');
         } else {
-            // For new reviews, hide message group by default
             $('#reviewMessageGroup').hide();
         }
         
-        // Run when dropdown changes
         $('#status').change(function() {
             handleStatusChange();
         });
 
-        // Handle form submission
         $('#reviewForm').submit(function(e) {
             e.preventDefault();
             
@@ -278,7 +378,6 @@
             const submitBtn = form.find('button[type="submit"]');
             const originalBtnText = submitBtn.html();
             
-            // Validate form
             const status = $('#status').val();
             const reviewMessage = $('#review_message').val().trim();
             
@@ -302,7 +401,6 @@
                 return;
             }
             
-            // Show appropriate confirmation message
             const actionText = currentStatus ? 'update' : 'submit';
             const statusText = status === 'approved' ? 'approve' : 
                              status === 'rejected' ? 'reject' : 'request changes';
@@ -324,7 +422,6 @@
         });
 
         function submitForm(form, submitBtn, originalBtnText, actionText) {
-            // Show loading state
             submitBtn.prop('disabled', true).html(`<i class="fas fa-spinner fa-spin"></i> ${actionText === 'update' ? 'Updating...' : 'Submitting...'}`);
             
             $.ajax({
@@ -375,5 +472,4 @@
     });
 </script>
 @endif
-
 @endsection
