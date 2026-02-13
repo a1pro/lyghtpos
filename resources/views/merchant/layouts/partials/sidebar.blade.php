@@ -20,7 +20,7 @@
                     </a>
                 </li>
 
-                <!-- Products -->
+                <!-- External links -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.external-links') }}" class="nav-link {{ request()->routeIs('merchant.external-links') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-th-large"></i>

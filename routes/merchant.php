@@ -8,8 +8,12 @@ use App\Http\Controllers\ProchargePaymentController;
 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'subscription', 'representation'])->group(function (): void {
 
+
     Route::get('/', [MerchantDashboardController::class, 'index'])->name('dashboard');
     Route::get('/external-links', [MerchantDashboardController::class, 'externalLinks'])->name('external-links');
+
+    // Route::get('/barter-assist-cash-price', [MerchantDashboardController::class, 'showBarterAssistCashPrice'])->name('barter-assist-cash-price');
+    // Route::get('/barter-assist-pos', [MerchantDashboardController::class, 'showBarterAssistPos'])->name('barter-assist-pos');
 
     Route::prefix('subscription')->name('subscription.')->group(function (): void {
 
