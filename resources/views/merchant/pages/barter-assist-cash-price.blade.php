@@ -1,8 +1,195 @@
 @extends('merchant.layouts.main')
 
+@section('title', __('Barter Assist · Cash Price, Trade as Acceptable Settlement'))
+@section('content-header', __('Barter Assist · Cash Price, Trade as Acceptable Settlement'))
+
 @section('content')
+<style>
+    section.content h1 {
+        color: #020617;
+        font-weight: bold;
+        font-size: 26px;
+    }
+
+    section.content .small {
+
+        font-size: 13px;
+        color: #000;
+    }
+
+    section.content .card h2 {
+        color: #fff;
+
+    }
+
+    section.content .card label {
+        color: #fff;
+
+    }
+
+    section.content .card p {
+        color: #fff;
+
+    }
+
+    section.content .card {
+        background: #020617;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.8);
+        border: 1px solid #1f2937;
+    }
+
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .col {
+        flex: 1;
+        min-width: 260px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        font-size: 13px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #4b5563;
+        font: inherit;
+        margin-bottom: 10px;
+        background: #020617;
+        color: #e5e7eb;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+        color: #6b7280;
+    }
+
+    textarea {
+        min-height: 60px;
+        resize: vertical;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 9px 14px;
+        border-radius: 999px;
+        border: none;
+        font: inherit;
+        cursor: pointer;
+        margin-right: 8px;
+        margin-top: 6px;
+        font-size: 13px;
+    }
+
+    .btn-primary {
+        background: #ecfeff;
+        color: #0f172a;
+        font-weight: 600;
+    }
+
+    .btn-secondary {
+        background: #111827;
+        color: #e5e7eb;
+        border: 1px solid #4b5563;
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-left: 8px;
+    }
+
+    .status-none {
+        background: #111827;
+        color: #9ca3af;
+        border: 1px solid #374151;
+    }
+
+    .status-pending {
+        background: #facc15;
+        color: #713f12;
+    }
+
+    .status-complete {
+        background: #22c55e;
+        color: #052e16;
+    }
+
+    .ledger-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+    }
+
+    .ledger-tile {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #020617;
+        border: 1px solid #1f2937;
+    }
+
+    .ledger-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+        margin-bottom: 4px;
+    }
+
+    .ledger-value {
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .pill {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        color: #e5e7eb;
+        background: rgba(15, 118, 110, 0.3);
+        border: 1px solid rgba(34, 197, 94, 0.5);
+    }
+
+    pre {
+        background: #020617;
+        color: #a7f3d0;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 12px;
+        overflow-x: auto;
+        max-height: 260px;
+        border: 1px solid #1f2937;
+    }
+
+</style>
+
 <div class="container">
-    <h1>Barter Assist · Cash Price, Trade as Acceptable Settlement</h1>
+    {{-- <h1>Barter Assist · Cash Price, Trade as Acceptable Settlement</h1> --}}
     <p class="small">
         The price is set in <strong>cash (USD)</strong>. Trade dollars (TD) are an
         <strong>acceptable settlement medium pegged 1:1 to the cash price</strong>.
@@ -62,9 +249,11 @@
             <br>· Merchant is paid in <strong>trade dollars (TD)</strong> equal to the cash price <br>· Shopper
             gives available <strong>cash</strong> to the sponsor
         </p>
-        <button class="btn btn-primary" id="btnSimulate">Simulate Barter Assist
-            Transaction</button>
-        <span class="status-badge status-none" id="statusBadge">No Transaction</span>
+        <div class="btn-box">
+            <button class="btn btn-primary" id="btnSimulate">Simulate Barter Assist
+                Transaction</button>
+            <span class="status-badge status-none" id="statusBadge">No Transaction</span>
+        </div>
     </div>
     <div class="card">
         <h2>3. Ledgers (Before / After)</h2>
@@ -76,22 +265,22 @@
         <div class="ledger-grid">
             <div class="ledger-tile">
                 <div class="ledger-label">Shopper Cash On Hand (USD)</div>
-                <div class="ledger-value" id="ledgerShopperCash">$0.00</div>
+                <div class="ledger-value text-white" id="ledgerShopperCash">$0.00</div>
                 <div class="pill">Pays cash to Sponsor (not Merchant)</div>
             </div>
             <div class="ledger-tile">
                 <div class="ledger-label">Merchant Trade Balance (TD)</div>
-                <div class="ledger-value" id="ledgerMerchantTrade">0 TD</div>
+                <div class="ledger-value text-white" id="ledgerMerchantTrade">0 TD</div>
                 <div class="pill">Receives Trade Dollars = Cash Price</div>
             </div>
             <div class="ledger-tile">
                 <div class="ledger-label">Sponsor Trade Balance (TD)</div>
-                <div class="ledger-value" id="ledgerSponsorTrade">0 TD</div>
+                <div class="ledger-value text-white" id="ledgerSponsorTrade">0 TD</div>
                 <div class="pill">Spends Trade to Help Shopper</div>
             </div>
             <div class="ledger-tile">
                 <div class="ledger-label">Sponsor Cash On Hand (USD)</div>
-                <div class="ledger-value" id="ledgerSponsorCash">$0.00</div>
+                <div class="ledger-value text-white" id="ledgerSponsorCash">$0.00</div>
                 <div class="pill">Receives Shopper's Cash</div>
             </div>
         </div>
