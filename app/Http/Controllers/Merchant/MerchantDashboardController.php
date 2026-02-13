@@ -16,4 +16,14 @@ class MerchantDashboardController extends Controller
     {
         return view('merchant.pages.external-links');
     }
+
+    public function showBarterAssistCashPrice()
+    {
+        return view('merchant.pages.barter-assist-cash-price');
+    }
+
+    public function showBarterAssistPos()
+    {
+        return view('merchant.pages.barter-assist-pos-demo');
+    }
 }
