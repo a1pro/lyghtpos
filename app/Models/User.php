@@ -97,4 +97,14 @@ class User extends Authenticatable
     {
         return $this->hasOne(Merchant::class, 'user_id');
     }
+
+    public function subscribed()
+    {
+        return false;
+    }
+
+    public function hasMethodOnFile()
+    {
+        return false;
+    }
 }

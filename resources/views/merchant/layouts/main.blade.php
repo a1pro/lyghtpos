@@ -29,7 +29,9 @@
     <!-- Site wrapper -->
     <div class="wrapper">
 
-        @include('layouts.partials.navbar')
+        @include('merchant.layouts.partials.navbar')
+
+        @include('merchant.layouts.partials.sidebar')
      
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">

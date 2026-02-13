@@ -7,9 +7,13 @@ use Illuminate\Http\Request;
 
 class MerchantDashboardController extends Controller
 {
-    public function index(){
+    public function index()
+    {
         return view('merchant.pages.dashboard');
-       }
+    }
 
-       
+    public function externalLinks()
+    {
+        return view('merchant.pages.external-links');
+    }
 }
