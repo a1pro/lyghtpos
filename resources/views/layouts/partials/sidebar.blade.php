@@ -109,7 +109,7 @@
                         <p>{{ __('Supplier') }}</p>
                     </a>
                 </li>
-
+                @if(auth()->user()->role_id ==1)
                 <li class="nav-header">{{ __('Extra') }}</li>
                 <!-- Settings -->
                 <li class="nav-item">
@@ -118,7 +118,7 @@
                         <p>{{ __('settings.title') }}</p>
                     </a>
                 </li>
-
+                @endif
                 <!-- Logout -->
                 <li class="nav-item">
                     <a href="#" class="nav-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">

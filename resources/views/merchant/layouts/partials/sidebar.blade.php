@@ -108,14 +108,8 @@
     </a>
 </li>
 
-<li class="nav-header">{{ __('Extra') }}</li>
-<!-- Settings -->
-<li class="nav-item">
-    <a href="{{auth()->user()->isAdmin() ? route('settings.index') : route('merchant.settings.index') }}" class="nav-link {{ activeSegment('settings') }}">
-        <i class="nav-icon fas fa-cogs"></i>
-        <p>{{ __('settings.title') }}</p>
-    </a>
-</li>
+ 
+ 
 
 
 
