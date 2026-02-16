@@ -48,7 +48,7 @@
                         $orderRemaining = $orderTotal - $orderReceived;
                     @endphp
                     <tr>
-                        <td>{{$order->id}}</td>
+                        <td>{{$loop->iteration}}</td>
                         <td>{{$order->getCustomerName()}}</td>
                         <td>{{ config('settings.currency_symbol') }} {{number_format($orderTotal, 2)}}</td>
                         <td>{{ config('settings.currency_symbol') }} {{number_format($orderReceived, 2)}}</td>

@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Auth;
 
 class ProductController extends Controller
 {
@@ -22,11 +23,24 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+        $userId = Auth::id();
+         
+        $role = $user['role_id'];
+        if($role==1){
         $products = Product::query()
             ->search($request->search)
             ->latest()
             ->paginate(10);
-
+        }
+        else
+        {
+            $products = Product::query()
+            ->search($request->search)
+            ->latest()
+            ->where('user_id',$userId)
+            ->paginate(10);
+        }
         return $request->wantsJson()
             ? response()->json($products)
             : view('products.index', ['products' => $products]);
@@ -48,15 +62,27 @@ class ProductController extends Controller
      */
     public function store(ProductStoreRequest $request)
     {
+        $user = Auth::user();
+        $userId = Auth::id();
+         
+        $role = $user['role_id'];
         $productData = $request->validated();
-
+    
+        // Attach logged-in user
+        $productData['user_id'] = Auth::id();
+    
         if ($request->hasFile('image')) {
             $productData['image'] = $request->file('image')->store('products', 'public');
         }
-
+    
         Product::create($productData);
-
+    if($role==1){
         return redirect()->route('products.index')
+            ->with('success', __('product.success_creating'));
+    }
+    else{
+
+    }return redirect()->route('merchant.products.index')
             ->with('success', __('product.success_creating'));
     }
 
@@ -86,7 +112,7 @@ class ProductController extends Controller
     public function update(ProductUpdateRequest $request, Product $product)
     {
         $productData = $request->validated();
-
+        $productData['user_id'] = Auth::id();
         if ($request->hasFile('image')) {
             if ($product->image) {
                 Storage::disk('public')->delete($product->image);
@@ -95,9 +121,15 @@ class ProductController extends Controller
         }
 
         $product->update($productData);
+        
+         
 
-        return redirect()->route('products.index')
-            ->with('success', __('product.success_updating'));
+        return redirect()->route(
+            auth()->user()->isAdmin()
+                ? 'products.index'
+                : 'merchant.products.index'
+        )->with('success', __('product.success_updating'));
+         
     }
 
     /**
