@@ -38,8 +38,14 @@ class SupplierController extends Controller
 
         Supplier::create($supplierData);
 
-        return redirect()->route('suppliers.index')
-            ->with('success', __('supplier.success_creating'));
+        $route = auth()->user()->isAdmin()
+        ? 'suppliers.index'
+        : 'merchant.suppliers.index';
+    
+    return redirect()
+        ->route($route)
+        ->with('success', __('supplier.success_creating'));
+    
     }
 
     public function update(SupplierUpdateRequest $request, Supplier $supplier)
