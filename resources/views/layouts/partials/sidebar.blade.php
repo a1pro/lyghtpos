@@ -19,7 +19,7 @@
                         <p>{{ __('dashboard.title') }}</p>
                     </a>
                 </li>
-                @if(auth()->user()->isMerchant())
+                @if(auth()->user()->role_id == 2)
                 <li class="nav-item">
                     <a href="{{ route('merchant.barter-assist-pos') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-pos') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-th-large"></i>
