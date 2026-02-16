@@ -12,6 +12,8 @@ class OrderController extends Controller
 {
     public function index(Request $request): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
     {
+        if(auth()->user()->isAdmin())
+        {
         $orders = Order::query()
             ->with(['items.product', 'payments', 'customer'])
             ->when($request->input('start_date'), function ($query, $startDate): void {
@@ -22,6 +24,19 @@ class OrderController extends Controller
             })
             ->latest()
             ->paginate(10);
+        }
+        else{
+            $orders = Order::query()
+            ->with(['items.product', 'payments', 'customer'])
+            ->when($request->input('start_date'), function ($query, $startDate): void {
+                $query->where('created_at', '>=', $startDate);
+            })
+            ->when($request->input('end_date'), function ($query, string $endDate): void {
+                $query->where('created_at', '<=', $endDate . ' 23:59:59');
+            })
+            ->latest()->where('user_id',auth()->id())
+            ->paginate(10);
+        }
 
         $total = $orders->sum(fn($order) => $order->total());
         $receivedAmount = $orders->sum(fn($order) => $order->receivedAmount());

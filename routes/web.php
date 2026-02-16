@@ -24,7 +24,7 @@ Route::post('register/final', [App\Http\Controllers\Auth\RegisterController::cla
 
 Auth::routes();
 
-Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(function (): void {
+Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin,merchant'])->group(function (): void {
     Route::get('/', HomeController::class)->name('home');
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');

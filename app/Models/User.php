@@ -53,6 +53,17 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    public function isAdmin(): bool
+{
+    return $this->role_id === 1;
+}
+
+public function isMerchant(): bool
+{
+    return $this->role_id === 2;
+}
+
+
     public function cart()
     {
         return $this->belongsToMany(related: Product::class, table: 'user_cart')->withPivot('quantity');

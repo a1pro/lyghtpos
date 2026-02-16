@@ -8,7 +8,7 @@
 <div class="card">
     <div class="card-body">
 
-        <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{auth()->user()->role_id ==2 ? route('merchant.products.store'): route('products.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             <div class="form-group">

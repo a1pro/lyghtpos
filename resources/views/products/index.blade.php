@@ -3,7 +3,16 @@
 @section('title', __('product.Product_List'))
 @section('content-header', __('product.Product_List'))
 @section('content-actions')
-<a href="{{route('products.create')}}" class="btn btn-primary">{{ __('product.Create_Product') }}</a>
+ 
+{{-- <a href="{{route('products.create')}}" class="btn btn-primary">{{ __('product.Create_Product') }}</a> --}}
+
+<a href="{{ auth()->user()->role_id == 2 
+    ? route('merchant.products.create') 
+    : route('products.create') }}" 
+class="btn btn-primary">
+{{ __('product.Create_Product') }}
+</a>
+
 @endsection
 @section('css')
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
@@ -29,7 +38,7 @@
             <tbody>
                 @foreach ($products as $product)
                 <tr>
-                    <td>{{$product->id}}</td>
+                    <td>{{$loop->iteration}}</td>
                     <td>{{$product->name}}</td>
                     <td><img class="product-img" src="{{ Storage::url($product->image) }}" alt=""></td>
                     <td>{{$product->barcode}}</td>
@@ -41,8 +50,8 @@
                     <td>{{$product->created_at}}</td>
                     <td>{{$product->updated_at}}</td>
                     <td>
-                        <a href="{{ route('products.edit', $product) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
-                        <button class="btn btn-danger btn-delete" data-url="{{route('products.destroy', $product)}}"><i class="fas fa-trash"></i></button>
+                        <a href="{{auth()->user()->role_id ==1 ?  route('products.edit', $product) :   route('merchant.products.edit', $product)}}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
+                        <button class="btn btn-danger btn-delete" data-url="{{auth()->user()->role_id ==1 ? route('products.destroy', $product) : route('merchant.products.destroy', $product)}}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
                 @endforeach
