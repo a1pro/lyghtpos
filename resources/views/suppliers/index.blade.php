@@ -3,7 +3,7 @@
 @section('title', __('Supplier List'))
 @section('content-header', __('Supplier List'))
 @section('content-actions')
-<a href="{{route('suppliers.create')}}" class="btn btn-primary">{{ __('Add Supplier') }}</a>
+<a href="{{auth()->user()->isAdmin() ? route('suppliers.create') : route('merchant.suppliers.create')}}" class="btn btn-primary">{{ __('Add Supplier') }}</a>
 @endsection
 @section('css')
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
