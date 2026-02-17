@@ -7,9 +7,14 @@
                 <i class="fas fa-bars"></i>
             </a>
         </li>
-        <li class="nav-item d-none d-sm-inline-block">
-            <a href="{{ route('merchant.dashboard') }}" class="nav-link">{{ __('dashboard.title') }}</a>
-        </li>
+        @if(auth()->user()->subscribed == 'no')
+        <a href="{{ route('home') }}" class="nav-link">
+            {{ __('dashboard.title') }}
+        </a>
+    @else
+        <button type="button" class="btn btn-success">Subscribed</button>
+    @endif
+    
     </ul>
 
     <!-- Right navbar links -->
