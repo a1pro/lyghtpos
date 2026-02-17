@@ -16,30 +16,33 @@ use App\Http\Controllers\Settings\SettingController;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\ProchargePaymentController;
 
-Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'subscription', 'representation'])->group(function (): void {
+// Public merchant routes (no subscription/representation required)
+Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
+    
+    // Subscription routes - These should be accessible without subscription check
+    Route::prefix('subscription')->name('subscription.')->group(function () {
+        Route::get('/plans', [PlanController::class, 'index'])->name('plans');
+        
+        // AJAX routes
+        Route::post('/process', [PlanController::class, 'processSubscription'])->name('process');
+        Route::get('/plan-details/{planId}', [PlanController::class, 'getPlanDetails'])->name('plan.details');
+    });
+});
 
+// Protected merchant routes (require subscription and representation)
+Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'subscription', 'representation'])->group(function (): void {
 
     Route::get('/', [MerchantDashboardController::class, 'index'])->name('dashboard');
     Route::get('/external-links', [MerchantDashboardController::class, 'externalLinks'])->name('external-links');
 
     Route::get('/barter-assist-cash-price', [MerchantDashboardController::class, 'showBarterAssistCashPrice'])->name('barter-assist-cash-price');
     Route::get('/barter-assist-pos', [MerchantDashboardController::class, 'showBarterAssistPos'])->name('barter-assist-pos');
-
-    Route::prefix('subscription')->name('subscription.')->group(function (): void {
-
-        Route::get('/plans', [PlanController::class, 'index'])->name('plans');
-
-        Route::get('/demo-card-details', [PlanController::class, 'showCardDetails'])->name('demo.card');
-        Route::post('/demo-payment/submit', [PlanController::class, 'submitPayment'])->name('demo.card.submit');
-    });
-
+    
     Route::prefix('representation')->name('representation.')->group(function (): void {
-
         Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
         Route::post('/submit', [MerchantRepresentationController::class, 'submitForm'])->name('submit');
     });
 
-    
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
     Route::resource('products', ProductController::class)->names('products');
@@ -65,12 +68,10 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::post('/change-price', [PurchaseCartController::class, 'changePrice'])->name('change-price');
         Route::delete('/delete', [PurchaseCartController::class, 'delete'])->name('delete');
         Route::delete('/empty', [PurchaseCartController::class, 'empty'])->name('empty');
-      });
-
+    });
 });
 
 // for testing outside auth
 // Route::prefix('merchant')->name('merchant.')->group(function (): void {
-
 //     Route::get('/procharge/intent', [ProchargePaymentController::class, 'createIntent']);
 // });

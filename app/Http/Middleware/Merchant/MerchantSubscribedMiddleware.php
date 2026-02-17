@@ -2,30 +2,24 @@
 
 namespace App\Http\Middleware\Merchant;
 
-use App\Models\BrandTeamMember;
-use App\Models\Representation;
-use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
 use Symfony\Component\HttpFoundation\Response;
 
 class MerchantSubscribedMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
 
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
         $bypassRoutes = [
             'login',
             'logout',
-
             'register',
             'register.final',
 
@@ -42,16 +36,23 @@ class MerchantSubscribedMiddleware
             'merchant.representation.submit'
         ];
 
-        if (in_array($request->route()->getName(), $bypassRoutes)) {
+        $currentRoute = $request->route()->getName();
+
+        // ✅ If user IS subscribed
+        if ($user->subscribed === 'yes') {
+
+            // If subscribed user tries to access plan page → redirect to dashboard
+            if ($currentRoute === 'merchant.subscription.plans') {
+                return redirect()->route('merchant.dashboard');
+            }
+
             return $next($request);
         }
 
-        if (!Session::has('subscribed')) {
+        // ✅ If user is NOT subscribed
+        if (!in_array($currentRoute, $bypassRoutes)) {
             return redirect()->route('merchant.subscription.plans');
         }
-        // if (!$user->hasMethodOnFile()) {
-        //     return redirect()->route('merchant.subscription.plans');
-        // }
 
         return $next($request);
     }
