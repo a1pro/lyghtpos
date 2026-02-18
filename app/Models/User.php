@@ -31,7 +31,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
-        'subscribed'
+        'subscribed',
+        'governance_check'
         
     ];
 
@@ -119,4 +120,20 @@ public function isMerchant(): bool
     {
         return false;
     }
+
+
+    public function governancelayers(){
+        return $this->belongsToMany(GovernanceLayer::class,'user_governance_layers')->withPivot('status')->withTimeStamps();
+    }
+
+    public function scopeMerchants($query){
+        return $query->where('role_id',2);
+    }
+
+    public function getGovernanceCheckAttribute($value)
+{
+    return $value ?? 'pending';
+}
+
+
 }

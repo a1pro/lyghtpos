@@ -31,7 +31,7 @@
             <tbody>
                 @forelse ($merchants as $merchant)
                 <tr>
-                    <td>{{$merchant->id}}</td>
+                    <td>{{$loop->iteration}}</td>
                     <td>{{$merchant->role->name}}</td>
                     <td>{{$merchant->first_name . ' ' . $merchant->last_name}}</td>
                     <td>{{$merchant->email}}</td>
