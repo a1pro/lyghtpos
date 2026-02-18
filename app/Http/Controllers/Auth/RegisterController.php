@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Merchant;
 use App\Models\Representation;
+use App\Models\UserGovernanceLayer;
+use App\Models\GovernanceLayer;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -69,6 +71,7 @@ class RegisterController extends Controller
             'role_id' => 2,
         ]);
 
+        
         Merchant::create([
             'user_id' => $user->id,
             'merchant_id' => $merchantId,
@@ -81,6 +84,14 @@ class RegisterController extends Controller
             'communyti_enrollment' => $data['communyti_enrollment'],
             'advocate_contact' => $data['advocate_contact'],
         ]);
+
+        $governanceData = GovernanceLayer::where('status','active')->get();
+        foreach($governanceData as $govData){
+            UserGovernanceLayer::create([
+                'user_id'  => $user->id,
+                'governance_id' => $govData->id
+            ]);
+        }
 
         return $user;
     }

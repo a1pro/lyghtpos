@@ -1,4 +1,7 @@
 <!-- Main Sidebar Container -->
+<?php
+ $status = representation_status();
+?>
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
     <a href="{{auth()->user()->isAdmin() ? route('home') : route('merchant.dashboard') }}" class="brand-link">
@@ -43,6 +46,8 @@
                     </a>
                 </li>
 <!-- Products -->
+
+@if($status == 'approved')
 <li class="nav-item">
     <a href="{{ auth()->user()->role_id ==1 ? route('products.index') :route('merchant.products.index') }}" class="nav-link {{ activeSegment('products') }}">
         <i class="nav-icon fas fa-th-large"></i>
@@ -108,7 +113,7 @@
     </a>
 </li>
 
- 
+ @endif
  
 
 
