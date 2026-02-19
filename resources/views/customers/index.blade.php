@@ -3,7 +3,7 @@
 @section('title', __('customer.Customer_List'))
 @section('content-header', __('customer.Customer_List'))
 @section('content-actions')
-<a href="{{ auth->user()->isAdmin() ? route('customers.create') : route('merchant.customers.create')}}" class="btn btn-primary">{{ __('customer.Add_Customer') }}</a>
+<a href="{{ auth()->user()->isAdmin() ? route('customers.create') : route('merchant.customers.create')}}" class="btn btn-primary">{{ __('customer.Add_Customer') }}</a>
 @endsection
 @section('css')
 <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
