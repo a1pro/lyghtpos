@@ -18,8 +18,8 @@ return new class extends Migration
             ->constrained('subscription_plans')
             ->cascadeOnDelete();
 
-            $table->timestamp('start_date');
-            $table->timestamp('end_date');
+            $table->timestamp('start_date')->nullable();
+            $table->timestamp('end_date')->nullable();
             $table->text('transaction_id');
             $table->timestamps();
         });

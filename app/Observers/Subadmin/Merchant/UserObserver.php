@@ -63,7 +63,7 @@ class UserObserver
     public function updated(User $user): void
     {
         $changedFields = array_keys($user->getChanges());
-        
+
         if ($this->shouldClearCache($user, $changedFields)) {
             $this->clearMerchantCaches();
         }

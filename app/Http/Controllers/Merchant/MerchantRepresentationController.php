@@ -16,7 +16,6 @@ class MerchantRepresentationController extends Controller
 
     public function submitForm(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'subject' => ['required', 'string', 'max:255'],
             'pledge_value' => ['required'],
