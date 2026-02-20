@@ -35,17 +35,23 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
-        // Check user role and redirect accordingly
-        if ($user->role_id == 1) {
-            return redirect('/admin');
-        } elseif ($user->role_id == 2) {
-            return redirect()->route('merchant.dashboard'); // or use '/merchant/dashboard'
-        } elseif ($user->role_id == 5) {
-            return redirect()->route('subadmin.dashboard'); // or use '/subadmin/dashboard'
+        switch ($user->role_id) {
+            case 1: // Admin
+                return redirect()->route('admin.dashboard');
+            case 2: // Merchant
+                return redirect()->route('merchant.dashboard');
+            case 5: // Subadmin
+                return redirect()->route('subadmin.dashboard');
+            case 6: // Trade Member
+                return redirect()->route('trade-member.dashboard');
+            case 7: // Organization
+                return redirect()->route('organization.dashboard');
+            default:
+                return redirect()->route('merchant.dashboard'); // fallback
         }
-        
-        // Default redirect (fallback)
-        return redirect($this->redirectPath());
+
+        // Fallback
+        return redirect('/home');
     }
 
     /**
