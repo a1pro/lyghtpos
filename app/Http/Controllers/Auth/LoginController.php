@@ -45,7 +45,9 @@ class LoginController extends Controller
             case 6: // Trade Member
                 return redirect()->route('trade-member.dashboard');
             case 7: // Organization
-                return redirect()->route('organization.dashboard');
+                return redirect()->route('organization-admin.dashboard');
+            case 8: // Favor Member
+                return redirect()->route('favor-member.dashboard');
             default:
                 return redirect()->route('merchant.dashboard'); // fallback
         }

@@ -1,4 +1,4 @@
-@extends('trade-member.layouts.main')
+@extends('organization-admin.layouts.main')
 
 @section('content')
 <div class="container">
