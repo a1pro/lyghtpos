@@ -10,19 +10,21 @@ use App\Http\Controllers\Inventory\PurchaseCartController;
 use App\Http\Controllers\Inventory\PurchaseController;
 use App\Http\Controllers\Management\CustomerController;
 use App\Http\Controllers\Management\SupplierController;
+use App\Http\Controllers\OrganizationAdmin\OrganizationAdminDashboardController;
 use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\ProchargePaymentController;
+use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
 
 // Public merchant routes (no subscription/representation required)
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
-    
+
     // Subscription routes - These should be accessible without subscription check
     Route::prefix('subscription')->name('subscription.')->group(function () {
         Route::get('/plans', [PlanController::class, 'index'])->name('plans');
-        
+
         // AJAX routes
         Route::post('/process', [PlanController::class, 'processSubscription'])->name('process');
         Route::get('/plan-details/{planId}', [PlanController::class, 'getPlanDetails'])->name('plan.details');
@@ -37,7 +39,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
 
     Route::get('/barter-assist-cash-price', [MerchantDashboardController::class, 'showBarterAssistCashPrice'])->name('barter-assist-cash-price');
     Route::get('/barter-assist-pos', [MerchantDashboardController::class, 'showBarterAssistPos'])->name('barter-assist-pos');
-    
+
     Route::prefix('representation')->name('representation.')->group(function (): void {
         Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
         Route::post('/submit', [MerchantRepresentationController::class, 'submitForm'])->name('submit');
@@ -69,6 +71,16 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::delete('/delete', [PurchaseCartController::class, 'delete'])->name('delete');
         Route::delete('/empty', [PurchaseCartController::class, 'empty'])->name('empty');
     });
+});
+
+Route::prefix('trade-member')->name('trade-member.')->middleware(['auth', 'locale', 'role:trade_member'])->group(function (): void {
+
+    Route::get('/', [TradeMemberDashboardController::class, 'index'])->name('dashboard');
+});
+
+Route::prefix('organization')->name('organization.')->middleware(['auth', 'locale', 'role:organization'])->group(function (): void {
+
+    Route::get('/', [OrganizationAdminDashboardController::class, 'index'])->name('dashboard');
 });
 
 // for testing outside auth

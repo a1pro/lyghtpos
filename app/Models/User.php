@@ -32,8 +32,8 @@ class User extends Authenticatable
         'password',
         'role_id',
         'subscribed',
-        'governance_check'
-        
+        'governance_check',
+        'account_type',
     ];
 
     /**
@@ -56,14 +56,14 @@ class User extends Authenticatable
     ];
 
     public function isAdmin(): bool
-{
-    return $this->role_id === 1;
-}
+    {
+        return $this->role_id === 1;
+    }
 
-public function isMerchant(): bool
-{
-    return $this->role_id === 2;
-}
+    public function isMerchant(): bool
+    {
+        return $this->role_id === 2;
+    }
 
 
     public function cart()
@@ -121,19 +121,38 @@ public function isMerchant(): bool
         return false;
     }
 
-
-    public function governancelayers(){
-        return $this->belongsToMany(GovernanceLayer::class,'user_governance_layers')->withPivot('status')->withTimeStamps();
+    public function governancelayers()
+    {
+        return $this->belongsToMany(GovernanceLayer::class, 'user_governance_layers')->withPivot('status')->withTimeStamps();
     }
 
-    public function scopeMerchants($query){
-        return $query->where('role_id',2);
+    public function scopeMerchants($query)
+    {
+        return $query->where('role_id', 2);
     }
 
     public function getGovernanceCheckAttribute($value)
-{
-    return $value ?? 'pending';
-}
+    {
+        return $value ?? 'pending';
+    }
 
+    public function isTradeMerchant(): bool
+    {
+        return $this->account_type === 'TRADE_MERCHANT';
+    }
 
+    public function isTradeMember(): bool
+    {
+        return $this->account_type === 'TRADE_MEMBER';
+    }
+
+    public function isOrganization(): bool
+    {
+        return $this->account_type === 'ORGANIZATION';
+    }
+
+    public function isFavorMember(): bool
+    {
+        return $this->account_type === 'FAVOR_MEMBER';
+    }
 }

@@ -1,4 +1,33 @@
 @extends('layouts.app')
+@section('css')
+
+<style>
+    .account-type-card {
+        width: 100%;
+        cursor: pointer;
+    }
+
+    .account-type-card input {
+        display: none;
+    }
+
+    .account-type-card .card {
+        border: 2px solid #dee2e6;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .account-type-card:hover .card {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, .25);
+    }
+
+    .account-type-card input:checked+.card {
+        border-color: #007bff;
+        background-color: #f8fbff;
+    }
+
+</style>
+@endsection
 
 @section('content')
 <div class="container">
@@ -7,7 +36,7 @@
             <div class="card">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span>{{ __('Register as Merchant') }}</span>
+                        <span>{{ __('Register') }}</span>
                     </div>
                 </div>
 
@@ -153,6 +182,84 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <!-- Account Type Selection -->
+                        <h5 class="text-center mb-3">Account Type</h5>
+
+                        <div class="form-group row">
+                            <div class="col-md-10 offset-md-1">
+                                <div class="row">
+
+                                    <!-- Trade Merchant -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="account-type-card">
+                                            <input type="radio" name="account_type" value="TRADE_MERCHANT" {{ old('account_type') === 'TRADE_MERCHANT' ? 'checked' : '' }} required>
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title mb-1">Trade Merchant</h6>
+                                                    <p class="card-text text-muted small">
+                                                        I run a business and want to accept TradeTokens and vouchers at my POS
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Trade Member -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="account-type-card">
+                                            <input type="radio" name="account_type" value="TRADE_MEMBER" {{ old('account_type') === 'TRADE_MEMBER' ? 'checked' : '' }}>
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title mb-1">Trade Member</h6>
+                                                    <p class="card-text text-muted small">
+                                                        I want to trade with other members but do not run a POS
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Organization -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="account-type-card">
+                                            <input type="radio" name="account_type" value="ORGANIZATION" {{ old('account_type') === 'ORGANIZATION' ? 'checked' : '' }}>
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title mb-1">Organization</h6>
+                                                    <p class="card-text text-muted small">
+                                                        I represent a nonprofit or community organization
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Favor Member -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="account-type-card">
+                                            <input type="radio" name="account_type" value="FAVOR_MEMBER" {{ old('account_type') === 'FAVOR_MEMBER' ? 'checked' : '' }}>
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title mb-1">Favor Member</h6>
+                                                    <p class="card-text text-muted small">
+                                                        I am a consumer who wants to shop using TradeTokens or vouchers
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                </div>
+
+                                @error('account_type')
+                                <span class="text-danger small d-block mt-2">
+                                    {{ $message }}
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+
                         <!-- Password Section -->
                         <h5 class="text-center mb-3 mt-4">Account Security</h5>
 
