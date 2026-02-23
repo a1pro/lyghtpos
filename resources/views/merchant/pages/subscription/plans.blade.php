@@ -67,8 +67,8 @@
                                             data-plan-id="{{ $plan->id }}"
                                             data-plan-name="{{ $plan->name }}"
                                             data-bs-toggle="modal"
-                                            data-bs-target="#cardModal">
-                                        Choose {{ $plan->name }}
+                                            data-bs-target="#paypalModal">
+                                        <i class="fab fa-paypal me-2"></i>Choose {{ $plan->name }}
                                     </button>
                                 </div>
                             </div>
@@ -80,7 +80,7 @@
                     <div class="text-center mt-4">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i>
-                            All plans include a 14-day free trial. No credit card required.
+                            All plans include a 14-day free trial. Secure payments powered by PayPal.
                         </small>
                     </div>
 
@@ -92,65 +92,109 @@
                             <a href="#">Privacy Policy</a>
                         </small>
                     </div>
+
+                    <!-- PayPal Trust Badge -->
+                    <div class="text-center mt-4">
+                        <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" alt="PayPal" class="me-2" style="height: 30px;">
+                        <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_SbyPP_mc_vs_dc_ae.jpg" alt="Payment Methods" style="height: 30px;">
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Card Details Modal -->
-<div class="modal fade" id="cardModal" tabindex="-1" aria-labelledby="cardModalLabel" aria-hidden="true">
+<!-- PayPal Payment Modal -->
+<div class="modal fade" id="paypalModal" tabindex="-1" aria-labelledby="paypalModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="cardModalLabel">Enter Card Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="paypalModalLabel">
+                    <i class="fab fa-paypal me-2"></i>Complete Your Subscription
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <!-- Selected Plan Summary -->
                 <div class="alert alert-info mb-4" id="selectedPlanSummary" style="display: none;">
-                    <h6 class="alert-heading" id="selectedPlanName"></h6>
-                    <p class="mb-0" id="selectedPlanPrice"></p>
-                    <small id="selectedPlanDuration"></small>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle fa-2x text-info"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="alert-heading mb-1" id="selectedPlanName"></h6>
+                            <p class="mb-0" id="selectedPlanPrice"></p>
+                            <small id="selectedPlanDuration" class="text-muted"></small>
+                        </div>
+                    </div>
                 </div>
 
-                <form id="paymentForm">
-                    @csrf
-                    <input type="hidden" name="plan_id" id="plan_id">
-                    <input type="hidden" name="billing_type" id="billing_type" value="monthly">
-
-                    <div class="mb-3">
-                        <label for="card_number" class="form-label">Card Number</label>
-                        <input type="text" class="form-control" id="card_number" name="card_number" value="4242 4242 4242 4242" required>
-                        <div class="invalid-feedback" id="card_number_error"></div>
+                <!-- PayPal Payment Section -->
+                <div class="text-center py-4">
+                    <!-- PayPal Logo -->
+                    <div class="mb-4">
+                        <img src="https://www.paypalobjects.com/webstatic/icon/pp258.png" alt="PayPal" style="height: 60px;">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="card_holder" class="form-label">Card Holder</label>
-                        <input type="text" class="form-control" id="card_holder" name="card_holder" value="John Doe" required>
-                        <div class="invalid-feedback" id="card_holder_error"></div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="expiry" class="form-label">Expiry Date</label>
-                            <input type="text" class="form-control" id="expiry" name="expiry" value="12/25" placeholder="MM/YY" required>
-                            <div class="invalid-feedback" id="expiry_error"></div>
+                    <!-- Payment Summary -->
+                    <div class="payment-summary bg-light p-4 rounded mb-4">
+                        <h5 class="mb-3">Payment Summary</h5>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Plan:</span>
+                            <strong id="summaryPlanName">-</strong>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="cvc" class="form-label">CVC</label>
-                            <input type="text" class="form-control" id="cvc" name="cvc" value="123" required>
-                            <div class="invalid-feedback" id="cvc_error"></div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Billing:</span>
+                            <strong id="summaryBillingType">-</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Amount:</span>
+                            <strong class="text-primary" id="summaryAmount">-</strong>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Total:</span>
+                            <strong class="text-success h5 mb-0" id="summaryTotal">-</strong>
                         </div>
                     </div>
-                </form>
+
+                    <!-- PayPal Benefits -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <i class="fas fa-shield-alt fa-2x text-primary mb-2"></i>
+                                <small class="d-block">Buyer Protection</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <i class="fas fa-lock fa-2x text-primary mb-2"></i>
+                                <small class="d-block">Secure Payment</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PayPal Button -->
+                    <button type="button" class="btn btn-primary btn-lg w-100" id="paypalBtn">
+                        <i class="fab fa-paypal me-2"></i>
+                        <span class="button-text">Pay with PayPal</span>
+                        <span class="spinner-border spinner-border-sm d-none ms-2" role="status" aria-hidden="true"></span>
+                    </button>
+
+                    <!-- Security Note -->
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="fas fa-lock me-1"></i>
+                        You'll be redirected to PayPal's secure payment page
+                    </p>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitPaymentBtn">
-                    <span class="spinner-border spinner-border-sm d-none" id="paymentSpinner" role="status" aria-hidden="true"></span>
-                    Pay Now
-                </button>
+            <div class="modal-footer bg-light">
+                <div class="w-100 text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-credit-card me-1"></i>
+                        We accept all major credit cards via PayPal
+                    </small>
+                </div>
             </div>
         </div>
     </div>
@@ -161,16 +205,38 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="successModalLabel">Success!</h5>
+                <h5 class="modal-title" id="successModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>Payment Successful!
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center py-4">
-                <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
-                <h4 class="mt-3" id="successMessage">Subscription started successfully!</h4>
-                <p class="text-muted" id="transactionIdDisplay"></p>
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h4 class="mb-3" id="successMessage">Subscription started successfully!</h4>
+                <p class="text-muted mb-2" id="transactionIdDisplay"></p>
+                <p class="text-muted mb-0">You will be redirected to your dashboard in a few seconds...</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="redirectToDashboard">Go to Dashboard</button>
+                <button type="button" class="btn btn-primary w-100" id="redirectToDashboard">
+                    Go to Dashboard Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="modal fade" id="processingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="processingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="mb-2" id="processingMessage">Processing Payment...</h5>
+                <p class="text-muted small mb-0">Please wait while we confirm your payment</p>
             </div>
         </div>
     </div>
@@ -186,26 +252,33 @@
         const monthlyPrices = document.querySelectorAll('.monthly-price');
         const yearlyPrices = document.querySelectorAll('.yearly-price');
         const choosePlanBtns = document.querySelectorAll('.choose-plan-btn');
-        const billingTypeInput = document.getElementById('billing_type');
-        const planIdInput = document.getElementById('plan_id');
+        const paypalBtn = document.getElementById('paypalBtn');
         const selectedPlanSummary = document.getElementById('selectedPlanSummary');
         const selectedPlanName = document.getElementById('selectedPlanName');
         const selectedPlanPrice = document.getElementById('selectedPlanPrice');
         const selectedPlanDuration = document.getElementById('selectedPlanDuration');
-        const submitPaymentBtn = document.getElementById('submitPaymentBtn');
-        const paymentSpinner = document.getElementById('paymentSpinner');
-        const paymentForm = document.getElementById('paymentForm');
         
+        // Summary elements
+        const summaryPlanName = document.getElementById('summaryPlanName');
+        const summaryBillingType = document.getElementById('summaryBillingType');
+        const summaryAmount = document.getElementById('summaryAmount');
+        const summaryTotal = document.getElementById('summaryTotal');
+
+        // Modals
+        const paypalModal = new bootstrap.Modal(document.getElementById('paypalModal'));
+        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+        const processingModal = new bootstrap.Modal(document.getElementById('processingModal'));
+
         // Define routes
-        const processSubscriptionUrl = '{{ route("merchant.subscription.process") }}';
+        const processPayPalUrl = '{{ route("merchant.subscription.paypal.create") }}';
         const planDetailsBaseUrl = '/merchant/subscription/plan-details/';
         const dashboardUrl = '{{ route("merchant.dashboard") }}';
         
-        console.log('Process Subscription URL:', processSubscriptionUrl);
-        console.log('Dashboard URL:', dashboardUrl);
+        console.log('Process PayPal URL:', processPayPalUrl);
         
         let currentBillingType = 'monthly';
         let selectedPlan = null;
+        let selectedPlanId = null;
 
         // Price toggle functions
         function showMonthly() {
@@ -220,7 +293,7 @@
             yearlyPrices.forEach(price => price.classList.add('d-none'));
             
             currentBillingType = 'monthly';
-            if (billingTypeInput) billingTypeInput.value = 'monthly';
+            updateSummary();
         }
 
         function showYearly() {
@@ -235,7 +308,47 @@
             yearlyPrices.forEach(price => price.classList.remove('d-none'));
             
             currentBillingType = 'yearly';
-            if (billingTypeInput) billingTypeInput.value = 'yearly';
+            updateSummary();
+        }
+
+        // Update summary with current plan and billing type
+        function updateSummary() {
+            if (!selectedPlan) return;
+
+            const price = currentBillingType === 'monthly' 
+                ? selectedPlan.monthly_price_formatted 
+                : selectedPlan.yearly_price_formatted;
+            
+            const totalYearly = currentBillingType === 'yearly' 
+                ? ` (${selectedPlan.yearly_total}/yr)` 
+                : '';
+            
+            const days = currentBillingType === 'monthly' ? '30 days' : '365 days';
+
+            // Update modal summary
+            if (selectedPlanName) {
+                selectedPlanName.textContent = `${selectedPlan.name} Plan`;
+            }
+            if (selectedPlanPrice) {
+                selectedPlanPrice.textContent = `Amount: ${price}${totalYearly}`;
+            }
+            if (selectedPlanDuration) {
+                selectedPlanDuration.textContent = `Duration: ${days}`;
+            }
+
+            // Update payment summary
+            if (summaryPlanName) {
+                summaryPlanName.textContent = selectedPlan.name;
+            }
+            if (summaryBillingType) {
+                summaryBillingType.textContent = currentBillingType === 'monthly' ? 'Monthly' : 'Yearly';
+            }
+            if (summaryAmount) {
+                summaryAmount.textContent = price;
+            }
+            if (summaryTotal) {
+                summaryTotal.textContent = price;
+            }
         }
 
         // Add event listeners for billing toggle
@@ -245,20 +358,16 @@
         // Handle plan selection
         choosePlanBtns.forEach(btn => {
             btn.addEventListener('click', function(e) {
-                const planId = this.dataset.planId;
+                selectedPlanId = this.dataset.planId;
                 const planName = this.dataset.planName;
                 
-                console.log('Plan selected:', { planId, planName, billingType: currentBillingType });
-                
-                // Set plan ID in hidden input
-                if (planIdInput) planIdInput.value = planId;
-                if (billingTypeInput) billingTypeInput.value = currentBillingType;
+                console.log('Plan selected:', { planId: selectedPlanId, planName, billingType: currentBillingType });
                 
                 // Fetch plan details
-                const planDetailsUrl = planDetailsBaseUrl + planId;
+                const planDetailsUrl = planDetailsBaseUrl + selectedPlanId;
                 console.log('Fetching plan details from:', planDetailsUrl);
                 
-                // Show loading state
+                // Show loading in summary
                 if (selectedPlanSummary) {
                     selectedPlanSummary.style.display = 'none';
                 }
@@ -291,29 +400,17 @@
                         selectedPlan = data.data;
                         
                         // Update summary
-                        if (selectedPlanName) {
-                            selectedPlanName.textContent = `${selectedPlan.name} Plan (${currentBillingType === 'monthly' ? 'Monthly' : 'Yearly'})`;
-                        }
-                        
-                        const price = currentBillingType === 'monthly' 
-                            ? selectedPlan.monthly_price_formatted 
-                            : selectedPlan.yearly_price_formatted;
-                        
-                        const totalYearly = currentBillingType === 'yearly' 
-                            ? ` (${selectedPlan.yearly_total}/yr)` 
-                            : '';
-                        
-                        if (selectedPlanPrice) {
-                            selectedPlanPrice.textContent = `Amount: ${price}${totalYearly}`;
-                        }
-                        
-                        const days = currentBillingType === 'monthly' ? '30 days' : '365 days';
-                        if (selectedPlanDuration) {
-                            selectedPlanDuration.textContent = `Duration: ${days}`;
-                        }
+                        updateSummary();
                         
                         if (selectedPlanSummary) {
                             selectedPlanSummary.style.display = 'block';
+                        }
+                        
+                        // Reset PayPal button state
+                        if (paypalBtn) {
+                            paypalBtn.disabled = false;
+                            paypalBtn.querySelector('.button-text').textContent = 'Pay with PayPal';
+                            paypalBtn.querySelector('.spinner-border').classList.add('d-none');
                         }
                     } else {
                         console.error('Error fetching plan details:', data.message);
@@ -327,128 +424,129 @@
             });
         });
 
-        // Handle payment submission
-        if (submitPaymentBtn) {
-            submitPaymentBtn.addEventListener('click', function() {
-                // Clear previous errors
-                document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
-                
-                // Validate form
-                const cardNumber = document.getElementById('card_number')?.value;
-                const cardHolder = document.getElementById('card_holder')?.value;
-                const expiry = document.getElementById('expiry')?.value;
-                const cvc = document.getElementById('cvc')?.value;
-                
-                if (!cardNumber || !cardHolder || !expiry || !cvc) {
-                    alert('Please fill in all card details');
+        // PayPal payment handler
+        if (paypalBtn) {
+            paypalBtn.addEventListener('click', function() {
+                if (!selectedPlanId || !selectedPlan) {
+                    alert('Please select a plan first.');
                     return;
                 }
                 
-                // Show spinner
-                if (paymentSpinner) paymentSpinner.classList.remove('d-none');
-                submitPaymentBtn.disabled = true;
+                // Disable button and show loading
+                paypalBtn.disabled = true;
+                paypalBtn.querySelector('.button-text').textContent = 'Redirecting to PayPal...';
+                paypalBtn.querySelector('.spinner-border').classList.remove('d-none');
                 
-                // Get form data
-                const formData = new FormData(paymentForm);
+                // Show processing modal
+                processingModal.show();
+                document.getElementById('processingMessage').textContent = 'Redirecting to PayPal...';
                 
-                // Debug: Log form data
-                console.log('Submitting to:', processSubscriptionUrl);
-                for (let pair of formData.entries()) {
-                    console.log(pair[0] + ': ' + pair[1]);
-                }
+                console.log('Sending PayPal request:', {
+                    plan_id: selectedPlanId,
+                    billing_type: currentBillingType
+                });
                 
-                // Submit payment
-                fetch(processSubscriptionUrl, {
+                // Create PayPal payment
+                fetch(processPayPalUrl, {
                     method: 'POST',
-                    body: formData,
                     headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-                    }
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plan_id: selectedPlanId,
+                        billing_type: currentBillingType
+                    })
                 })
                 .then(async response => {
-                    console.log('Payment response status:', response.status);
+                    const data = await response.json();
+                    console.log('PayPal response:', data);
                     
                     if (!response.ok) {
-                        if (response.status === 302) {
-                            throw new Error('Redirect detected. Please check if you are logged in.');
-                        }
-                        if (response.status === 422) {
-                            return response.json();
-                        }
-                        const errorText = await response.text();
-                        console.error('Error response:', errorText);
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        throw new Error(data.message || 'Failed to create payment');
                     }
-                    return response.json();
+                    return data;
                 })
                 .then(data => {
-                    console.log('Payment response:', data);
-                    
-                    if (paymentSpinner) paymentSpinner.classList.add('d-none');
-                    submitPaymentBtn.disabled = false;
-                    
                     if (data.success) {
-                        // Hide card modal
-                        const cardModal = bootstrap.Modal.getInstance(document.getElementById('cardModal'));
-                        if (cardModal) {
-                            cardModal.hide();
-                        }
-                        
-                        // Show success modal
-                        const successMessageEl = document.getElementById('successMessage');
-                        const transactionIdEl = document.getElementById('transactionIdDisplay');
-                        
-                        if (successMessageEl) successMessageEl.textContent = data.message;
-                        if (transactionIdEl) transactionIdEl.textContent = `Transaction ID: ${data.transaction_id}`;
-                        
-                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                        successModal.show();
-                        
-                        // Reset form
-                        if (paymentForm) paymentForm.reset();
-                        if (selectedPlanSummary) selectedPlanSummary.style.display = 'none';
-                        
-                        // Auto redirect after 3 seconds
-                        setTimeout(function() {
-                            window.location.href = dashboardUrl;
-                        }, 3000);
+                        console.log('Redirecting to PayPal:', data.approval_url);
+                        // Redirect to PayPal
+                        window.location.href = data.approval_url;
                     } else {
-                        // Handle validation errors
-                        if (data.errors) {
-                            Object.keys(data.errors).forEach(key => {
-                                const input = document.getElementById(key);
-                                const errorDiv = document.getElementById(key + '_error');
-                                if (input && errorDiv) {
-                                    input.classList.add('is-invalid');
-                                    errorDiv.textContent = data.errors[key][0];
-                                }
-                            });
-                        } else {
-                            alert(data.message || 'An error occurred. Please try again.');
-                        }
+                        throw new Error(data.message || 'Failed to initiate PayPal payment');
                     }
                 })
                 .catch(error => {
-                    if (paymentSpinner) paymentSpinner.classList.add('d-none');
-                    submitPaymentBtn.disabled = false;
-                    console.error('Fetch error:', error);
-                    alert(error.message || 'An error occurred. Please try again. Check console for details.');
+                    console.error('Error:', error);
+                    
+                    // Hide processing modal
+                    processingModal.hide();
+                    
+                    // Show error message
+                    alert(error.message || 'An error occurred. Please try again.');
+                    
+                    // Reset button
+                    paypalBtn.disabled = false;
+                    paypalBtn.querySelector('.button-text').textContent = 'Pay with PayPal';
+                    paypalBtn.querySelector('.spinner-border').classList.add('d-none');
                 });
             });
         }
 
-        // Initialize monthly view
-        showMonthly();
+        // Show success message if redirected from PayPal
+        @if(Session::has('success'))
+            successModal.show();
+            document.getElementById('successMessage').textContent = '{{ Session::get('success') }}';
+            
+            // Auto redirect after 3 seconds
+            setTimeout(function() {
+                window.location.href = dashboardUrl;
+            }, 3000);
+        @endif
 
-        // Add click handler for redirect button
+        // Show info message if cancelled
+        @if(Session::has('info'))
+            alert('{{ Session::get('info') }}');
+        @endif
+
+        // Show error message if any
+        @if(Session::has('error'))
+            alert('{{ Session::get('error') }}');
+        @endif
+
+        // Handle redirect button
         const redirectBtn = document.getElementById('redirectToDashboard');
         if (redirectBtn) {
             redirectBtn.addEventListener('click', function() {
                 window.location.href = dashboardUrl;
             });
         }
+
+        // Initialize monthly view
+        showMonthly();
+
+        // Format expiry date input (if any)
+        const expiryInput = document.getElementById('expiry');
+        if (expiryInput) {
+            expiryInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 2) {
+                    value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                }
+                e.target.value = value;
+            });
+        }
+
+        // Handle modal close
+        document.getElementById('paypalModal').addEventListener('hidden.bs.modal', function () {
+            // Reset PayPal button if modal is closed
+            if (paypalBtn) {
+                paypalBtn.disabled = false;
+                paypalBtn.querySelector('.button-text').textContent = 'Pay with PayPal';
+                paypalBtn.querySelector('.spinner-border').classList.add('d-none');
+            }
+        });
     });
 </script>
 @endsection
