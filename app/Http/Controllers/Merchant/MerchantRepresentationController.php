@@ -28,16 +28,19 @@ class MerchantRepresentationController extends Controller
                 ->withInput();
         }
 
-        Representation::create([
-            'user_id' => $request->input('user_id'),
-            'subject' => $request->input('subject'),
-            'purpose' => $request->input('purpose'),
-            'futuristic_plan' => $request->input('futuristic_plan'),
-            'pledge_value' => $request->input('pledge_value'),
-            'currency' => $request->input('currency'),
-            'status' => 'approved'
-        ]);
-
+        Representation::updateOrCreate(
+            [
+                'user_id' => $request->input('user_id'),
+                'subject' => $request->input('subject'),
+            ],
+            [
+                'purpose' => $request->input('purpose'),
+                'futuristic_plan' => $request->input('futuristic_plan'),
+                'pledge_value' => $request->input('pledge_value'),
+                'currency' => $request->input('currency'),
+                'status' => 'pending',
+            ]
+        );
         return redirect()->route('merchant.dashboard');
     }
 }

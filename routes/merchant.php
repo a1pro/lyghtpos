@@ -20,14 +20,23 @@ use App\Http\Controllers\ProchargePaymentController;
 use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
 
 // Public merchant routes (no subscription/representation required)
+ 
+// routes/web.php or routes/merchant.php
+
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
 
-    // Subscription routes - These should be accessible without subscription check
+    // Subscription routes
     Route::prefix('subscription')->name('subscription.')->group(function () {
         Route::get('/plans', [PlanController::class, 'index'])->name('plans');
-
+        Route::get('/success', [PlanController::class, 'subscriptionSuccess'])->name('success');
+        
+        // PayPal routes
+        Route::post('/paypal/create', [PlanController::class, 'processPayPalPayment'])->name('paypal.create');
+        Route::get('/paypal/success', [PlanController::class, 'paypalSuccess'])->name('paypal.success');
+        Route::get('/paypal/cancel', [PlanController::class, 'paypalCancel'])->name('paypal.cancel');
+        Route::post('/paypal/ipn', [PlanController::class, 'paypalIpn'])->name('paypal.ipn');
+        
         // AJAX routes
-        Route::post('/process', [PlanController::class, 'processSubscription'])->name('process');
         Route::get('/plan-details/{planId}', [PlanController::class, 'getPlanDetails'])->name('plan.details');
     });
 });

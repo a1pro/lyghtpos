@@ -47,7 +47,7 @@ class MerchantRepresentationMiddleware
             return $next($request);
         }
 
-        $representation = Representation::where('user_id', $userId)->where('status', 'approved')->first();
+        $representation = Representation::where('user_id', $userId)->first();
 
         if (!$representation) {
             return redirect()->route('merchant.representation.form');

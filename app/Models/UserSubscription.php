@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,14 @@ class UserSubscription extends Model
         'end_date',
         'transaction_id',
         'amount_paid',
-        'status'
+        'payment_method',
+        'payment_status',
+        'paypal_payment_id',
+        'paypal_payer_id',
+        'paypal_sale_id',
+        'status',
+        'paypal_order_id',
+        'paypal_capture_id'
     ];
 
     protected $casts = [
@@ -43,5 +51,15 @@ class UserSubscription extends Model
     public function isExpired()
     {
         return $this->end_date->isPast();
+    }
+
+    public function isPending()
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isCancelled()
+    {
+        return $this->status === 'cancelled';
     }
 }
