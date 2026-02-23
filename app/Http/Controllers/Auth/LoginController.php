@@ -37,7 +37,7 @@ class LoginController extends Controller
     {
         switch ($user->role_id) {
             case 1: // Admin
-                return redirect()->route('admin.dashboard');
+                return redirect()->route('home');
             case 2: // Merchant
                 return redirect()->route('merchant.dashboard');
             case 5: // Subadmin
