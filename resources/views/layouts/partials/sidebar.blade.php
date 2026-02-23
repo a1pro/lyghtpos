@@ -54,6 +54,14 @@
                     </a>
                 </li>
 
+                <!-- Governance Layers -->
+                <li class="nav-item">
+                    <a href="{{ route('admin.governance-layers') }}" class="nav-link {{ activeSegment('governance-layers') }}">
+                        <i class="nav-icon fas fa-th-large"></i>
+                        <p>{{ __('Governance Layers') }}</p>
+                    </a>
+                </li>
+
                 <li class="nav-header">{{ __('Sales') }}</li>
                 <!-- POS Cart -->
                 <li class="nav-item">

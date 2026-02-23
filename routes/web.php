@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\GovernanceLayerController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\PurchaseCartController;
@@ -32,6 +33,14 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
     Route::resource('customers', CustomerController::class);
     Route::resource('orders', OrderController::class);
     Route::resource('suppliers', SupplierController::class);
+
+    // Governance Layers
+    Route::get('/governance-layers', [GovernanceLayerController::class, 'index'])->name('admin.governance-layers');
+    Route::get('/governance-layers/create', [GovernanceLayerController::class, 'create'])->name('admin.governance-layers.create');
+    Route::post('/governance-layers/create', [GovernanceLayerController::class, 'store'])->name('admin.governance-layers.store');
+    Route::get('/governance-layers/{governanceLayer}/edit', [GovernanceLayerController::class, 'edit'])->name('admin.governance-layers.edit');
+    Route::put('/governance-layers/{governanceLayer}', [GovernanceLayerController::class, 'update'])->name('admin.governance-layers.update');
+    Route::delete('/governance-layers/{governanceLayer}', [GovernanceLayerController::class, 'destroy'])->name('admin.governance-layers.destroy');
 
     // POS Cart
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
