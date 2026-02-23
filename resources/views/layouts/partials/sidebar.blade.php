@@ -19,6 +19,15 @@
                         <p>{{ __('dashboard.title') }}</p>
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a href="{{ auth()->user()->role_id ==1 ? route('home') : route('merchant.dashboard')}}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <p>{{ __('dashboard.title') }}</p>
+                    </a>
+                </li>
+
+                
                 @if(auth()->user()->role_id == 2)
                 <li class="nav-item">
                     <a href="{{ route('merchant.barter-assist-pos') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-pos') ? 'active' : '' }}">
