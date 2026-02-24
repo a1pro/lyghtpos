@@ -1,47 +1,53 @@
 <?php
+
 namespace App\Services\Paypal;
 
-use PayPalCheckoutSdk\Core\PayPalHttpClient;
-use PayPalCheckoutSdk\Core\SandboxEnvironment;
-use PayPalCheckoutSdk\Core\ProductionEnvironment;
-use PayPalCheckoutSdk\Orders\OrdersCreateRequest;
-use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
-use PayPalCheckoutSdk\Orders\OrdersGetRequest;
+use Srmklive\PayPal\Services\PayPal as PayPalClient;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 
 class ModernPayPalService
 {
-    protected $client;
-    protected $environment;
+    protected $provider;
     protected $mode;
 
     public function __construct()
     {
         $this->mode = config('paypal.mode', 'sandbox');
-        
-        // Get credentials
-        $clientId = config('paypal.client_id');
-        $clientSecret = config('paypal.secret');
 
-        if (empty($clientId) || empty($clientSecret)) {
-            throw new \Exception('PayPal credentials not configured');
-        }
+        // Initialize PayPal client
+        $this->provider = new PayPalClient;
 
-        // Set up environment based on mode
-        if ($this->mode === 'live') {
-            $this->environment = new ProductionEnvironment($clientId, $clientSecret);
-        } else {
-            $this->environment = new SandboxEnvironment($clientId, $clientSecret);
-        }
+        // Set credentials based on mode
+        $config = [
+            'mode' => $this->mode,
+            'sandbox' => [
+                'client_id' => config('paypal.sandbox.client_id'),
+                'client_secret' => config('paypal.sandbox.client_secret'),
+                'app_id' => 'APP-80W284485P519543T',
+            ],
+            'live' => [
+                'client_id' => config('paypal.live.client_id'),
+                'client_secret' => config('paypal.live.client_secret'),
+                'app_id' => config('paypal.live.app_id'),
+            ],
+            'payment_action' => 'Sale',
+            'currency' => 'USD',
+            'notify_url' => '', // Webhook URL
+            'locale' => 'en_US',
+            'validate_ssl' => true,
+        ];
 
-        // Create PayPal HTTP client
-        $this->client = new PayPalHttpClient($this->environment);
+        // Set configuration
+        $this->provider->setApiCredentials($config);
+
+        // Get access token
+        $this->provider->getAccessToken();
 
         Log::info('Modern PayPal Service initialized', [
             'mode' => $this->mode,
-            'client_id_exists' => !empty($clientId)
+            'client_id_exists' => !empty(config('paypal.sandbox.client_id'))
         ]);
     }
 
@@ -51,13 +57,21 @@ class ModernPayPalService
     public function createOrder($amount, $currency = 'USD', $description = 'Subscription Payment')
     {
         try {
-            $request = new OrdersCreateRequest();
-            $request->prefer('return=representation');
-            
             // Generate unique reference ID
             $referenceId = 'SUB-' . Str::random(8) . '-' . time();
 
-            $request->body = [
+            // Get pending subscription data
+            $pendingSubscription = Session::get('pending_subscription', []);
+
+            $customData = json_encode([
+                'plan_id' => $pendingSubscription['plan_id'] ?? null,
+                'billing_type' => $pendingSubscription['billing_type'] ?? null,
+                'user_id' => $pendingSubscription['user_id'] ?? null,
+                'timestamp' => now()->timestamp
+            ]);
+
+            // Build order data
+            $orderData = [
                 'intent' => 'CAPTURE',
                 'purchase_units' => [
                     [
@@ -67,11 +81,7 @@ class ModernPayPalService
                             'currency_code' => $currency,
                             'value' => number_format($amount, 2, '.', '')
                         ],
-                        'custom_id' => json_encode([
-                            'plan_id' => Session::get('pending_subscription.plan_id'),
-                            'billing_type' => Session::get('pending_subscription.billing_type'),
-                            'user_id' => Session::get('pending_subscription.user_id')
-                        ])
+                        'custom_id' => $customData
                     ]
                 ],
                 'application_context' => [
@@ -84,30 +94,37 @@ class ModernPayPalService
             ];
 
             // Create order
-            $response = $this->client->execute($request);
+            $response = $this->provider->createOrder($orderData);
 
             Log::info('PayPal order created', [
-                'order_id' => $response->result->id,
-                'status' => $response->result->status
+                'order_id' => $response['id'] ?? null,
+                'status' => $response['status'] ?? null
             ]);
 
-            // Find approval URL
-            $approvalUrl = null;
-            foreach ($response->result->links as $link) {
-                if ($link->rel === 'approve') {
-                    $approvalUrl = $link->href;
-                    break;
+            if (isset($response['id']) && $response['id']) {
+                // Find approval URL
+                $approvalUrl = null;
+                foreach ($response['links'] as $link) {
+                    if ($link['rel'] === 'approve') {
+                        $approvalUrl = $link['href'];
+                        break;
+                    }
                 }
+
+                return [
+                    'success' => true,
+                    'order_id' => $response['id'],
+                    'approval_url' => $approvalUrl,
+                    'status' => $response['status'],
+                    'response' => $response
+                ];
             }
 
             return [
-                'success' => true,
-                'order_id' => $response->result->id,
-                'approval_url' => $approvalUrl,
-                'status' => $response->result->status,
-                'response' => $response->result
+                'success' => false,
+                'message' => 'Failed to create PayPal order: Invalid response',
+                'error' => $response
             ];
-
         } catch (\Exception $e) {
             Log::error('PayPal create order error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
@@ -115,7 +132,7 @@ class ModernPayPalService
 
             return [
                 'success' => false,
-                'message' => 'Failed to create PayPal order: ' . $e->getMessage(),
+                'message' => 'Failed to create PayPal order: ' . $this->getUserFriendlyError($e),
                 'error' => $e->getMessage()
             ];
         }
@@ -127,31 +144,46 @@ class ModernPayPalService
     public function captureOrder($orderId)
     {
         try {
-            $request = new OrdersCaptureRequest($orderId);
-            $response = $this->client->execute($request);
+            // Capture the order
+            $response = $this->provider->capturePaymentOrder($orderId);
 
             Log::info('PayPal order captured', [
                 'order_id' => $orderId,
-                'status' => $response->result->status,
-                'capture_id' => $response->result->purchase_units[0]->payments->captures[0]->id ?? null
+                'status' => $response['status'] ?? null,
+                'capture_id' => $response['purchase_units'][0]['payments']['captures'][0]['id'] ?? null
             ]);
 
-            // Extract capture details
-            $capture = null;
-            if (isset($response->result->purchase_units[0]->payments->captures[0])) {
-                $capture = $response->result->purchase_units[0]->payments->captures[0];
+            if (isset($response['status']) && $response['status'] === 'COMPLETED') {
+                // Extract capture details
+                $capture = $response['purchase_units'][0]['payments']['captures'][0] ?? null;
+
+                // Extract payer details
+                $payerEmail = $response['payer']['email_address'] ?? null;
+                $payerName = null;
+
+                if (isset($response['payer']['name'])) {
+                    $payerName = ($response['payer']['name']['given_name'] ?? '') . ' ' . ($response['payer']['name']['surname'] ?? '');
+                    $payerName = trim($payerName);
+                }
+
+                return [
+                    'success' => true,
+                    'order_id' => $orderId,
+                    'capture_id' => $capture['id'] ?? null,
+                    'status' => $response['status'],
+                    'amount' => $capture['amount']['value'] ?? null,
+                    'currency' => $capture['amount']['currency_code'] ?? null,
+                    'payer_email' => $payerEmail,
+                    'payer_name' => $payerName ?: null,
+                    'response' => $response
+                ];
             }
 
             return [
-                'success' => true,
-                'order_id' => $orderId,
-                'capture_id' => $capture->id ?? null,
-                'status' => $response->result->status,
-                'amount' => $capture->amount->value ?? null,
-                'currency' => $capture->amount->currency_code ?? null,
-                'response' => $response->result
+                'success' => false,
+                'message' => 'Payment capture failed: ' . ($response['status'] ?? 'Unknown status'),
+                'response' => $response
             ];
-
         } catch (\Exception $e) {
             Log::error('PayPal capture order error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
@@ -159,7 +191,7 @@ class ModernPayPalService
 
             return [
                 'success' => false,
-                'message' => 'Failed to capture PayPal order: ' . $e->getMessage(),
+                'message' => 'Failed to capture PayPal order: ' . $this->getUserFriendlyError($e),
                 'error' => $e->getMessage()
             ];
         }
@@ -171,23 +203,65 @@ class ModernPayPalService
     public function getOrder($orderId)
     {
         try {
-            $request = new OrdersGetRequest($orderId);
-            $response = $this->client->execute($request);
+            $response = $this->provider->showOrderDetails($orderId);
 
             return [
                 'success' => true,
-                'order' => $response->result,
-                'status' => $response->result->status
+                'order' => $response,
+                'status' => $response['status'] ?? null
             ];
-
         } catch (\Exception $e) {
             Log::error('PayPal get order error: ' . $e->getMessage());
-            
+
             return [
                 'success' => false,
                 'message' => 'Failed to get order details',
                 'error' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Get user-friendly error message
+     */
+    protected function getUserFriendlyError($exception)
+    {
+        $message = 'Payment processing failed. Please try again.';
+
+        try {
+            $errorMessage = $exception->getMessage();
+
+            // Common PayPal error messages
+            if (strpos($errorMessage, 'INSTRUMENT_DECLINED') !== false) {
+                return 'Your payment method was declined. Please try another payment method.';
+            }
+            if (strpos($errorMessage, 'PAYER_ACCOUNT_LOCKED') !== false) {
+                return 'Your PayPal account is locked or closed. Please contact PayPal support.';
+            }
+            if (strpos($errorMessage, 'PAYER_ACCOUNT_RESTRICTED') !== false) {
+                return 'Your PayPal account has restrictions. Please contact PayPal support.';
+            }
+            if (strpos($errorMessage, 'PAYER_CANNOT_PAY') !== false) {
+                return 'You cannot complete this payment. Please contact PayPal support.';
+            }
+            if (strpos($errorMessage, 'TRANSACTION_REFUSED') !== false) {
+                return 'The transaction was refused. Please try again later.';
+            }
+            if (strpos($errorMessage, 'CURRENCY_NOT_SUPPORTED') !== false) {
+                return 'The selected currency is not supported.';
+            }
+            if (strpos($errorMessage, 'DUPLICATE_INVOICE_ID') !== false) {
+                return 'A duplicate transaction was detected. Please try again.';
+            }
+
+            // Extract message from exception if possible
+            if (method_exists($exception, 'getMessage')) {
+                $message = $exception->getMessage();
+            }
+        } catch (\Exception $e) {
+            // Fall back to default message
+        }
+
+        return $message;
     }
 }
