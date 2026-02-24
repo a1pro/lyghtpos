@@ -17,7 +17,32 @@ class RoleMiddleware
     {
         $user = auth()->user();
 
-        if (! $user || ! in_array($user->role->name, $roles)) {
+        // If user is not authenticated
+        if (!$user) {
+            abort(403, 'Unauthorized.');
+        }
+
+        // Get user's role name and id
+        $userRole = $user->role;
+        $userRoleName = $userRole->name;
+        $userRoleId = $userRole->id;
+
+        // Check if user's role is in the allowed roles
+        if (!in_array($userRoleName, $roles)) {
+            
+            // Role ID 2 (merchant) trying to access role ID 1 (admin) routes
+            if ($userRoleId == 2) {
+                return redirect()->route('merchant.dashboard')
+                    ->with('error', 'Unauthorized access. You do not have permission to view this page.');
+            }
+            
+            // Role ID 1 (admin) trying to access role ID 2 (merchant) routes
+            if ($userRoleId == 1) {
+                return redirect()->route('home')
+                    ->with('error', 'Unauthorized access. You do not have permission to view this page.');
+            }
+            
+            // For any other role combinations
             abort(403, 'Unauthorized.');
         }
 
