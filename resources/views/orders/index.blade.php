@@ -3,7 +3,7 @@
 @section('title', __('order.Orders_List'))
 @section('content-header', __('order.Orders_List'))
 @section('content-actions')
-    <a href="{{route('cart.index')}}" class="btn btn-primary">{{ __('cart.title') }}</a>
+    <a href="{{auth()->user()->role_id == '1' ? route('cart.index') : route('merchant.cart.index')}}" class="btn btn-primary">{{ __('cart.title') }}</a>
 @endsection
 @section('content')
 
