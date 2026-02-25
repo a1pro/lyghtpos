@@ -196,7 +196,7 @@
 
                 <!-- Settings for Merchant -->
                 @if(auth()->user()->role_id == 2)
-                    <li class="nav-header">{{ __('Settings') }}</li>
+                    <li class="nav-header">Settings</li>
                     <li class="nav-item">
                         <a href="{{ route('merchant.settings.index') }}" class="nav-link {{ activeSegment('settings') }}">
                             <i class="nav-icon fas fa-cogs"></i>

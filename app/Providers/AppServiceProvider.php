@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Representation;
 use App\Models\Setting;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\App;
@@ -9,6 +10,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB; // Add this import
 use App\Models\User;
+use App\Observers\RepresentationObserver;
 use App\Observers\Subadmin\Merchant\UserObserver;
 
 class AppServiceProvider extends ServiceProvider
@@ -48,5 +50,6 @@ class AppServiceProvider extends ServiceProvider
 
         Paginator::useBootstrap();
         User::observe(UserObserver::class);
+        Representation::observe(RepresentationObserver::class);
     }
 }

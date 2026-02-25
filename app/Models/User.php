@@ -34,6 +34,8 @@ class User extends Authenticatable
         'subscribed',
         'governance_check',
         'account_type',
+        'cyclos_user_id',
+        'cyclos_group',
     ];
 
     /**

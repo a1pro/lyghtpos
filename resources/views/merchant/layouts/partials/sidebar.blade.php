@@ -178,7 +178,7 @@
 
                     <!-- Settings Section (For Merchants) -->
                     @if(!auth()->user()->isAdmin())
-                        <li class="nav-header">{{ __('Settings') }}</li>
+                        <li class="nav-header">Settings</li>
                         <li class="nav-item">
                             <a href="{{ route('merchant.settings.index') }}" class="nav-link {{ activeSegment('settings') }}">
                                 <i class="nav-icon fas fa-cogs"></i>
