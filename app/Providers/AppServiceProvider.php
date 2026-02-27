@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB; // Add this import
 use App\Models\User;
 use App\Observers\RepresentationObserver;
 use App\Observers\Subadmin\Merchant\UserObserver;
+use App\Repositories\Admin\Interfaces\GovernanceLayerRepositoryInterface;
+use App\Repositories\Admin\Eloquent\GovernanceLayerRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,7 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            GovernanceLayerRepositoryInterface::class,
+            GovernanceLayerRepository::class
+        );
     }
 
     /**

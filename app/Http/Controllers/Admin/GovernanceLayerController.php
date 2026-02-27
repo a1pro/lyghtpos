@@ -4,98 +4,53 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\GovernanceLayer;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Services\Admin\GovernanceLayerService;
+use App\Http\Requests\Admin\StoreGovernanceLayerRequest;
+use App\Http\Requests\Admin\UpdateGovernanceLayerRequest;
 
 class GovernanceLayerController extends Controller
 {
-    /**
-     * Show governance layers view.
-     */
+    public function __construct(
+        private GovernanceLayerService $service
+    ) {}
+
     public function index()
     {
-        $governanceLayers = GovernanceLayer::all();
+        $governanceLayers = $this->service->getAll();
+
         return view('admin.governance-layers.index', compact('governanceLayers'));
     }
 
-    /**
-     * Show the form for editing the specified governance layer.
-     */
-    public function edit(GovernanceLayer $governanceLayer)
-    {
-        return view('admin.governance-layers.edit', compact('governanceLayer'));
-    }
-
-    /**
-     * Show the form for creating a new governance layer.
-     */
     public function create()
     {
         return view('admin.governance-layers.create');
     }
 
-    /**
-     * Store a newly created governance layer in storage.
-     */
-    public function store(Request $request)
+    public function store(StoreGovernanceLayerRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $governanceLayer = GovernanceLayer::create([
-            'name' => $request->input('name'),
-            'description' => $request->input('description'),
-            'status' => $request->input('status'),
-        ]);
+        $this->service->create($request->validated());
 
         return redirect()->route('admin.governance-layers')
-            ->with('success', 'Governance layer created successfully.');
+            ->with('success', 'Created successfully');
     }
 
-    /**
-     * Update the specified governance layer in storage.
-     */
-    public function update(Request $request, GovernanceLayer $governanceLayer)
+    public function edit(GovernanceLayer $governanceLayer)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $governanceLayer->update([
-            'name' => $request->input('name'),
-            'description' => $request->input('description'),
-            'status' => $request->input('status'),
-        ]);
-
-        return redirect()->back()
-            ->with('success', 'Governance layer updated successfully.');
+        return view('admin.governance-layers.edit', compact('governanceLayer'));
     }
 
-    /**
-     * Remove the specified governance layer from storage.
-     */
+    public function update(UpdateGovernanceLayerRequest $request, GovernanceLayer $governanceLayer)
+    {
+        $this->service->update($governanceLayer, $request->validated());
+
+        return back()->with('success', 'Updated successfully');
+    }
+
     public function destroy(GovernanceLayer $governanceLayer)
     {
-        $governanceLayer->delete();
+        $this->service->delete($governanceLayer);
 
         return redirect()->route('admin.governance-layers')
-            ->with('success', 'Governance layer deleted successfully.');
+            ->with('success', 'Deleted successfully');
     }
 }
