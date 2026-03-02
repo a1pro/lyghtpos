@@ -54,6 +54,19 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
         Route::post('/submit', [MerchantRepresentationController::class, 'submitForm'])->name('submit');
     });
+    // In routes/web.php or routes/merchant.php
+   
+    // Voucher routes
+    Route::prefix('vouchers')->name('vouchers.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Merchant\VoucherController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Merchant\VoucherController::class, 'create'])->name('create');
+        Route::post('/generate', [App\Http\Controllers\Merchant\VoucherController::class, 'generate'])->name('generate');
+        Route::post('/{voucherId}/change-expiration', [App\Http\Controllers\Merchant\VoucherController::class, 'changeExpiration'])->name('change-expiration');
+        Route::post('/{voucherId}/cancel', [App\Http\Controllers\Merchant\VoucherController::class, 'cancel'])->name('cancel');
+    });
+
+    
+ 
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');

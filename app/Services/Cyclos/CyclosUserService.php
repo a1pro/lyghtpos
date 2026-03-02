@@ -87,9 +87,24 @@ class CyclosUserService
             return null;
         }
 
+        $responseData = $response->json();
+        
+        // Extract username from response if available
+        $cyclosUsername = $responseData['username'] ?? $responseData['login'] ?? $username;
+        $cyclosUserId = $responseData['id'] ?? null;
+
+        Log::info('Cyclos user created successfully', [
+            'user_id' => $user->id,
+            'cyclos_user_id' => $cyclosUserId,
+            'cyclos_username' => $cyclosUsername,
+            'group' => $group
+        ]);
+
         return [
-            'response' => $response->json(),
+            'response' => $responseData,
             'group' => $group,
+            'username' => $cyclosUsername, // Add this
+            'user_id' => $cyclosUserId, // Add this
         ];
     }
 }
