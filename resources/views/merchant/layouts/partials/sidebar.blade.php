@@ -33,7 +33,7 @@
                 <!-- Cash Price -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.barter-assist-cash-price') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-cash-price') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-th-large"></i>
+                        <i class="fa-solid fa-circle-dollar-to-slot"></i>
                         <p>{{ __('Cash Price') }}</p>
                     </a>
                 </li>
@@ -41,7 +41,7 @@
                 <!-- External links -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.external-links') }}" class="nav-link {{ request()->routeIs('merchant.external-links') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-th-large"></i>
+                        <i class="fa-solid fa-link"></i>
                         <p>{{ __('External Links') }}</p>
                     </a>
                 </li>
@@ -51,15 +51,26 @@
                     <li class="nav-item">
                         @if(auth()->user()->isAdmin())
                             <a href="{{ route('products.index') }}" class="nav-link {{ activeSegment('products') }}">
-                                <i class="nav-icon fas fa-th-large"></i>
+                                <i class="fa-solid fa-bag-shopping"></i>
                                 <p>{{ __('product.title') }}</p>
                             </a>
                         @else
                             <a href="{{ route('merchant.products.index') }}" class="nav-link {{ activeSegment('products') }}">
-                                <i class="nav-icon fas fa-th-large"></i>
+                                <i class="fa-solid fa-bag-shopping"></i>
                                 <p>{{ __('product.title') }}</p>
                             </a>
                         @endif
+                    </li>
+
+
+
+                    <li class="nav-item">
+                         
+                            <a href="{{ route('merchant.vouchers.index') }}" class="nav-link {{ activeSegment('products') }}">
+                                <i class="fa-solid fa-ticket"></i>
+                                <p>Vouchers</p>
+                            </a>
+                         
                     </li>
 
                     <li class="nav-header">{{ __('Sales') }}</li>
