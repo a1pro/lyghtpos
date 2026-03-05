@@ -64,14 +64,14 @@
 
 
 
-                    <li class="nav-item">
+                    {{-- <li class="nav-item">
                          
                             <a href="{{ route('merchant.vouchers.index') }}" class="nav-link {{ activeSegment('products') }}">
                                 <i class="fa-solid fa-ticket"></i>
                                 <p>Vouchers</p>
                             </a>
                          
-                    </li>
+                    </li> --}}
 
                     <li class="nav-header">{{ __('Sales') }}</li>
                     
