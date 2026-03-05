@@ -34,6 +34,21 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
     Route::resource('orders', OrderController::class);
     Route::resource('suppliers', SupplierController::class);
 
+
+    Route::prefix('vouchers')->name('admin.vouchers.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\AdminVoucherController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Admin\AdminVoucherController::class, 'create'])->name('create');
+        Route::post('/generate', [App\Http\Controllers\Admin\AdminVoucherController::class, 'generate'])->name('generate');
+        Route::get('/{voucherId}', [App\Http\Controllers\Admin\AdminVoucherController::class, 'show'])->name('show');
+        
+        // Expiration routes
+        Route::get('/{voucherId}/edit-expiration', [App\Http\Controllers\Admin\AdminVoucherController::class, 'editExpiration'])->name('edit-expiration');
+        Route::post('/{voucherId}/change-expiration', [App\Http\Controllers\Admin\AdminVoucherController::class, 'changeExpiration'])->name('change-expiration');
+        
+        // Cancel route (AJAX)
+        Route::post('/{voucherId}/cancel', [App\Http\Controllers\Admin\AdminVoucherController::class, 'cancel'])->name('cancel');
+    });
+    
     // Governance Layers
     Route::get('/governance-layers', [GovernanceLayerController::class, 'index'])->name('admin.governance-layers');
     Route::get('/governance-layers/create', [GovernanceLayerController::class, 'create'])->name('admin.governance-layers.create');

@@ -76,6 +76,14 @@
                             <p>{{ __('Governance Layers') }}</p>
                         </a>
                     </li>
+
+
+                    <li class="nav-item">
+                        <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ activeSegment('governance-layers') }}">
+                            <i class="nav-icon fas fa-th-large"></i>
+                            <p>Vouchers</p>
+                        </a>
+                    </li>
                 @endif
 
                 <li class="nav-header">{{ __('Sales') }}</li>

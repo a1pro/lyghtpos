@@ -1,238 +1,305 @@
 @extends('merchant.layouts.main')
 
-@section('title', __('My Cyclos Vouchers'))
-@section('content-header', __('My Cyclos Vouchers'))
-
 @section('content')
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">
-                <i class="fas fa-ticket-alt"></i> My Vouchers (Cyclos)
-                
-            </h3>
-            <div class="card-tools">
-                <a href="{{ route('merchant.vouchers.create') }}" class="btn btn-success btn-sm">
-                    <i class="fas fa-plus"></i> Generate New Voucher
-                </a>
-            </div>
-        </div>
-        <div class="card-body">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <i class="fas fa-check-circle"></i> {{ session('success') }}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">My Vouchers</h3>
+                    <div class="card-tools">
+                        <a href="{{ route('merchant.vouchers.create') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Create New Vouchers
+                        </a>
+                    </div>
                 </div>
-            @endif
+                <div class="card-body">
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" data-dismiss="alert">×</button>
+                            {{ session('success') }}
+                        </div>
+                    @endif
 
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <i class="fas fa-exclamation-triangle"></i> {{ session('error') }}
-                </div>
-            @endif
+                    @if(isset($error) && $error)
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" data-dismiss="alert">×</button>
+                            {{ $error }}
+                        </div>
+                    @endif
 
-            @if(isset($error) && $error)
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle"></i> {{ $error }}
-                </div>
-            @endif
+                    @if(isset($merchant_name))
+                    <div class="alert alert-info alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert">×</button>
+                        <i class="fas fa-user mr-2"></i>
+                        Welcome, <strong>{{ $merchant_name }}</strong> (Cyclos: {{ $cyclos_username }})
+                    </div>
+                    @endif
 
-            <!-- Debug Info - Remove in production -->
-           
+                    <!-- Status Filter Tabs -->
+                    @if(isset($statusCounts) && $statusCounts['TOTAL'] > 0)
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card card-outline card-primary">
+                                <div class="card-header">
+                                    <h3 class="card-title">Filter by Status</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a href="{{ route('merchant.vouchers.index', ['status' => '']) }}" 
+                                           class="btn btn-default {{ !request('status') ? 'active' : '' }}">
+                                            All <span class="badge badge-secondary ml-1">{{ $statusCounts['TOTAL'] ?? 0 }}</span>
+                                        </a>
+                                        
+                                        <a href="{{ route('merchant.vouchers.index', ['status' => 'ACTIVE']) }}" 
+                                           class="btn btn-success {{ request('status') == 'ACTIVE' ? 'active' : '' }}">
+                                            <i class="fas fa-check-circle mr-1"></i>
+                                            Active <span class="badge badge-light ml-1">{{ $statusCounts['ACTIVE'] ?? 0 }}</span>
+                                        </a>
+                                        
+                                        <a href="{{ route('merchant.vouchers.index', ['status' => 'REDEEMED']) }}" 
+                                           class="btn btn-secondary {{ request('status') == 'REDEEMED' ? 'active' : '' }}">
+                                            <i class="fas fa-check-double mr-1"></i>
+                                            Redeemed <span class="badge badge-light ml-1">{{ $statusCounts['REDEEMED'] ?? 0 }}</span>
+                                        </a>
+                                        
+                                        <a href="{{ route('merchant.vouchers.index', ['status' => 'EXPIRED']) }}" 
+                                           class="btn btn-warning {{ request('status') == 'EXPIRED' ? 'active' : '' }}">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            Expired <span class="badge badge-light ml-1">{{ $statusCounts['EXPIRED'] ?? 0 }}</span>
+                                        </a>
+                                        
+                                        <a href="{{ route('merchant.vouchers.index', ['status' => 'CANCELED']) }}" 
+                                           class="btn btn-danger {{ request('status') == 'CANCELED' ? 'active' : '' }}">
+                                            <i class="fas fa-times-circle mr-1"></i>
+                                            Canceled <span class="badge badge-light ml-1">{{ $statusCounts['CANCELED'] ?? 0 }}</span>
+                                        </a>
+                                        
+                                        <a href="{{ route('merchant.vouchers.index', ['status' => 'SCHEDULED']) }}" 
+                                           class="btn btn-info {{ request('status') == 'SCHEDULED' ? 'active' : '' }}">
+                                            <i class="fas fa-clock mr-1"></i>
+                                            Scheduled <span class="badge badge-light ml-1">{{ $statusCounts['SCHEDULED'] ?? 0 }}</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
 
-            @if(empty($vouchers))
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    No vouchers found for your account. 
-                    <a href="{{ route('merchant.vouchers.create') }}" class="btn btn-primary btn-sm mt-2">
-                        <i class="fas fa-plus"></i> Generate Your First Voucher
-                    </a>
-                </div>
-            @else
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped table-hover">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th width="50">#</th>
-                                <th>Voucher Code</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Expiry Date</th>
-                                <th>Created Date</th>
-                                {{-- <th width="200">Actions</th> --}}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($vouchers as $index => $voucher)
-                                @php
-                                    $voucherId = $voucher['id'] ?? '';
-                                    $code = $voucher['token'] ?? $voucher['code'] ?? 'N/A';
-                                    $amount = $voucher['amount'] ?? $voucher['value'] ?? 0;
-                                    $status = strtolower($voucher['status'] ?? 'unknown');
-                                    $expiry = $voucher['expirationDate'] ?? $voucher['expiryDate'] ?? $voucher['validTo'] ?? null;
-                                    $created = $voucher['creationDate'] ?? $voucher['createdDate'] ?? $voucher['issueDate'] ?? null;
-                                    
-                                    $badgeClass = match($status) {
-                                        'open', 'active', 'new' => 'success',
-                                        'redeemed', 'used' => 'secondary',
-                                        'expired' => 'danger',
-                                        'canceled', 'cancelled' => 'dark',
-                                        default => 'warning'
-                                    };
-                                    
-                                    $canEdit = in_array($status, ['open', 'active', 'expired']);
-                                    $canCancel = in_array($status, ['open', 'active', 'expired', 'pending']);
-                                @endphp
+                    <!-- Clear Filter Button -->
+                    @if(request('status'))
+                    <div class="mb-3">
+                        <a href="{{ route('merchant.vouchers.index') }}" class="btn btn-default btn-sm">
+                            <i class="fas fa-times"></i> Clear Status Filter
+                        </a>
+                    </div>
+                    @endif
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead>
                                 <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>
-                                        <code class="bg-light p-1 rounded" style="font-size: 0.9rem; font-family: monospace;">
-                                            {{ $code }}
-                                        </code>
-                                    </td>
-                                    <td>
-                                        <span class="font-weight-bold text-primary">
-                                            ${{ number_format($amount, 2) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ $badgeClass }} p-2" style="font-size: 0.9rem;">
-                                            {{ ucfirst($status) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if($expiry)
-                                            <i class="far fa-calendar-alt text-muted"></i> 
-                                            {{ date('d-m-Y', strtotime($expiry)) }}
-                                        @else
-                                            <span class="text-muted font-italic">No expiry</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($created)
-                                            <i class="far fa-clock text-muted"></i> 
-                                            {{ date('d-m-Y H:i', strtotime($created)) }}
-                                        @else
-                                            <span class="text-muted font-italic">N/A</span>
-                                        @endif
-                                    </td>
-                                    {{-- <td>
-                                        <div class="btn-group" role="group">
-                                            @if($canEdit)
-                                                <button type="button" class="btn btn-sm btn-warning" 
-                                                        onclick="editVoucher('{{ $voucherId }}', '{{ $expiry }}')"
-                                                        data-toggle="modal" data-target="#editVoucherModal"
-                                                        title="Edit Expiration Date">
-                                                    <i class="fas fa-calendar-alt"></i> Edit Expiry
-                                                </button>
-                                            @endif
-                                            
-                                            @if($canCancel)
-                                                <button type="button" class="btn btn-sm btn-danger" 
-                                                        onclick="cancelVoucher('{{ $voucherId }}', '{{ $code }}')"
-                                                        title="Cancel Voucher">
-                                                    <i class="fas fa-ban"></i> Cancel
-                                                </button>
-                                            @endif
-                                            
-                                            @if(!$canEdit && !$canCancel)
-                                                <span class="text-muted small">No actions</span>
-                                            @endif
-                                        </div>
-                                    </td> --}}
+                                    <th width="50">#</th>
+                                    <th>Voucher Code</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Created Date</th>
+                                    <th>Expiration Date</th>
+                                    <th width="120">Actions</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @forelse($vouchers as $index => $voucher)
+                                    @php
+                                        $status = $voucher['status'] ?? 'unknown';
+                                        $statusUpper = strtoupper($status);
+                                        $statusClass = [
+                                            'ACTIVE' => 'success',
+                                            'REDEEMED' => 'secondary',
+                                            'EXPIRED' => 'warning',
+                                            'CANCELED' => 'danger',
+                                            'SCHEDULED' => 'info',
+                                            'PENDING' => 'primary'
+                                        ][$statusUpper] ?? 'secondary';
+                                        
+                                        $statusIcons = [
+                                            'ACTIVE' => 'check-circle',
+                                            'REDEEMED' => 'check-double',
+                                            'EXPIRED' => 'exclamation-triangle',
+                                            'CANCELED' => 'times-circle',
+                                            'SCHEDULED' => 'clock',
+                                            'PENDING' => 'hourglass-half'
+                                        ];
+                                        $icon = $statusIcons[$statusUpper] ?? 'info-circle';
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $index + 1 }}</td>
+                                        <td>
+                                            <code>{{ $voucher['code'] ?? $voucher['id'] ?? 'N/A' }}</code>
+                                        </td>
+                                        <td><strong>${{ number_format($voucher['amount'] ?? 0, 2) }}</strong></td>
+                                        <td>
+                                            <span class="badge badge-{{ $statusClass }} p-2" style="font-size: 0.9rem; min-width: 100px;">
+                                                <i class="fas fa-{{ $icon }} mr-1"></i>
+                                                {{ $status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ isset($voucher['creationDate']) ? date('Y-m-d H:i', strtotime($voucher['creationDate'])) : 'N/A' }}</td>
+                                        <td>
+                                            @if(isset($voucher['expirationDate']))
+                                                @php
+                                                    $expirationDate = strtotime($voucher['expirationDate']);
+                                                    $now = time();
+                                                    $daysLeft = round(($expirationDate - $now) / (60 * 60 * 24));
+                                                @endphp
+                                                {{ date('Y-m-d H:i', $expirationDate) }}
+                                                @if($statusUpper == 'ACTIVE' && $daysLeft <= 7)
+                                                    <br>
+                                                    <span class="badge badge-{{ $daysLeft <= 3 ? 'danger' : 'warning' }} mt-1">
+                                                        <i class="fas fa-clock mr-1"></i>
+                                                        {{ $daysLeft }} day{{ $daysLeft != 1 ? 's' : '' }} left
+                                                    </span>
+                                                @endif
+                                            @else
+                                                N/A
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                @if(in_array($statusUpper, ['ACTIVE', 'SCHEDULED']))
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-warning" 
+                                                            onclick="changeExpiration('{{ $voucher['id'] ?? $voucher['code'] }}')" 
+                                                            title="Change Expiration">
+                                                        <i class="fas fa-calendar-alt"></i>
+                                                    </button>
+                                                    
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-danger" 
+                                                            onclick="cancelVoucher('{{ $voucher['id'] ?? $voucher['code'] }}')" 
+                                                            title="Cancel Voucher">
+                                                        <i class="fas fa-ban"></i>
+                                                    </button>
+                                                @elseif($statusUpper == 'REDEEMED')
+                                                    <span class="badge badge-secondary p-2" style="font-size: 0.9rem;">
+                                                        <i class="fas fa-check-circle"></i> Redeemed
+                                                    </span>
+                                                @elseif($statusUpper == 'EXPIRED')
+                                                    <span class="badge badge-warning p-2" style="font-size: 0.9rem;">
+                                                        <i class="fas fa-exclamation-triangle"></i> Expired
+                                                    </span>
+                                                @elseif($statusUpper == 'CANCELED')
+                                                    <span class="badge badge-danger p-2" style="font-size: 0.9rem;">
+                                                        <i class="fas fa-times-circle"></i> Canceled
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            @if(isset($error) && $error)
+                                                <span class="text-danger">{{ $error }}</span>
+                                            @else
+                                                <div class="py-5">
+                                                    <i class="fas fa-ticket-alt fa-4x text-muted mb-3"></i>
+                                                    <h4 class="text-muted">No vouchers found</h4>
+                                                    @if(request('status'))
+                                                        <p class="text-muted">No {{ request('status') }} vouchers available</p>
+                                                        <a href="{{ route('merchant.vouchers.index') }}" class="btn btn-default mt-2">
+                                                            <i class="fas fa-times"></i> Clear Filter
+                                                        </a>
+                                                    @else
+                                                        <p class="text-muted">You haven't created any vouchers yet</p>
+                                                        <a href="{{ route('merchant.vouchers.create') }}" class="btn btn-primary mt-2">
+                                                            <i class="fas fa-plus"></i> Create Your First Voucher
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if(isset($statusCounts) && $statusCounts['TOTAL'] > 0)
+                    <div class="mt-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-chart-pie mr-1"></i>
+                                    Showing {{ count($vouchers) }} of {{ $statusCounts['TOTAL'] }} total vouchers
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <div class="btn-group btn-group-sm">
+                                    <span class="btn btn-default disabled">Summary:</span>
+                                    <span class="btn btn-success disabled">
+                                        <i class="fas fa-check-circle"></i> {{ $statusCounts['ACTIVE'] ?? 0 }}
+                                    </span>
+                                    <span class="btn btn-secondary disabled">
+                                        <i class="fas fa-check-double"></i> {{ $statusCounts['REDEEMED'] ?? 0 }}
+                                    </span>
+                                    <span class="btn btn-warning disabled">
+                                        <i class="fas fa-exclamation-triangle"></i> {{ $statusCounts['EXPIRED'] ?? 0 }}
+                                    </span>
+                                    <span class="btn btn-danger disabled">
+                                        <i class="fas fa-times-circle"></i> {{ $statusCounts['CANCELED'] ?? 0 }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                 </div>
-                
-                <div class="mt-3 p-2 bg-light rounded">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> 
-                        Showing <strong>{{ count($vouchers) }}</strong> voucher(s) created by 
-                        <strong class="text-primary">{{ $cyclos_username ?? 'you' }}</strong>
-                    </small>
-                </div>
-            @endif
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Edit Expiration Date Modal -->
-<div class="modal fade" id="editVoucherModal" tabindex="-1" role="dialog" aria-labelledby="editVoucherModalLabel" aria-hidden="true">
+<!-- Change Expiration Modal -->
+<div class="modal fade" id="expirationModal" tabindex="-1" role="dialog" aria-labelledby="expirationModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title" id="editVoucherModalLabel">
-                    <i class="fas fa-calendar-alt"></i> Edit Voucher Expiration Date
-                </h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="editVoucherForm">
+            <form id="expirationForm" method="POST">
                 @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="expirationModalLabel">
+                        <i class="fas fa-calendar-alt text-warning mr-2"></i>
+                        Change Expiration Date
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
                 <div class="modal-body">
-                    <input type="hidden" id="edit_voucher_id" name="voucher_id">
-                    
                     <div class="form-group">
-                        <label for="edit_expiry">Expiration Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="edit_expiry" name="expirationDate" required min="{{ date('Y-m-d') }}">
-                        <small class="text-muted">Change the expiration date for this voucher. Must be a future date.</small>
+                        <label for="expirationDate">New Expiration Date</label>
+                        <input type="datetime-local" 
+                               name="expirationDate" 
+                               id="expirationDate" 
+                               class="form-control" 
+                               min="{{ date('Y-m-d\TH:i') }}"
+                               required>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Select a future date for the voucher expiration
+                        </small>
                     </div>
-                    
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> 
-                        Note: You can change the expiration date for vouchers with status: <strong>Open, Active, or Expired</strong>.
-                    </div>
-                    
-                    <div id="editError" class="alert alert-danger" style="display: none;"></div>
-                    <div id="editSuccess" class="alert alert-success" style="display: none;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning" id="saveEditBtn">
-                        <i class="fas fa-save"></i> Update Expiration Date
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Update Expiration
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-
-<!-- Cancel Voucher Confirmation Modal -->
-<div class="modal fade" id="cancelVoucherModal" tabindex="-1" role="dialog" aria-labelledby="cancelVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="cancelVoucherModalLabel">
-                    <i class="fas fa-exclamation-triangle"></i> Confirm Cancel Voucher
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to cancel this voucher? This action will change the status to <strong>Canceled</strong>.</p>
-                <div class="card bg-light p-3 mb-3">
-                    <p><strong>Voucher Code:</strong> <span id="cancel_voucher_code" class="font-weight-bold"></span></p>
-                    <p><strong>Status:</strong> Will be changed to <span class="badge bg-dark">Canceled</span></p>
-                </div>
-                <p class="text-warning">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    <strong>Warning:</strong> This action cannot be undone. If the voucher was bought, the buyer will be refunded.
-                </p>
-                <input type="hidden" id="cancel_voucher_id">
-                
-                <div id="cancelError" class="alert alert-danger" style="display: none;"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Keep Voucher</button>
-                <button type="button" class="btn btn-danger" id="confirmCancelBtn">
-                    <i class="fas fa-ban"></i> Yes, Cancel Voucher
-                </button>
-            </div>
         </div>
     </div>
 </div>
@@ -240,225 +307,82 @@
 
 @push('styles')
 <style>
-    .table th {
-        background-color: #f4f6f9;
-    }
-    .badge {
-        font-size: 0.9rem;
-        padding: 0.5rem 0.8rem;
-    }
     .btn-group .btn {
         margin: 0 2px;
     }
-    code {
-        background-color: #f8f9fa;
-        padding: 4px 8px;
-        border-radius: 4px;
-        border: 1px solid #dee2e6;
-        display: inline-block;
+    .badge {
+        font-weight: 500;
         font-size: 0.9rem;
-        font-family: monospace;
     }
-    .modal-header.bg-warning {
-        color: #856404;
+    .gap-2 {
+        gap: 0.5rem;
     }
-    .modal-header.bg-danger {
-        color: white;
+    .btn.active {
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.5);
+        font-weight: bold;
+    }
+    .table td {
+        vertical-align: middle;
+    }
+    .status-summary .btn.disabled {
+        opacity: 0.8;
+        cursor: default;
     }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-// Edit Voucher - Change Expiration Date
-function editVoucher(voucherId, currentExpiry) {
-    if (!voucherId) return;
-    
-    document.getElementById('edit_voucher_id').value = voucherId;
-    document.getElementById('editError').style.display = 'none';
-    document.getElementById('editSuccess').style.display = 'none';
-    
-    // Format current expiry date for input field
-    if (currentExpiry && currentExpiry !== 'null' && currentExpiry !== 'No expiry') {
-        try {
-            const date = new Date(currentExpiry);
-            if (!isNaN(date.getTime())) {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                document.getElementById('edit_expiry').value = `${year}-${month}-${day}`;
-            } else {
-                document.getElementById('edit_expiry').value = '';
+function changeExpiration(voucherId) {
+    const modal = $('#expirationModal');
+    const form = $('#expirationForm');
+    form.attr('action', `{{ url('merchant/vouchers') }}/${voucherId}/change-expiration`);
+    modal.modal('show');
+}
+
+function cancelVoucher(voucherId) {
+    if (confirm('⚠️ Are you sure you want to cancel this voucher?\n\nThis action cannot be undone.')) {
+        $.ajax({
+            url: `{{ url('merchant/vouchers') }}/${voucherId}/cancel`,
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}'
+            },
+            beforeSend: function() {
+                // Show loading state
+            },
+            success: function(response) {
+                alert('✓ ' + response.message);
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('✗ Error: ' + (xhr.responseJSON?.error || 'Failed to cancel voucher'));
             }
-        } catch (e) {
-            document.getElementById('edit_expiry').value = '';
-        }
-    } else {
-        // Set default to 1 year from now if no expiry
-        const date = new Date();
-        date.setFullYear(date.getFullYear() + 1);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        document.getElementById('edit_expiry').value = `${year}-${month}-${day}`;
+        });
     }
 }
 
-// Handle Edit Form Submit - Change Expiration
-document.getElementById('editVoucherForm').addEventListener('submit', function(e) {
+$('#expirationForm').on('submit', function(e) {
     e.preventDefault();
     
-    const voucherId = document.getElementById('edit_voucher_id').value;
-    const expiry = document.getElementById('edit_expiry').value;
+    const form = $(this);
+    const submitBtn = form.find('button[type="submit"]');
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
     
-    if (!expiry) {
-        document.getElementById('editError').style.display = 'block';
-        document.getElementById('editError').innerHTML = '<i class="fas fa-exclamation-circle"></i> Expiration date is required';
-        return;
-    }
-    
-    // Validate that expiry date is in the future
-    const selectedDate = new Date(expiry);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (selectedDate < today) {
-        document.getElementById('editError').style.display = 'block';
-        document.getElementById('editError').innerHTML = '<i class="fas fa-exclamation-circle"></i> Expiration date must be today or in the future';
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('expirationDate', expiry);
-    
-    document.getElementById('saveEditBtn').disabled = true;
-    document.getElementById('saveEditBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-    
-    fetch(`/merchant/vouchers/${voucherId}/change-expiration`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+    $.ajax({
+        url: form.attr('action'),
+        type: 'POST',
+        data: form.serialize(),
+        success: function(response) {
+            $('#expirationModal').modal('hide');
+            alert('✓ ' + response.message);
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('✗ Error: ' + (xhr.responseJSON?.error || 'Failed to update expiration'));
+            submitBtn.prop('disabled', false).html('<i class="fas fa-save"></i> Update Expiration');
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('saveEditBtn').disabled = false;
-        document.getElementById('saveEditBtn').innerHTML = '<i class="fas fa-save"></i> Update Expiration Date';
-        
-        if (data.success) {
-            document.getElementById('editSuccess').style.display = 'block';
-            document.getElementById('editSuccess').innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
-            
-            // Close modal after 1.5 seconds and reload
-            setTimeout(() => {
-                $('#editVoucherModal').modal('hide');
-                location.reload();
-            }, 1500);
-        } else {
-            document.getElementById('editError').style.display = 'block';
-            document.getElementById('editError').innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + data.error;
-        }
-    })
-    .catch(error => {
-        document.getElementById('saveEditBtn').disabled = false;
-        document.getElementById('saveEditBtn').innerHTML = '<i class="fas fa-save"></i> Update Expiration Date';
-        document.getElementById('editError').style.display = 'block';
-        document.getElementById('editError').innerHTML = '<i class="fas fa-exclamation-circle"></i> Network error: ' + error.message;
     });
 });
-
-// Cancel Voucher
-function cancelVoucher(voucherId, voucherCode) {
-    if (!voucherId) return;
-    
-    document.getElementById('cancel_voucher_id').value = voucherId;
-    document.getElementById('cancel_voucher_code').innerText = voucherCode || 'Unknown';
-    document.getElementById('cancelError').style.display = 'none';
-    
-    $('#cancelVoucherModal').modal('show');
-}
-
-// Confirm Cancel
-document.getElementById('confirmCancelBtn').addEventListener('click', function() {
-    const voucherId = document.getElementById('cancel_voucher_id').value;
-    
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Canceling...';
-    
-    fetch(`/merchant/vouchers/${voucherId}/cancel`, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        this.disabled = false;
-        this.innerHTML = '<i class="fas fa-ban"></i> Yes, Cancel Voucher';
-        
-        if (data.success) {
-            $('#cancelVoucherModal').modal('hide');
-            
-            // Show success message and reload
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible';
-            alertDiv.innerHTML = `
-                <button type="button" class="close" data-dismiss="alert">×</button>
-                <i class="fas fa-check-circle"></i> ${data.message}
-            `;
-            document.querySelector('.card-body').insertBefore(alertDiv, document.querySelector('.card-body').firstChild);
-            
-            setTimeout(() => {
-                location.reload();
-            }, 1500);
-        } else {
-            document.getElementById('cancelError').style.display = 'block';
-            document.getElementById('cancelError').innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + data.error;
-            
-            // Re-enable button
-            this.disabled = false;
-            this.innerHTML = '<i class="fas fa-ban"></i> Yes, Cancel Voucher';
-        }
-    })
-    .catch(error => {
-        this.disabled = false;
-        this.innerHTML = '<i class="fas fa-ban"></i> Yes, Cancel Voucher';
-        document.getElementById('cancelError').style.display = 'block';
-        document.getElementById('cancelError').innerHTML = '<i class="fas fa-exclamation-circle"></i> Network error: ' + error.message;
-    });
-});
-
-// Reset modals when closed
-$('#editVoucherModal').on('hidden.bs.modal', function () {
-    document.getElementById('editError').style.display = 'none';
-    document.getElementById('editSuccess').style.display = 'none';
-    document.getElementById('saveEditBtn').disabled = false;
-    document.getElementById('saveEditBtn').innerHTML = '<i class="fas fa-save"></i> Update Expiration Date';
-});
-
-$('#cancelVoucherModal').on('hidden.bs.modal', function () {
-    document.getElementById('cancelError').style.display = 'none';
-    const cancelBtn = document.getElementById('confirmCancelBtn');
-    cancelBtn.disabled = false;
-    cancelBtn.innerHTML = '<i class="fas fa-ban"></i> Yes, Cancel Voucher';
-});
-
-// Helper function to format date for display
-function formatDisplayDate(dateString) {
-    if (!dateString) return 'N/A';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return dateString;
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    } catch (e) {
-        return dateString;
-    }
-}
 </script>
 @endpush

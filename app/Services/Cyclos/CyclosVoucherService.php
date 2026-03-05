@@ -85,19 +85,84 @@ class CyclosVoucherService
     }
 
     /**
+     * Get single voucher by ID or token
+     */
+    public function getVoucher(string $voucherId): ?array
+    {
+        try {
+            Log::info('Getting voucher details', [
+                'voucher_id' => $voucherId,
+                'url' => $this->baseUrl . '/api/vouchers/' . $voucherId
+            ]);
+
+            $response = Http::withBasicAuth($this->apiUsername, $this->apiPassword)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'confirmationPassword' => $this->apiPassword
+                ])
+                ->withOptions([
+                    'verify' => app()->environment('local') ? false : true,
+                    'timeout' => 30
+                ])
+                ->get($this->baseUrl . '/api/vouchers/' . $voucherId);
+
+            if (!$response->successful()) {
+                if ($response->status() === 404) {
+                    Log::warning('Voucher not found', ['voucher_id' => $voucherId]);
+                    return null;
+                }
+                
+                $errorBody = $response->json();
+                $errorMessage = 'Failed to get voucher: ';
+                
+                if (isset($errorBody['detail'])) {
+                    $errorMessage .= $errorBody['detail'];
+                } elseif (isset($errorBody['error'])) {
+                    $errorMessage .= $errorBody['error'];
+                } else {
+                    $errorMessage .= $response->body();
+                }
+
+                throw new \Exception($errorMessage);
+            }
+
+            return $response->json();
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get voucher', [
+                'voucher_id' => $voucherId,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Change voucher expiration date
      * POST /vouchers/{key}/change-expiration
      */
-    public function changeExpiration(string $voucherId, string $expirationDate): array
+    public function changeExpiration(string $voucherId, string $expirationDate, ?string $comments = null): array
     {
         try {
+            $timestamp = strtotime($expirationDate);
+            if (!$timestamp) {
+                throw new \Exception('Invalid expiration date format');
+            }
+            
+            $formattedDate = date('Y-m-d\TH:i:s.v\Z', $timestamp);
+            
             $payload = [
-                'expirationDate' => $expirationDate
+                'newExpirationDate' => $formattedDate
             ];
+            
+            if ($comments) {
+                $payload['comments'] = $comments;
+            }
 
             Log::info('Changing voucher expiration', [
                 'voucher_id' => $voucherId,
-                'expiration_date' => $expirationDate
+                'new_expiration_date' => $formattedDate,
+                'payload' => $payload
             ]);
 
             $response = Http::withBasicAuth($this->apiUsername, $this->apiPassword)
@@ -105,6 +170,10 @@ class CyclosVoucherService
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                     'confirmationPassword' => $this->apiPassword
+                ])
+                ->withOptions([
+                    'verify' => app()->environment('local') ? false : true,
+                    'timeout' => 30
                 ])
                 ->post($this->baseUrl . '/api/vouchers/' . $voucherId . '/change-expiration', $payload);
 
@@ -118,6 +187,8 @@ class CyclosVoucherService
                     }
                 } elseif (isset($errorBody['detail'])) {
                     $errorMessage .= $errorBody['detail'];
+                } elseif (isset($errorBody['error'])) {
+                    $errorMessage .= $errorBody['error'];
                 } else {
                     $errorMessage .= $response->body();
                 }
@@ -125,7 +196,13 @@ class CyclosVoucherService
                 throw new \Exception($errorMessage);
             }
 
-            return ['success' => true, 'message' => 'Expiration date updated successfully'];
+            $responseData = $response->json();
+            
+            return [
+                'success' => true, 
+                'message' => 'Expiration date updated successfully',
+                'data' => $responseData
+            ];
 
         } catch (\Exception $e) {
             Log::error('Failed to change voucher expiration', [
@@ -139,12 +216,23 @@ class CyclosVoucherService
     /**
      * Cancel a voucher
      * POST /vouchers/{key}/cancel
+     * 
+     * @param string $voucherId The voucher ID or token
+     * @param string|null $comments Optional comments
+     * @return array
      */
-    public function cancelVoucher(string $voucherId): array
+    public function cancelVoucher(string $voucherId, ?string $comments = null): array
     {
         try {
+            $payload = [];
+            if ($comments) {
+                $payload['comments'] = $comments;
+            }
+
             Log::info('Cancelling voucher', [
-                'voucher_id' => $voucherId
+                'voucher_id' => $voucherId,
+                'has_comments' => !is_null($comments),
+                'url' => $this->baseUrl . '/api/vouchers/' . $voucherId . '/cancel'
             ]);
 
             $response = Http::withBasicAuth($this->apiUsername, $this->apiPassword)
@@ -153,7 +241,21 @@ class CyclosVoucherService
                     'Content-Type' => 'application/json',
                     'confirmationPassword' => $this->apiPassword
                 ])
-                ->post($this->baseUrl . '/api/vouchers/' . $voucherId . '/cancel');
+                ->withOptions([
+                    'verify' => app()->environment('local') ? false : true,
+                    'timeout' => 30
+                ])
+                ->post($this->baseUrl . '/api/vouchers/' . $voucherId . '/cancel', $payload);
+
+            // According to Cyclos API, 204 means success with no content
+            if ($response->status() === 204) {
+                Log::info('Voucher cancelled successfully', ['voucher_id' => $voucherId]);
+                return [
+                    'success' => true, 
+                    'message' => 'Voucher cancelled successfully',
+                    'data' => null
+                ];
+            }
 
             if (!$response->successful()) {
                 $errorBody = $response->json();
@@ -165,6 +267,8 @@ class CyclosVoucherService
                     }
                 } elseif (isset($errorBody['detail'])) {
                     $errorMessage .= $errorBody['detail'];
+                } elseif (isset($errorBody['error'])) {
+                    $errorMessage .= $errorBody['error'];
                 } else {
                     $errorMessage .= $response->body();
                 }
@@ -172,7 +276,11 @@ class CyclosVoucherService
                 throw new \Exception($errorMessage);
             }
 
-            return ['success' => true, 'message' => 'Voucher cancelled successfully'];
+            return [
+                'success' => true, 
+                'message' => 'Voucher cancelled successfully',
+                'data' => $response->json()
+            ];
 
         } catch (\Exception $e) {
             Log::error('Failed to cancel voucher', [
@@ -189,15 +297,35 @@ class CyclosVoucherService
     public function searchVouchers(array $filters = []): array
     {
         try {
+            Log::info('Searching vouchers in Cyclos', [
+                'filters' => $filters,
+                'url' => $this->baseUrl . '/api/vouchers'
+            ]);
+
             $response = Http::withBasicAuth($this->apiUsername, $this->apiPassword)
                 ->withHeaders([
                     'Accept' => 'application/json',
                     'confirmationPassword' => $this->apiPassword
                 ])
+                ->withOptions([
+                    'verify' => app()->environment('local') ? false : true,
+                    'timeout' => 30
+                ])
                 ->get($this->baseUrl . '/api/vouchers', $filters);
 
             if (!$response->successful()) {
-                throw new \Exception('Failed to search vouchers: ' . $response->body());
+                $errorBody = $response->json();
+                $errorMessage = 'Failed to search vouchers: ';
+                
+                if (isset($errorBody['detail'])) {
+                    $errorMessage .= $errorBody['detail'];
+                } elseif (isset($errorBody['error'])) {
+                    $errorMessage .= $errorBody['error'];
+                } else {
+                    $errorMessage .= $response->body();
+                }
+
+                throw new \Exception($errorMessage);
             }
 
             return $response->json();
