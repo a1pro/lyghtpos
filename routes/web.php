@@ -10,6 +10,7 @@ use App\Http\Controllers\Management\SupplierController;
 use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
+use App\Http\Controllers\Admin\AdminMerchantController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +35,17 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
     Route::resource('orders', OrderController::class);
     Route::resource('suppliers', SupplierController::class);
 
+    // ===================================Merchant List===========================================================
+
+Route::prefix('merchants')->name('admin.merchants.')->group(function(){
+    Route::get('/merchants/{id}/change-password', [AdminMerchantController::class, 'showChangePasswordForm'])->name('change-password');
+    Route::post('/merchants/{id}/update-password', [AdminMerchantController::class, 'updatePassword'])->name('update-password');
+    Route::get('/', [AdminMerchantController::class, 'renderMerchants'])->name('index');
+});
+
+    // =============================================End===========================================================
+
+    // ===================================Vouchers===========================================================
 
     Route::prefix('vouchers')->name('admin.vouchers.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\AdminVoucherController::class, 'index'])->name('index');
