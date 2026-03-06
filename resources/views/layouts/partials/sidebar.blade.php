@@ -68,6 +68,17 @@
                     @endif
                 </li>
 
+                <li class="nav-item">
+                    @if(auth()->user()->role_id == 1)
+                        <a href="{{ route('admin.merchants.index') }}" class="nav-link {{ activeSegment('merchants') }}">
+                            <i class="nav-icon fas fa-th-large"></i>
+                            <p>Merchants</p>
+                        </a>
+                   @endif
+                        
+                
+                </li>
+
                 <!-- Governance Layers (Admin Only) -->
                 @if(auth()->user()->role_id == 1)
                     <li class="nav-item">
@@ -79,7 +90,7 @@
 
 
                     <li class="nav-item">
-                        <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ activeSegment('governance-layers') }}">
+                        <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ activeSegment('vouchers') }}">
                             <i class="nav-icon fas fa-th-large"></i>
                             <p>Vouchers</p>
                         </a>
