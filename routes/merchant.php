@@ -17,15 +17,108 @@ use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\ProchargePaymentController;
+use App\Http\Controllers\Merchant\PaymentController;
 use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
-
+use net\authorize\api\contract\v1 as AnetAPI;
+use net\authorize\api\controller as AnetController;
 // Public merchant routes (no subscription/representation required)
  
-// routes/web.php or routes/merchant.php
+// routes/web.php or routes/merchant.
 
+ 
+Route::get('/test-authorize', function() {
+    return [
+        'api_login_id' => config('authorize.api_login_id'),
+        'transaction_key' => substr(config('authorize.transaction_key'), 0, 5) . '********',
+        'sandbox_mode' => config('authorize.sandbox_mode'),
+        'currency' => config('authorize.currency'),
+    ];
+});
+
+
+Route::get('/debug-authorize', function() {
+    try {
+        $merchantAuthentication = new \net\authorize\api\contract\v1\MerchantAuthenticationType();
+        $merchantAuthentication->setName(config('authorize.api_login_id'));
+        $merchantAuthentication->setTransactionKey(config('authorize.transaction_key'));
+
+        // Create a simple transaction request to test authentication
+        $refId = 'ref_' . time();
+        
+        $transactionRequest = new \net\authorize\api\contract\v1\TransactionRequestType();
+        $transactionRequest->setTransactionType('authCaptureTransaction');
+        $transactionRequest->setAmount(1.00); // Test with $1.00
+
+        $request = new \net\authorize\api\contract\v1\CreateTransactionRequest();
+        $request->setMerchantAuthentication($merchantAuthentication);
+        $request->setRefId($refId);
+        $request->setTransactionRequest($transactionRequest);
+
+        $controller = new \net\authorize\api\controller\CreateTransactionController($request);
+        $environment = config('authorize.sandbox_mode') 
+            ? \net\authorize\api\constants\ANetEnvironment::SANDBOX 
+            : \net\authorize\api\constants\ANetEnvironment::PRODUCTION;
+        
+        $response = $controller->executeWithApiResponse($environment);
+
+        if ($response != null) {
+            $result = [
+                'success' => $response->getMessages()->getResultCode() == 'Ok',
+                'result_code' => $response->getMessages()->getResultCode(),
+                'messages' => []
+            ];
+            
+            foreach ($response->getMessages()->getMessage() as $message) {
+                $result['messages'][] = [
+                    'code' => $message->getCode(),
+                    'text' => $message->getText()
+                ];
+            }
+            
+            return $result;
+        } else {
+            return ['error' => 'Null response from Authorize.net'];
+        }
+    } catch (\Exception $e) {
+        return [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ];
+    }
+});
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
 
-    // Subscription routes
+    // Subscription 
+    
+
+    Route::prefix('payments')->name('payments.')->controller(PaymentController::class)->group(function () {
+        // Payment dashboard/index
+        Route::get('/', 'index')->name('index');
+        
+        // Make payment form
+        Route::get('/create', 'create')->name('create');
+        
+        // NEW: Redirect to Authorize.net hosted page - make sure this is POST
+        Route::post('/hosted-redirect', 'redirectToHostedPage')->name('hosted-redirect');
+        
+        // Process payment (POST) - keep for backward compatibility
+        Route::post('/process', 'process')->name('process');
+        
+        // Payment history
+        Route::get('/history', 'history')->name('history');
+        
+        // Return from Authorize.net
+        Route::get('/return', 'handleReturn')->name('return');
+        
+        // Cancel from Authorize.net
+        Route::get('/cancel', 'handleCancel')->name('cancel');
+        
+        // View single payment (must be at the end)
+        Route::get('/{id}', 'show')->name('show');
+    });
+
+
     Route::prefix('subscription')->name('subscription.')->group(function () {
         Route::get('/plans', [PlanController::class, 'index'])->name('plans');
         Route::get('/success', [PlanController::class, 'subscriptionSuccess'])->name('success');

@@ -14,7 +14,8 @@ use App\Observers\RepresentationObserver;
 use App\Observers\Subadmin\Merchant\UserObserver;
 use App\Repositories\Admin\Interfaces\GovernanceLayerRepositoryInterface;
 use App\Repositories\Admin\Eloquent\GovernanceLayerRepository;
-
+use App\Repositories\Merchant\Interfaces\PaymentRepositoryInterface;;
+use App\Repositories\Merchant\Eloquent\PaymentRepository;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -25,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             GovernanceLayerRepositoryInterface::class,
             GovernanceLayerRepository::class
+        );
+
+        $this->app->bind(
+            PaymentRepositoryInterface::class,
+            PaymentRepository::class
         );
     }
 
