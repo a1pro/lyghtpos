@@ -18,7 +18,8 @@ class Representation extends Model
         'status',
         'review_message',
         'last_reviewed',
-        'reviewer_user_id'
+        'reviewer_user_id',
+        'payment_status'
     ];
 
     protected $casts = [

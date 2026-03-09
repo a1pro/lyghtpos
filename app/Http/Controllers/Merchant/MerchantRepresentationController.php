@@ -6,14 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Representation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-
+use App\Models\UserGovernanceLayer;
+use App\Models\GovernanceLayer;
 class MerchantRepresentationController extends Controller
 {
     public function showForm()
     {
         return view('merchant.pages.representations');
     }
-
     public function submitForm(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -21,14 +21,15 @@ class MerchantRepresentationController extends Controller
             'pledge_value' => ['required'],
             'currency' => ['required'],
         ]);
-
+    
         if ($validator->fails()) {
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
-
-        Representation::updateOrCreate(
+    
+        // Create or update the representation
+        $representation = Representation::updateOrCreate(
             [
                 'user_id' => $request->input('user_id'),
                 'subject' => $request->input('subject'),
@@ -41,6 +42,18 @@ class MerchantRepresentationController extends Controller
                 'status' => 'pending',
             ]
         );
+    
+        // Governance layer logic moved here with representation_id
+        $governanceData = GovernanceLayer::where('status', 'active')->get();
+    
+        foreach ($governanceData as $govData) {
+            UserGovernanceLayer::create([
+                'user_id'  => $request->input('user_id'),
+                'governance_id' => $govData->id,
+                'representation_id' => $representation->id // Added representation_id
+            ]);
+        }
+    
         return redirect()->route('merchant.dashboard');
     }
 }

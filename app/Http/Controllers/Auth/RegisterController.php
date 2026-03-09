@@ -97,15 +97,7 @@ class RegisterController extends Controller
                 'advocate_contact' => $data['advocate_contact'],
             ]);
         }
-
-        $governanceData = GovernanceLayer::where('status', 'active')->get();
-
-        foreach ($governanceData as $govData) {
-            UserGovernanceLayer::create([
-                'user_id'  => $user->id,
-                'governance_id' => $govData->id
-            ]);
-        }
+ 
 
         return $user;
     }

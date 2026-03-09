@@ -35,4 +35,56 @@ if (!function_exists('notifications')) {
             ->take($limit)
             ->get();
     }
+
+}
+
+
+// ================Representation  ===================================
+if (!function_exists('payment_check')) {
+    function payment_check()
+    {
+        $user = auth()->user();
+        
+        // Get the first representation
+        $firstEntry = Representation::where('user_id', $user->id)
+            ->orderBy('created_at', 'asc')
+            ->first();
+            
+        if (!$firstEntry) {
+            return [
+                'show_popup' => false,
+                'status_code' => 0,
+                'message' => 'No representation found',
+                'pledge_value' => 0
+            ];
+        }
+        
+        // Check if all governance layers are approved
+        $totalGovernanceLayers = UserGovernanceLayer::where('representation_id', $firstEntry->id)->count();
+        $approvedGovernanceLayers = UserGovernanceLayer::where([
+            'representation_id' => $firstEntry->id,
+            'status' => 'approved'
+        ])->count();
+        
+        // Check if all layers are approved
+        $allLayersApproved = ($totalGovernanceLayers > 0 && $totalGovernanceLayers == $approvedGovernanceLayers);
+        
+        // Check payment status
+        $paymentStatus = $firstEntry->payment_status ?? null;
+        $paymentPendingOrCancel = in_array($paymentStatus, ['pending', 'cancel', 'cancelled', 'failed']);
+        
+        // Determine if popup should be shown
+        $showPopup = ($allLayersApproved && $paymentPendingOrCancel);
+        
+        return [
+            'show_popup' => $showPopup,
+            'status_code' => $showPopup ? 1 : 0,
+            'all_layers_approved' => $allLayersApproved,
+            'approved_count' => $approvedGovernanceLayers,
+            'total_layers' => $totalGovernanceLayers,
+            'payment_status' => $paymentStatus,
+            'representation_id' => $firstEntry->id,
+            'pledge_value' => $firstEntry->pledge_value ?? 0 // Get pledge value from representation
+        ];
+    }
 }

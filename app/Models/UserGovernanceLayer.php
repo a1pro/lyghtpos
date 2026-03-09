@@ -9,7 +9,7 @@ class UserGovernanceLayer extends Model
 {
     protected $table = 'user_governance_layers';
     
-    protected $fillable = ['user_id', 'governance_id', 'status','message'];
+    protected $fillable = ['user_id', 'governance_id', 'status','message','representation_id'];
 
     public function governance()
     {
