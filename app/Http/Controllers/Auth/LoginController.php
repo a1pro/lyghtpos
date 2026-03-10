@@ -39,7 +39,7 @@ class LoginController extends Controller
             case 1: // Admin
                 return redirect()->route('home');
             case 2: // Merchant
-                return redirect()->route('merchant.dashboard');
+                return redirect()->route('merchant.barter-assist-pos');
             case 5: // Subadmin
                 return redirect()->route('subadmin.dashboard');
             case 6: // Trade Member
