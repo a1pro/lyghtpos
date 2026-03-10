@@ -15,7 +15,14 @@
             box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
-
+        body.coming-soon {
+    background-image: 
+        linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.4)),
+        url("images/mainBanner.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+}
         body {
             height: 100vh;
             background: linear-gradient(135deg, #0f172a, #020617);
@@ -106,7 +113,7 @@
         }
     </style>
 </head>
-<body>
+<body class="coming-soon">
 
     <!-- Header -->
     <div class="header">
