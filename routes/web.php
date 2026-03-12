@@ -18,6 +18,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 
+// Translations
+Route::get('/locale/{type}', function ($type) {
+    $translations = trans($type);
+    return response()->json($translations);
+});
+
 // Custom registration routes for 2-step registration
 Route::get('register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register'])->name('register.step1');

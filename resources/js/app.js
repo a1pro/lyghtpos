@@ -14,4 +14,6 @@ import "./bootstrap";
 
 import "./components/Cart";
 
+import "./merchant/components/Cart";
+
 import "./components/Purchase"
