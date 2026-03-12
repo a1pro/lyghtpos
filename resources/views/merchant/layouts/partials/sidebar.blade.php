@@ -126,7 +126,7 @@
                     </li>
 
                     <!-- Settings Section for Merchants -->
-                    <li class="nav-header">{{ __('Settings') }}</li>
+                    <li class="nav-header">Settings</li>
                     
                 @else
                     <!-- Show pending status message for unapproved merchants -->

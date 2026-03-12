@@ -10,6 +10,7 @@ use App\Http\Requests\Cart\RemoveFromCartRequest;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class CartController extends Controller
@@ -23,7 +24,13 @@ class CartController extends Controller
             return response()->json($request->user()->cart()->get());
         }
 
-        return view('cart.index');
+        $user = Auth::user();
+
+        if ($user->isMerchant()) {
+            return view('merchant.pages.cart.index');
+        } else {
+            return view('cart.index');
+        }
     }
 
     /**

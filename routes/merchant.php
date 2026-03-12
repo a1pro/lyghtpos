@@ -21,64 +21,39 @@ use App\Http\Controllers\Merchant\PaymentController;
 use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
 use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
-// Public merchant routes (no subscription/representation required)
- 
-// routes/web.php or routes/merchant.
-
- 
-Route::get('/test-authorize', function() {
-    return [
-        'api_login_id' => config('authorize.api_login_id'),
-        'transaction_key' => substr(config('authorize.transaction_key'), 0, 5) . '********',
-        'sandbox_mode' => config('authorize.sandbox_mode'),
-        'currency' => config('authorize.currency'),
-    ];
-});
 
 
- 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
 
     // Subscription 
-    
-
     Route::prefix('payments')->name('payments.')->controller(PaymentController::class)->group(function () {
-        // Payment dashboard/index
         Route::get('/', 'index')->name('index');
-        
         // Make payment form
         Route::get('/create', 'create')->name('create');
-        
-        // NEW: Redirect to Authorize.net hosted page - make sure this is POST
+        // Redirect to Authorize.net hosted page
         Route::post('/hosted-redirect', 'redirectToHostedPage')->name('hosted-redirect');
-        
-        // Process payment (POST) - keep for backward compatibility
+        // Process payment for backward compatibility
         Route::post('/process', 'process')->name('process');
-        
         // Payment history
         Route::get('/history', 'history')->name('history');
-        
         // Return from Authorize.net
         Route::get('/return', 'handleReturn')->name('return');
-        
         // Cancel from Authorize.net
         Route::get('/cancel', 'handleCancel')->name('cancel');
-        
-        // View single payment (must be at the end)
+        // View single payment
         Route::get('/{id}', 'show')->name('show');
     });
-
 
     Route::prefix('subscription')->name('subscription.')->group(function () {
         Route::get('/plans', [PlanController::class, 'index'])->name('plans');
         Route::get('/success', [PlanController::class, 'subscriptionSuccess'])->name('success');
-        
+
         // PayPal routes
         Route::post('/paypal/create', [PlanController::class, 'processPayPalPayment'])->name('paypal.create');
         Route::get('/paypal/success', [PlanController::class, 'paypalSuccess'])->name('paypal.success');
         Route::get('/paypal/cancel', [PlanController::class, 'paypalCancel'])->name('paypal.cancel');
         Route::post('/paypal/ipn', [PlanController::class, 'paypalIpn'])->name('paypal.ipn');
-        
+
         // AJAX routes
         Route::get('/plan-details/{planId}', [PlanController::class, 'getPlanDetails'])->name('plan.details');
     });
@@ -97,8 +72,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
         Route::post('/submit', [MerchantRepresentationController::class, 'submitForm'])->name('submit');
     });
-    // In routes/web.php or routes/merchant.php
-   
+
     // Voucher routes
     Route::prefix('vouchers')->name('vouchers.')->group(function () {
         Route::get('/', [App\Http\Controllers\Merchant\VoucherController::class, 'index'])->name('index');
@@ -107,9 +81,6 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::post('/{voucherId}/change-expiration', [App\Http\Controllers\Merchant\VoucherController::class, 'changeExpiration'])->name('change-expiration');
         Route::post('/{voucherId}/cancel', [App\Http\Controllers\Merchant\VoucherController::class, 'cancel'])->name('cancel');
     });
-
-    
- 
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
@@ -139,22 +110,20 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     });
 });
 
+/** **************** TRADE MEMBER ************************ */
 Route::prefix('trade-member')->name('trade-member.')->middleware(['auth', 'locale', 'role:trade_member'])->group(function (): void {
 
     Route::get('/', [TradeMemberDashboardController::class, 'index'])->name('dashboard');
 });
 
+/** **************** ORGANIZATION ************************ */
 Route::prefix('organization')->name('organization-admin.')->middleware(['auth', 'locale', 'role:organization'])->group(function (): void {
 
     Route::get('/', [OrganizationAdminDashboardController::class, 'index'])->name('dashboard');
 });
 
+/** **************** FAVOR MEMBER ************************ */
 Route::prefix('favor-member')->name('favor-member.')->middleware(['auth', 'locale', 'role:favor_member'])->group(function (): void {
 
     Route::get('/', [FavorMemberDashboardController::class, 'index'])->name('dashboard');
 });
-
-// for testing outside auth
-// Route::prefix('merchant')->name('merchant.')->group(function (): void {
-//     Route::get('/procharge/intent', [ProchargePaymentController::class, 'createIntent']);
-// });
