@@ -16,11 +16,12 @@ use App\Models\Role;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
+use App\Services\Cyclos\CyclosUserService;
+use Log;
 
 class RegisterController extends Controller
 {
     use RegistersUsers;
-
 
     protected string $redirectTo = '/login';
 
@@ -41,11 +42,15 @@ class RegisterController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'business_name' => ['required', 'string', 'max:255'],
-            'primary_contact_name' => ['required', 'string', 'max:255'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'business_name' => ['required_if:account_type,TRADE_MERCHANT', 'string', 'max:255'],
+            'primary_contact_name' => ['required_if:account_type,TRADE_MERCHANT', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:255'],
             'location' => ['required', 'string', 'max:255'],
-            'website' => ['required', 'string', 'max:255'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'consent_language_authorizing' => ['nullable', 'string'],
+            'communyti_enrollment' => ['nullable'],
+            'advocate_contact' => ['nullable', 'string', 'max:255'],
         ]);
 
         if ($validator->fails()) {
@@ -54,7 +59,27 @@ class RegisterController extends Controller
                 ->withInput();
         }
 
-        $this->create($request->all());
+        // Create the user
+        $user = $this->create($request->all());
+
+        // For FAVOR_MEMBER, directly create Cyclos account and update user
+        if ($request->account_type === 'FAVOR_MEMBER') {
+            $cyclosData = $this->createCyclosUser($user);
+            
+            // Update user with Cyclos data if creation was successful
+            if ($cyclosData && isset($cyclosData['user_id'])) {
+                $user->update([
+                    'cyclos_user_id' => $cyclosData['user_id'],
+                    'cyclos_username' => $cyclosData['username'] ?? null,
+                    'cyclos_group' => $cyclosData['group'] ?? null,
+                ]);
+                
+                Log::info('Favor member updated with Cyclos data', [
+                    'user_id' => $user->id,
+                    'cyclos_user_id' => $cyclosData['user_id']
+                ]);
+            }
+        }
 
         // Add success message and redirect to login
         return redirect()->route('login')
@@ -83,6 +108,7 @@ class RegisterController extends Controller
             'account_type' => $data['account_type'],
         ]);
 
+        // Create merchant record for TRADE_MERCHANT
         if ($data['account_type'] === 'TRADE_MERCHANT') {
             Merchant::create([
                 'user_id' => $user->id,
@@ -91,14 +117,43 @@ class RegisterController extends Controller
                 'primary_contact_name' => $data['primary_contact_name'],
                 'phone' => $data['phone'],
                 'location' => $data['location'],
-                'website' => $data['website'],
-                'consent_language_authorizing' => $data['consent_language_authorizing'],
-                'communyti_enrollment' => $data['communyti_enrollment'],
-                'advocate_contact' => $data['advocate_contact'],
+                'website' => $data['website'] ?? '',
+                'consent_language_authorizing' => $data['consent_language_authorizing'] ?? '',
+                'communyti_enrollment' => $data['communyti_enrollment'] ?? false,
+                'advocate_contact' => $data['advocate_contact'] ?? '',
             ]);
         }
- 
 
         return $user;
+    }
+
+    /**
+     * Create Cyclos user directly for favor members
+     */
+    protected function createCyclosUser(User $user): ?array
+    {
+        try {
+            $cyclosService = app(CyclosUserService::class);
+            $response = $cyclosService->createUser($user);
+
+            if ($response && isset($response['user_id'])) {
+                Log::info('Cyclos user created directly for favor member', [
+                    'user_id' => $user->id,
+                    'cyclos_user_id' => $response['user_id']
+                ]);
+                return $response;
+            } else {
+                Log::error('Failed to create Cyclos user for favor member', [
+                    'user_id' => $user->id
+                ]);
+                return null;
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception while creating Cyclos user for favor member', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 }
