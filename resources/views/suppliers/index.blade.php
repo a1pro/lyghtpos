@@ -28,7 +28,7 @@
             <tbody>
                 @foreach ($suppliers as $supplier)
                 <tr>
-                    <td>{{$supplier->id}}</td>
+                    <td>{{$loop->iteration}}</td>
                     {{-- <td>
                        <img width="50" src="{{$supplier->getAvatarUrl()}}" alt="">
                     </td> --}}
@@ -40,7 +40,7 @@
                     <td>{{$supplier->created_at}}</td>
                     <td>
                         <!-- <a href="{{ route('suppliers.edit', $supplier) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a> -->
-                        <button class="btn btn-danger btn-delete" data-url="{{route('suppliers.destroy', $supplier)}}"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-danger btn-delete" data-url="{{auth()->user()->role_id == 1 ? route('suppliers.destroy', $supplier) : route('merchant.suppliers.destroy', $supplier)}}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
                 @endforeach

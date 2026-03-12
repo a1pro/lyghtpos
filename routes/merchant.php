@@ -36,57 +36,7 @@ Route::get('/test-authorize', function() {
 });
 
 
-Route::get('/debug-authorize', function() {
-    try {
-        $merchantAuthentication = new \net\authorize\api\contract\v1\MerchantAuthenticationType();
-        $merchantAuthentication->setName(config('authorize.api_login_id'));
-        $merchantAuthentication->setTransactionKey(config('authorize.transaction_key'));
-
-        // Create a simple transaction request to test authentication
-        $refId = 'ref_' . time();
-        
-        $transactionRequest = new \net\authorize\api\contract\v1\TransactionRequestType();
-        $transactionRequest->setTransactionType('authCaptureTransaction');
-        $transactionRequest->setAmount(1.00); // Test with $1.00
-
-        $request = new \net\authorize\api\contract\v1\CreateTransactionRequest();
-        $request->setMerchantAuthentication($merchantAuthentication);
-        $request->setRefId($refId);
-        $request->setTransactionRequest($transactionRequest);
-
-        $controller = new \net\authorize\api\controller\CreateTransactionController($request);
-        $environment = config('authorize.sandbox_mode') 
-            ? \net\authorize\api\constants\ANetEnvironment::SANDBOX 
-            : \net\authorize\api\constants\ANetEnvironment::PRODUCTION;
-        
-        $response = $controller->executeWithApiResponse($environment);
-
-        if ($response != null) {
-            $result = [
-                'success' => $response->getMessages()->getResultCode() == 'Ok',
-                'result_code' => $response->getMessages()->getResultCode(),
-                'messages' => []
-            ];
-            
-            foreach ($response->getMessages()->getMessage() as $message) {
-                $result['messages'][] = [
-                    'code' => $message->getCode(),
-                    'text' => $message->getText()
-                ];
-            }
-            
-            return $result;
-        } else {
-            return ['error' => 'Null response from Authorize.net'];
-        }
-    } catch (\Exception $e) {
-        return [
-            'error' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ];
-    }
-});
+ 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
 
     // Subscription 

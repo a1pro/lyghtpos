@@ -191,7 +191,7 @@
                                 <td colspan="7" class="text-center text-muted py-4">
                                     <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
                                     <p>{{ __('No purchases found') }}</p>
-                                    <a href="{{ route('purchases.create') }}" class="btn btn-primary">
+                                    <a href="{{auth()->user()->role_id ==1 ? route('purchases.create') : route('merchant.purchases.create')  }}" class="btn btn-primary">
                                         <i class="fas fa-plus"></i> {{ __('Create First Purchase') }}
                                     </a>
                                 </td>

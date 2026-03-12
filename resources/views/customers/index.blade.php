@@ -28,7 +28,7 @@
             <tbody>
                 @foreach ($customers as $customer)
                 <tr>
-                    <td>{{$customer->id}}</td>
+                    <td>{{$loop->iteration}}</td>
                     <td>
                         <img width="50" src="{{$customer->getAvatarUrl()}}" alt="">
                     </td>
@@ -39,8 +39,8 @@
                     <td>{{$customer->address}}</td>
                     <td>{{$customer->created_at}}</td>
                     <td>
-                        <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
-                        <button class="btn btn-danger btn-delete" data-url="{{route('customers.destroy', $customer)}}"><i class="fas fa-trash"></i></button>
+                        <a href="{{auth()->user()->role_id ==1 ? route('customers.edit', $customer) : route('merchant.customers.edit', $customer) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
+                        <button class="btn btn-danger btn-delete" data-url="{{auth()->user()->role_id == 1 ? route('customers.destroy', $customer):route('merchant.customers.destroy', $customer)}}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
                 @endforeach

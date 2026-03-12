@@ -18,7 +18,7 @@
         body.coming-soon {
     background-image: 
         linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.4)),
-        url("images/mainBanner.png");
+        url("images/main.png");
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center;

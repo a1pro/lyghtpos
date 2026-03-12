@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Auth;
 
 class CustomerController extends Controller
 {
@@ -20,12 +21,22 @@ class CustomerController extends Controller
      */
     public function index(): Response|View
     {
+        $user = Auth::user();
         if (request()->wantsJson()) {
             return response(
                 Customer::all()
             );
         }
+            if($user->role_id==1 || $user->role_id==5)
+            {
         $customers = Customer::latest()->paginate(10);
+            }
+            else if($user->role_id==2)
+            {
+                $customers = Customer::where('user_id',auth()->id())->latest()->paginate(10);
+
+            }
+
         return view('customers.index')->with('customers', $customers);
     }
 
@@ -44,6 +55,8 @@ class CustomerController extends Controller
      */
     public function store(CustomerStoreRequest $request)
     {
+        $user = Auth::user();
+     
         $customerData = $request->validated();
         $customerData['user_id'] = $request->user()->id;
 
@@ -52,9 +65,15 @@ class CustomerController extends Controller
         }
 
         Customer::create($customerData);
-
+        if($user->role_id ==1){
         return redirect()->route('customers.index')
             ->with('success', __('customer.success_creating'));
+        }
+        else if($user->role_id==2)
+        {
+            return redirect()->route('merchant.customers.index')
+            ->with('success', __('customer.success_creating'));
+        }
     }
 
     /**
@@ -72,6 +91,7 @@ class CustomerController extends Controller
      */
     public function update(CustomerUpdateRequest $request, Customer $customer)
     {
+        $user = Auth::user();
         $customerData = $request->validated();
 
         if ($request->hasFile('avatar')) {
@@ -82,9 +102,16 @@ class CustomerController extends Controller
         }
 
         $customer->update($customerData);
-
+        if($user->role_id == 1)
+        {
         return redirect()->route('customers.index')
             ->with('success', __('customer.success_updating'));
+        }
+        else
+        {
+            return redirect()->route('merchant.customers.index')
+            ->with('success', __('customer.success_updating'));
+        }
     }
 
     public function destroy(Customer $customer): JsonResponse

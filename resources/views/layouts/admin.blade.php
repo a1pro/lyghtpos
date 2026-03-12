@@ -29,8 +29,16 @@
     <!-- Site wrapper -->
     <div class="wrapper">
 
-        @include('layouts.partials.navbar')
-        @include('layouts.partials.sidebar')
+       
+
+@if(auth()->user()->role_id == 1)
+@include('layouts.partials.navbar')
+    @include('layouts.partials.sidebar')
+@elseif(auth()->user()->role_id == 2)
+@include('merchant.layouts.partials.navbar')
+    @include('merchant.layouts.partials.sidebar')
+@endif
+
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             <!-- Content Header (Page header) -->

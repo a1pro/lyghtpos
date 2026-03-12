@@ -8,14 +8,22 @@ use App\Http\Requests\Supplier\SupplierUpdateRequest;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Auth;
 
 class SupplierController extends Controller
 {
 
     public function index(Request $request)
     {
+        $user = Auth::user();
+        if($user->role_id==1)
+    {
         $suppliers = Supplier::latest()->paginate();
-
+    }
+    else
+    {
+        $suppliers = Supplier::where('user_id',$user->id)->latest()->paginate();
+    }
         if ($request->wantsJson()) {
             return response()->json($suppliers);
         }
@@ -31,21 +39,23 @@ class SupplierController extends Controller
     public function store(SupplierStoreRequest $request)
     {
         $supplierData = $request->validated();
-
+    
         if ($request->hasFile('avatar')) {
             $supplierData['avatar'] = $request->file('avatar')->store('suppliers', 'public');
         }
-
+        
+        // Add the authenticated user's ID
+        $supplierData['user_id'] = auth()->id();
+        
         Supplier::create($supplierData);
-
+    
         $route = auth()->user()->isAdmin()
-        ? 'suppliers.index'
-        : 'merchant.suppliers.index';
-    
-    return redirect()
-        ->route($route)
-        ->with('success', __('supplier.success_creating'));
-    
+            ? 'suppliers.index'
+            : 'merchant.suppliers.index';
+        
+        return redirect()
+            ->route($route)
+            ->with('success', __('supplier.success_creating'));
     }
 
     public function update(SupplierUpdateRequest $request, Supplier $supplier)

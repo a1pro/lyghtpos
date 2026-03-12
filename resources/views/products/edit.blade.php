@@ -8,7 +8,7 @@
 <div class="card">
     <div class="card-body">
 
-        <form action="{{ route('products.update', $product) }}" method="POST" enctype="multipart/form-data">
+        <form action="{{auth()->user()->role_id ==1 ? route('products.update', $product) : route('merchant.products.update', $product) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
