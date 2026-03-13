@@ -26,19 +26,31 @@ class CyclosPaymentService
         $this->password = config('services.cyclos.password');
         $this->channel = config('services.cyclos.channel', 'webServices');
         
-        // Currency settings
+        // Currency settings with proper defaults
         $this->currencyCode = config('services.cyclos.currency_code', 'TT');
         $this->currencySymbol = config('services.cyclos.currency_symbol', 'TT');
         $this->currencyName = config('services.cyclos.currency_name', 'TradeTokens');
         
-        $this->paymentTypeId = config('services.cyclos.payment_type_id', '7157739016488738988');
-        $this->adminUserId = config('services.cyclos.admin_user_id', '7157739016491622572');
+        // Handle null values with proper defaults
+        $this->paymentTypeId = $this->getConfigValue('services.cyclos.payment_type_id', '-4143445532979633216');
+        $this->adminUserId = $this->getConfigValue('services.cyclos.admin_user_id', '-4143451855171492928');
         
         Log::info('CyclosPaymentService initialized', [
             'currency_code' => $this->currencyCode,
             'currency_symbol' => $this->currencySymbol,
+            'admin_user_id' => $this->adminUserId,
+            'payment_type_id' => $this->paymentTypeId,
             'environment' => app()->environment()
         ]);
+    }
+
+    /**
+     * Safely get config value with fallback
+     */
+    protected function getConfigValue(string $key, string $default): string
+    {
+        $value = config($key);
+        return !empty($value) ? $value : $default;
     }
 
     /**
@@ -55,6 +67,22 @@ class CyclosPaymentService
     public function getCurrencyCode(): string
     {
         return $this->currencyCode;
+    }
+
+    /**
+     * Get admin user ID
+     */
+    public function getAdminUserId(): string
+    {
+        return $this->adminUserId;
+    }
+
+    /**
+     * Get payment type ID
+     */
+    public function getPaymentTypeId(): string
+    {
+        return $this->paymentTypeId;
     }
 
     /**
@@ -242,6 +270,8 @@ class CyclosPaymentService
             Log::info('Adding funds to Cyclos wallet', [
                 'to_user' => $userCyclosId,
                 'amount' => $amount,
+                'payment_type' => $this->paymentTypeId,
+                'from_admin' => $this->adminUserId,
                 'currency' => $this->currencyCode
             ]);
 
@@ -257,10 +287,13 @@ class CyclosPaymentService
                 ->post($paymentUrl, $paymentData);
 
             if ($response->failed()) {
+                $errorData = $response->json();
                 Log::error('Cyclos payment failed', [
                     'status' => $response->status(),
+                    'error' => $errorData,
+                    'payment_type_used' => $this->paymentTypeId
                 ]);
-                return ['success' => false, 'message' => 'Payment failed'];
+                return ['success' => false, 'message' => 'Payment failed: ' . json_encode($errorData)];
             }
 
             $data = $response->json();
@@ -313,5 +346,22 @@ class CyclosPaymentService
             ]);
             return [];
         }
+    }
+
+    /**
+     * Debug method to check current configuration
+     */
+    public function debugConfig(): array
+    {
+        return [
+            'admin_user_id' => $this->adminUserId,
+            'payment_type_id' => $this->paymentTypeId,
+            'currency_code' => $this->currencyCode,
+            'currency_symbol' => $this->currencySymbol,
+            'currency_name' => $this->currencyName,
+            'base_url' => $this->baseUrl,
+            'username' => $this->username,
+            'channel' => $this->channel
+        ];
     }
 }
