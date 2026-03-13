@@ -32,8 +32,8 @@ class CyclosPaymentService
         $this->currencyName = config('services.cyclos.currency_name', 'TradeTokens');
         
         // Handle null values with proper defaults
-        $this->paymentTypeId = $this->getConfigValue('services.cyclos.payment_type_id', '-4143445532979633216');
-        $this->adminUserId = $this->getConfigValue('services.cyclos.admin_user_id', '-4143451855171492928');
+        $this->paymentTypeId = $this->getConfigValue('services.cyclos.payment_type_id', '7157739016488738988');
+        $this->adminUserId = $this->getConfigValue('services.cyclos.admin_user_id', '7157739016491622572');
         
         Log::info('CyclosPaymentService initialized', [
             'currency_code' => $this->currencyCode,

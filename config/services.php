@@ -50,8 +50,8 @@ return [
     'channel' => env('CYCLOS_CHANNEL', 'webServices'),
     
     // IMPORTANT: Using consistent env variable names
-    'payment_type_id' => env('CYCLOS_PAYMENT_TYPE_ID', '-4143445532979633216'),
-    'admin_user_id' => env('CYCLOS_ADMIN_USER_ID', '-4143451855171492928'),
+    'payment_type_id' => env('CYCLOS_PAYMENT_TYPE_ID', '7157739016488738988'),
+    'admin_user_id' => env('CYCLOS_ADMIN_USER_ID', '7157739016491622572'),
     
     // Currency configuration
     'currency_code' => env('CYCLOS_CURRENCY_CODE', 'TT'),
