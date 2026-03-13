@@ -5,7 +5,7 @@ use App\Http\Controllers\Merchant\MerchantDashboardController;
 use App\Http\Controllers\Merchant\MerchantRepresentationController;
 use App\Http\Controllers\Merchant\PlanController;
 use App\Http\Controllers\Admin\HomeController;
-use App\Http\Controllers\FavorMember\FavorMemberDashboardController;
+
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\PurchaseCartController;
 use App\Http\Controllers\Inventory\PurchaseController;
@@ -123,7 +123,3 @@ Route::prefix('organization')->name('organization-admin.')->middleware(['auth', 
 });
 
 /** **************** FAVOR MEMBER ************************ */
-Route::prefix('favor-member')->name('favor-member.')->middleware(['auth', 'locale', 'role:favor_member'])->group(function (): void {
-
-    Route::get('/', [FavorMemberDashboardController::class, 'index'])->name('dashboard');
-});

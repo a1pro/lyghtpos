@@ -22,6 +22,15 @@
                     </a>
                 </li>
 
+
+                <li class="nav-item">
+                    <a href="{{route('favor-member.wallet.transactions')}}" class="nav-link {{ request()->routeIs('favor-member.wallet.transactions') ? 'active' : '' }}">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                        <p>Transactions</p>
+                    </a>
+                </li>
+
+
                 <!-- Logout -->
                 <li class="nav-item">
                     <a href="#" class="nav-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">

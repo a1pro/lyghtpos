@@ -121,3 +121,4 @@ Route::prefix('merchants')->name('admin.merchants.')->group(function(){
 
 require __DIR__ . '/merchant.php';
 require __DIR__ . '/subadmin.php';
+require __DIR__ . '/favor-member.php';
