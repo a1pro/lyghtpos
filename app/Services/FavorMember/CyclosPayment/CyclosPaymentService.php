@@ -12,7 +12,9 @@ class CyclosPaymentService
     protected string $username;
     protected string $password;
     protected string $channel;
-    protected string $currency;
+    protected string $currencyCode;
+    protected string $currencySymbol;
+    protected string $currencyName;
     protected string $paymentTypeId;
     protected string $adminUserId;
     protected ?string $currentUserId = null;
@@ -23,9 +25,36 @@ class CyclosPaymentService
         $this->username = config('services.cyclos.username');
         $this->password = config('services.cyclos.password');
         $this->channel = config('services.cyclos.channel', 'webServices');
-        $this->currency = config('authorize.currency', 'USD');
+        
+        // Currency settings
+        $this->currencyCode = config('services.cyclos.currency_code', 'TT');
+        $this->currencySymbol = config('services.cyclos.currency_symbol', 'TT');
+        $this->currencyName = config('services.cyclos.currency_name', 'TradeTokens');
+        
         $this->paymentTypeId = config('services.cyclos.payment_type_id', '7157739016488738988');
         $this->adminUserId = config('services.cyclos.admin_user_id', '7157739016491622572');
+        
+        Log::info('CyclosPaymentService initialized', [
+            'currency_code' => $this->currencyCode,
+            'currency_symbol' => $this->currencySymbol,
+            'environment' => app()->environment()
+        ]);
+    }
+
+    /**
+     * Get current currency symbol
+     */
+    public function getCurrencySymbol(): string
+    {
+        return $this->currencySymbol;
+    }
+
+    /**
+     * Get current currency code
+     */
+    public function getCurrencyCode(): string
+    {
+        return $this->currencyCode;
     }
 
     /**
@@ -46,7 +75,8 @@ class CyclosPaymentService
             
             Log::info('Fetching user balance from Cyclos', [
                 'cyclos_user_id' => $cyclosUserId,
-                'url' => $url
+                'url' => $url,
+                'currency' => $this->currencyCode
             ]);
             
             $response = Http::withBasicAuth($this->username, $this->password)
@@ -88,17 +118,17 @@ class CyclosPaymentService
 
     /**
      * Get user's transaction history from Cyclos
-     * FIXED: Properly handles the response format (direct array, not wrapped in pageItems)
      */
     public function getUserTransactions(string $cyclosUserId, int $pageSize = 20, int $pageNumber = 0): array
     {
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/transactions";
             
-            Log::info('🔍 Fetching user transactions from Cyclos', [
+            Log::info('Fetching user transactions from Cyclos', [
                 'cyclos_user_id' => $cyclosUserId,
                 'url' => $url,
-                'pageSize' => $pageSize
+                'pageSize' => $pageSize,
+                'currency' => $this->currencyCode
             ]);
             
             $response = Http::withBasicAuth($this->username, $this->password)
@@ -113,47 +143,34 @@ class CyclosPaymentService
                     'direction' => 'DESC',
                 ]);
 
-            Log::info('📦 Transactions API Response', [
+            Log::info('Transactions API Response', [
                 'status' => $response->status(),
-                'success' => $response->successful(),
                 'headers' => [
                     'X-Total-Count' => $response->header('X-Total-Count'),
-                    'X-Page-Size' => $response->header('X-Page-Size'),
-                    'X-Current-Page' => $response->header('X-Current-Page'),
                 ]
             ]);
 
             if ($response->failed()) {
-                Log::error('❌ Failed to fetch transactions', [
+                Log::error('Failed to fetch transactions', [
                     'cyclos_user_id' => $cyclosUserId,
                     'status' => $response->status(),
-                    'body' => $response->body()
                 ]);
                 return [];
             }
 
-            // The response is a direct array of transactions (not wrapped in pageItems)
             $transactions = $response->json();
-            
-            // Get total count from headers
             $totalCount = (int) $response->header('X-Total-Count', 0);
             
-            Log::info('✅ Cyclos transactions response', [
-                'cyclos_user_id' => $cyclosUserId,
+            Log::info('Transactions fetched', [
                 'total_count' => $totalCount,
-                'items_count' => is_array($transactions) ? count($transactions) : 0,
-                'is_array' => is_array($transactions),
-                'sample' => is_array($transactions) && count($transactions) > 0 ? array_keys($transactions[0]) : null
+                'items_count' => is_array($transactions) ? count($transactions) : 0
             ]);
 
-            // Return the direct array of transactions
             return is_array($transactions) ? $transactions : [];
 
         } catch (\Exception $e) {
-            Log::error('🔥 Exception in getUserTransactions', [
-                'cyclos_user_id' => $cyclosUserId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            Log::error('Exception in getUserTransactions', [
+                'error' => $e->getMessage()
             ]);
             return [];
         }
@@ -169,7 +186,6 @@ class CyclosPaymentService
         foreach ($rawTransactions as $transaction) {
             $amount = floatval($transaction['amount'] ?? 0);
             
-            // Determine transaction type
             $type = 'credit';
             if ($this->currentUserId) {
                 $toUser = $transaction['to']['user']['id'] ?? null;
@@ -182,23 +198,11 @@ class CyclosPaymentService
                 }
             }
 
-            // Format date
-            $date = 'N/A';
-            if (isset($transaction['date'])) {
-                try {
-                    $date = date('M d, Y H:i', strtotime($transaction['date']));
-                } catch (\Exception $e) {
-                    $date = $transaction['date'];
-                }
-            }
+            $date = isset($transaction['date']) 
+                ? date('M d, Y H:i', strtotime($transaction['date'])) 
+                : 'N/A';
 
-            // Get description
-            $description = $transaction['description'] ?? '';
-            if (empty($description)) {
-                $description = $transaction['type']['name'] ?? 'Transaction';
-            }
-
-            // Get reference
+            $description = $transaction['description'] ?? $transaction['type']['name'] ?? 'Transaction';
             $reference = $transaction['transactionNumber'] ?? $transaction['id'] ?? 'N/A';
 
             $formatted[] = [
@@ -208,21 +212,77 @@ class CyclosPaymentService
                 'amount' => abs($amount),
                 'type' => $type,
                 'reference' => $reference,
-                'status' => $transaction['status'] ?? 'completed'
+                'status' => $transaction['status'] ?? 'completed',
+                'currency' => $this->currencySymbol
             ];
         }
 
-        // Sort by date descending (newest first)
         usort($formatted, function($a, $b) {
             if ($a['date'] === 'N/A' || $b['date'] === 'N/A') return 0;
             return strtotime($b['date']) - strtotime($a['date']);
         });
 
-        Log::info('📊 Formatted transactions', [
-            'count' => count($formatted)
-        ]);
-
         return $formatted;
+    }
+
+    /**
+     * Add funds to user's Cyclos wallet
+     */
+    public function addFunds(string $userCyclosId, float $amount, string $description = ''): array
+    {
+        try {
+            $paymentData = [
+                'subject' => $userCyclosId,
+                'amount' => $amount,
+                'type' => $this->paymentTypeId,
+                'description' => $description,
+                'currency' => $this->currencyCode,
+            ];
+
+            Log::info('Adding funds to Cyclos wallet', [
+                'to_user' => $userCyclosId,
+                'amount' => $amount,
+                'currency' => $this->currencyCode
+            ]);
+
+            $paymentUrl = $this->baseUrl . "/api/{$this->adminUserId}/payments";
+            
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($paymentUrl, $paymentData);
+
+            if ($response->failed()) {
+                Log::error('Cyclos payment failed', [
+                    'status' => $response->status(),
+                ]);
+                return ['success' => false, 'message' => 'Payment failed'];
+            }
+
+            $data = $response->json();
+            Cache::forget("cyclos_balance_{$userCyclosId}");
+
+            Log::info('Cyclos payment successful', [
+                'transaction_id' => $data['id'] ?? null,
+                'currency' => $this->currencyCode
+            ]);
+
+            return [
+                'success' => true,
+                'transaction_id' => $data['id'] ?? null,
+                'data' => $data
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Exception in addFunds', [
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Exception: ' . $e->getMessage()];
+        }
     }
 
     /**
@@ -242,10 +302,6 @@ class CyclosPaymentService
                 ->get($url);
 
             if ($response->failed()) {
-                Log::error('Failed to fetch user accounts', [
-                    'user_id' => $cyclosUserId,
-                    'status' => $response->status()
-                ]);
                 return [];
             }
 
@@ -253,104 +309,9 @@ class CyclosPaymentService
 
         } catch (\Exception $e) {
             Log::error('Exception in getUserAccounts', [
-                'user_id' => $cyclosUserId,
                 'error' => $e->getMessage()
             ]);
             return [];
-        }
-    }
-
-    /**
-     * Add funds to user's Cyclos wallet
-     */
-    public function addFunds(string $userCyclosId, float $amount, string $description = ''): array
-    {
-        try {
-            $paymentData = [
-                'subject' => $userCyclosId,
-                'amount' => $amount,
-                'type' => $this->paymentTypeId,
-                'description' => $description,
-                'currency' => 'TT',
-            ];
-
-            Log::info('💰 Adding funds to Cyclos wallet', [
-                'to_user' => $userCyclosId,
-                'amount' => $amount
-            ]);
-
-            $paymentUrl = $this->baseUrl . "/api/{$this->adminUserId}/payments";
-            
-            $response = Http::withBasicAuth($this->username, $this->password)
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'Channel' => $this->channel,
-                ])
-                ->timeout(30)
-                ->post($paymentUrl, $paymentData);
-
-            if ($response->failed()) {
-                Log::error('❌ Cyclos payment failed', [
-                    'status' => $response->status(),
-                    'error' => $response->json()
-                ]);
-                return ['success' => false, 'message' => 'Payment failed'];
-            }
-
-            $data = $response->json();
-            Cache::forget("cyclos_balance_{$userCyclosId}");
-
-            Log::info('✅ Cyclos payment successful', [
-                'transaction_id' => $data['id'] ?? null
-            ]);
-
-            return [
-                'success' => true,
-                'transaction_id' => $data['id'] ?? null,
-                'data' => $data
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('🔥 Exception in addFunds', [
-                'error' => $e->getMessage()
-            ]);
-            return ['success' => false, 'message' => 'Exception: ' . $e->getMessage()];
-        }
-    }
-
-    /**
-     * Get single transaction details
-     */
-    public function getTransaction(string $transactionId): ?array
-    {
-        try {
-            $url = $this->baseUrl . "/api/transactions/{$transactionId}";
-            
-            $response = Http::withBasicAuth($this->username, $this->password)
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'Channel' => $this->channel,
-                ])
-                ->timeout(30)
-                ->get($url);
-
-            if ($response->failed()) {
-                Log::error('Failed to fetch transaction', [
-                    'transaction_id' => $transactionId,
-                    'status' => $response->status()
-                ]);
-                return null;
-            }
-
-            return $response->json();
-
-        } catch (\Exception $e) {
-            Log::error('Exception in getTransaction', [
-                'transaction_id' => $transactionId,
-                'error' => $e->getMessage()
-            ]);
-            return null;
         }
     }
 }

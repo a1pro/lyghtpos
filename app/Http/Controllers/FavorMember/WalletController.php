@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\Cache;
 
 class WalletController extends Controller
 {
-    protected $taxRate = 5; // 5% tax
-    protected $processingFeeRate = 2.9; // 2.9% processing fee
-    protected $processingFixedFee = 0.30; // $0.30 fixed fee
+    protected $taxRate = 5;
+    protected $processingFeeRate = 2.9;
+    protected $processingFixedFee = 0.30;
 
     public function __construct(
         private CyclosPaymentService $cyclosPaymentService,
@@ -24,75 +24,57 @@ class WalletController extends Controller
     ) {}
 
     /**
-     * Show dashboard with balance and transactions
+     * Get currency symbol from service
      */
-    /**
- * Show dashboard with balance and transactions
- */
-public function dashboard()
-{
-    
-    $user = auth()->user();
-    
-    Log::info('=== DASHBOARD CONTROLLER START ===');
-    Log::info('User ID: ' . $user->id);
-    Log::info('Cyclos User ID: ' . ($user->cyclos_user_id ?? 'null'));
-    
-    // Initialize variables with default values
-    $balance = 0;
-    $recentTransactions = [];
-    $error = null;
-
-    if (!$user->cyclos_user_id) {
-        Log::warning('No cyclos_user_id found');
-        $error = 'Cyclos account not linked. Please contact support.';
-    } else {
-        try {
-            // Set user ID for transaction detection
-            $this->cyclosPaymentService->setCurrentUserId($user->cyclos_user_id);
-            
-            // Get fresh balance
-            Cache::forget("cyclos_balance_{$user->cyclos_user_id}");
-            $balance = $this->cyclosPaymentService->getUserBalance($user->cyclos_user_id);
-            
-            // Ensure balance is a float
-            $balance = floatval($balance);
-            
-            Log::info('Balance fetched successfully', [
-                'balance' => $balance,
-                'type' => gettype($balance)
-            ]);
-
-            // Get recent transactions
-            $rawTransactions = $this->cyclosPaymentService->getUserTransactions($user->cyclos_user_id, 5);
-            if (!empty($rawTransactions)) {
-                $recentTransactions = $this->cyclosPaymentService->formatTransactions($rawTransactions);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Error in dashboard', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            $error = 'Unable to fetch wallet data. Please try again later.';
-        }
+    private function getCurrencySymbol(): string
+    {
+        return $this->cyclosPaymentService->getCurrencySymbol();
     }
 
-    // Create data array
-    $data = [
-        'balance' => $balance,
-        'recentTransactions' => $recentTransactions,
-        'error' => $error
-    ];
-    
-    Log::info('Data prepared for view:', $data);
-    Log::info('=== DASHBOARD CONTROLLER END ===');
-    
-    // Dump data to browser (remove after fixing)
+    /**
+     * Show dashboard with balance and transactions
+     */
+    public function dashboard()
+    {
+        $user = auth()->user();
+        
+        $balance = 0;
+        $recentTransactions = [];
+        $error = null;
+        $currencySymbol = $this->getCurrencySymbol();
 
-    
-    return view('favor-member.pages.dashboard', $data);
-}
+        Log::info('Dashboard accessed', [
+            'user_id' => $user->id,
+            'currency' => $currencySymbol
+        ]);
+
+        if (!$user->cyclos_user_id) {
+            $error = 'Cyclos account not linked. Please contact support.';
+        } else {
+            try {
+                $this->cyclosPaymentService->setCurrentUserId($user->cyclos_user_id);
+                
+                Cache::forget("cyclos_balance_{$user->cyclos_user_id}");
+                $balance = $this->cyclosPaymentService->getUserBalance($user->cyclos_user_id);
+                
+                $rawTransactions = $this->cyclosPaymentService->getUserTransactions($user->cyclos_user_id, 5);
+                if (!empty($rawTransactions)) {
+                    $recentTransactions = $this->cyclosPaymentService->formatTransactions($rawTransactions);
+                }
+
+            } catch (\Exception $e) {
+                Log::error('Error in dashboard', ['error' => $e->getMessage()]);
+                $error = 'Unable to fetch wallet data.';
+            }
+        }
+
+        return view('favor-member.pages.dashboard', [
+            'balance' => $balance,
+            'recentTransactions' => $recentTransactions,
+            'error' => $error,
+            'currencySymbol' => $currencySymbol
+        ]);
+    }
 
     /**
      * Get current balance (AJAX)
@@ -112,15 +94,16 @@ public function dashboard()
         try {
             Cache::forget("cyclos_balance_{$user->cyclos_user_id}");
             $balance = $this->cyclosPaymentService->getUserBalance($user->cyclos_user_id);
+            $currencySymbol = $this->getCurrencySymbol();
             
             return response()->json([
                 'success' => true,
                 'balance' => $balance,
-                'formatted' => number_format($balance, 2)
+                'formatted' => number_format($balance, 2) . ' ' . $currencySymbol,
+                'currency' => $currencySymbol
             ]);
             
         } catch (\Exception $e) {
-            Log::error('AJAX balance error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'balance' => 0,
@@ -136,16 +119,9 @@ public function dashboard()
     {
         $netAmount = $amount;
         $taxAmount = round($netAmount * ($this->taxRate / 100), 2);
-        
-        // Processing fee: percentage + fixed
         $processingPercentage = round($netAmount * ($this->processingFeeRate / 100), 2);
         $processingTotal = $processingPercentage + $this->processingFixedFee;
-        
-        // Total to be charged (what customer pays)
         $totalAmount = $netAmount + $taxAmount + $processingTotal;
-        
-        // Amount that actually goes to wallet (net amount only)
-        $walletCredit = $netAmount;
         
         return [
             'net_amount' => $netAmount,
@@ -154,29 +130,26 @@ public function dashboard()
             'processing_fixed' => $this->processingFixedFee,
             'processing_total' => $processingTotal,
             'total_amount' => $totalAmount,
-            'wallet_credit' => $walletCredit,
+            'wallet_credit' => $netAmount,
             'tax_rate' => $this->taxRate,
-            'processing_rate' => $this->processingFeeRate
+            'processing_rate' => $this->processingFeeRate,
+            'currency_symbol' => $this->getCurrencySymbol()
         ];
     }
 
     /**
-     * Process add funds request - redirect to payment form
+     * Process add funds request
      */
     public function addFunds(AddFundsRequest $request)
     {
         $fees = $this->calculateFees($request->amount);
-        
-        // Store all fee data in session
-        session([
-            'payment_fees' => $fees
-        ]);
+        session(['payment_fees' => $fees]);
         
         return redirect()->route('favor-member.wallet.payment-form');
     }
 
     /**
-     * Show payment form with fee breakdown
+     * Show payment form
      */
     public function showPaymentForm()
     {
@@ -191,12 +164,11 @@ public function dashboard()
     }
 
     /**
-     * Process payment and add funds to Cyclos
+     * Process payment
      */
     public function processPayment(ProcessPaymentRequest $request)
     {
         $user = auth()->user();
-        
         $fees = session('payment_fees');
         
         if (!$fees || !$user->cyclos_user_id) {
@@ -207,10 +179,9 @@ public function dashboard()
         DB::beginTransaction();
 
         try {
-            // Process credit card payment via Authorize.net (charge the total amount)
             $paymentResult = $this->paymentService->processCardPayment(
                 $request->validated(),
-                $fees['total_amount'] // Charge the total amount including all fees
+                $fees['total_amount']
             );
 
             if (!$paymentResult['success']) {
@@ -218,11 +189,15 @@ public function dashboard()
                 return back()->with('error', 'Payment failed: ' . ($paymentResult['message'] ?? ''));
             }
 
-            // Add funds to Cyclos wallet (only the net amount)
+            $description = "Wallet funding: +{$fees['wallet_credit']} {$fees['currency_symbol']} " .
+                          "(Tax: {$fees['tax_amount']} {$fees['currency_symbol']}, " .
+                          "Processing: {$fees['processing_total']} {$fees['currency_symbol']}) - " .
+                          "TXN: {$paymentResult['transaction_id']}";
+
             $cyclosResult = $this->cyclosPaymentService->addFunds(
                 $user->cyclos_user_id,
                 $fees['wallet_credit'],
-                "Wallet funding: +{$fees['wallet_credit']} TT (Tax: {$fees['tax_amount']} TT, Processing: {$fees['processing_total']} TT) - TXN: {$paymentResult['transaction_id']}"
+                $description
             );
 
             if (!$cyclosResult['success']) {
@@ -241,7 +216,8 @@ public function dashboard()
                 'tax_amount' => $fees['tax_amount'],
                 'processing_fee' => $fees['processing_total'],
                 'total_amount' => $fees['total_amount'],
-                'transaction_id' => $paymentResult['transaction_id']
+                'transaction_id' => $paymentResult['transaction_id'],
+                'currency_symbol' => $fees['currency_symbol']
             ]);
 
         } catch (\Exception $e) {
@@ -263,6 +239,7 @@ public function dashboard()
             'processingFee' => $request->get('processing_fee'),
             'totalAmount' => $request->get('total_amount'),
             'transactionId' => $request->get('transaction_id'),
+            'currencySymbol' => $request->get('currency_symbol', $this->getCurrencySymbol()),
             'taxRate' => $this->taxRate,
             'processingRate' => $this->processingFeeRate
         ]);
@@ -272,49 +249,41 @@ public function dashboard()
      * Transactions history page
      */
     public function transactions()
-{
-    $user = auth()->user();
-    
-    $transactions = [];
-    $balance = 0;
-    $error = null;
+    {
+        $user = auth()->user();
+        
+        $transactions = [];
+        $balance = 0;
+        $error = null;
 
-    if (!$user->cyclos_user_id) {
-        $error = 'Cyclos account not linked. Please contact support.';
-    } else {
-        try {
-            // Set the current user ID for transaction detection
-            $this->cyclosPaymentService->setCurrentUserId($user->cyclos_user_id);
-            
-            // Get current balance
-            Cache::forget("cyclos_balance_{$user->cyclos_user_id}");
-            $balance = $this->cyclosPaymentService->getUserBalance($user->cyclos_user_id);
-            
-            // Get transactions using the working endpoint
-            $rawTransactions = $this->cyclosPaymentService->getUserTransactions($user->cyclos_user_id, 50);
-            
-            Log::info('Raw transactions count', ['count' => count($rawTransactions)]);
-            
-            if (!empty($rawTransactions)) {
+        if (!$user->cyclos_user_id) {
+            $error = 'Cyclos account not linked.';
+        } else {
+            try {
+                $this->cyclosPaymentService->setCurrentUserId($user->cyclos_user_id);
+                
+                Cache::forget("cyclos_balance_{$user->cyclos_user_id}");
+                $balance = $this->cyclosPaymentService->getUserBalance($user->cyclos_user_id);
+                
+                $rawTransactions = $this->cyclosPaymentService->getUserTransactions($user->cyclos_user_id, 50);
                 $transactions = $this->cyclosPaymentService->formatTransactions($rawTransactions);
-                Log::info('Formatted transactions count', ['count' => count($transactions)]);
-            } else {
-                Log::warning('No transactions returned from Cyclos');
+                
+            } catch (\Exception $e) {
+                Log::error('Transactions error', ['error' => $e->getMessage()]);
+                $error = 'Unable to load transactions';
             }
-            
-        } catch (\Exception $e) {
-            Log::error('Transactions error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            $error = 'Unable to load transactions: ' . $e->getMessage();
         }
+
+        return view('favor-member.pages.transactions', [
+            'transactions' => $transactions,
+            'error' => $error,
+            'balance' => $balance,
+            'currencySymbol' => $this->getCurrencySymbol()
+        ]);
     }
 
-    return view('favor-member.pages.transactions', [
-        'transactions' => $transactions,
-        'error' => $error,
-        'balance' => $balance
-    ]);
-}
+    /**
+     * Get current currency symbol (AJAX)
+     */
+     
 }

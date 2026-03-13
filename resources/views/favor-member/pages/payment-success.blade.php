@@ -25,19 +25,19 @@
                             <table class="table table-sm table-borderless">
                                 <tr>
                                     <td>Wallet Credit:</td>
-                                    <td class="text-right">{{ number_format($amount, 2) }} TT</td>
+                                    <td class="text-right">{{ number_format($amount, 2) }} {{ $currencySymbol }}</td>
                                 </tr>
                                 <tr>
                                     <td>Tax ({{ $taxRate }}%):</td>
-                                    <td class="text-right text-danger">{{ number_format($taxAmount, 2) }} TT</td>
+                                    <td class="text-right text-danger">+ {{ number_format($taxAmount, 2) }} {{ $currencySymbol }}</td>
                                 </tr>
                                 <tr>
                                     <td>Processing Fee ({{ $processingRate }}%):</td>
-                                    <td class="text-right text-danger">{{ number_format($processingFee, 2) }} TT</td>
+                                    <td class="text-right text-danger">+ {{ number_format($processingFee, 2) }} {{ $currencySymbol }}</td>
                                 </tr>
                                 <tr class="font-weight-bold">
                                     <td>Total Charged:</td>
-                                    <td class="text-right text-primary">{{ number_format($totalAmount, 2) }} TT</td>
+                                    <td class="text-right text-primary">{{ number_format($totalAmount, 2) }} {{ $currencySymbol }}</td>
                                 </tr>
                             </table>
                         </div>

@@ -52,9 +52,20 @@ return [
     'password' => env('CYCLOS_API_PASSWORD'),
     'default_group' => env('CYCLOS_DEFAULT_GROUP'),
     'agreement' => env('CYCLOS_ACCEPT_AGREEMENT'),
+    'mock_mode' => env('CYCLOS_MOCK_MODE', false),
+    'fallback_to_mock' => env('CYCLOS_FALLBACK_TO_MOCK', true),
+    'use_api_password' => env('CYCLOS_USE_API_PASSWORD', true),
     'channel' => env('CYCLOS_CHANNEL', 'webServices'),
-    'payment_type_id' => env('CYCLOS_PAYMENT_TYPE_ID', '7157739016488738988'),
+    'payment_type_id' => env('CYCLOS_PAYMENT_TYPE_ID'),
+    'admin_user_id' => env('CYCLOS_ADMIN_USER_ID'),
+    'currency_code' => env('CYCLOS_CURRENCY_CODE', 'TT'),
+    'currency_symbol' => env('CYCLOS_CURRENCY_SYMBOL', 'TT'),
+    'currency_name' => env('CYCLOS_CURRENCY_NAME', 'TradeTokens'),
+    'timeout' => env('CYCLOS_TIMEOUT', 30),
+    'connect_timeout' => env('CYCLOS_CONNECT_TIMEOUT', 10),
+    'retry_times' => env('CYCLOS_RETRY_TIMES', 3),
+    'retry_sleep' => env('CYCLOS_RETRY_SLEEP', 100),
+    'cache_ttl' => env('CYCLOS_CACHE_TTL', 60),
 ],
-
 
 ];
