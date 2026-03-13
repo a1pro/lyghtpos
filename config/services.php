@@ -37,12 +37,24 @@ return [
         'merchant_id' => env('PROCHARGE_MERCHANT_ID'),
     ],
 
-    'cyclos' => [
-        'base_url' => env('CYCLOS_BASE_URL'),
-        'username' => env('CYCLOS_API_USERNAME'),
-        'password' => env('CYCLOS_API_PASSWORD'),
-        'default_group' => env('CYCLOS_DEFAULT_GROUP'),
-        'agreement' => env('CYCLOS_ACCEPT_AGREEMENT'),
-    ],
+   'cyclos' => [
+    'base_url' => env('CYCLOS_BASE_URL'),
+    'username' => env('CYCLOS_API_USERNAME'),
+    'password' => env('CYCLOS_API_PASSWORD'),
+    'default_group' => env('CYCLOS_DEFAULT_GROUP'),
+    'agreement' => env('CYCLOS_ACCEPT_AGREEMENT'),
+    'channel' => env('CYCLOS_CHANNEL', 'webServices'),
+    'payment_type_id' => env('CYCLOS_PAYMENT_TYPE_ID', '7157739016488738988'),
+],
+'cyclos' => [
+    'base_url' => env('CYCLOS_BASE_URL'),
+    'username' => env('CYCLOS_API_USERNAME'),
+    'password' => env('CYCLOS_API_PASSWORD'),
+    'default_group' => env('CYCLOS_DEFAULT_GROUP'),
+    'agreement' => env('CYCLOS_ACCEPT_AGREEMENT'),
+    'channel' => env('CYCLOS_CHANNEL', 'webServices'),
+    'payment_type_id' => env('CYCLOS_PAYMENT_TYPE_ID', '7157739016488738988'),
+],
+
 
 ];
