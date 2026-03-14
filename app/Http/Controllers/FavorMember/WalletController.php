@@ -5,6 +5,7 @@ namespace App\Http\Controllers\FavorMember;
 use App\Http\Controllers\Controller;
 use App\Services\FavorMember\CyclosPayment\CyclosPaymentService;
 use App\Services\Merchant\PaymentService;
+use App\Services\Paypal\ModernPayPalService;
 use App\Http\Requests\FavorMember\AddFundsRequest;
 use App\Http\Requests\FavorMember\ProcessPaymentRequest;
 use Illuminate\Http\Request;
@@ -20,7 +21,8 @@ class WalletController extends Controller
 
     public function __construct(
         private CyclosPaymentService $cyclosPaymentService,
-        private PaymentService $paymentService
+        private PaymentService $paymentService,
+        private ModernPayPalService $payPalService
     ) {}
 
     /**
@@ -120,8 +122,8 @@ class WalletController extends Controller
         $netAmount = $amount;
         $taxAmount = round($netAmount * ($this->taxRate / 100), 2);
         $processingPercentage = round($netAmount * ($this->processingFeeRate / 100), 2);
-        $processingTotal = $processingPercentage + $this->processingFixedFee;
-        $totalAmount = $netAmount + $taxAmount + $processingTotal;
+        $processingTotal = round($processingPercentage + $this->processingFixedFee, 2);
+        $totalAmount = round($netAmount + $taxAmount + $processingTotal, 2);
         
         return [
             'net_amount' => $netAmount,
@@ -139,41 +141,63 @@ class WalletController extends Controller
 
     /**
      * Process add funds request
+     * Select payment mode here: authorize or paypal
      */
     public function addFunds(AddFundsRequest $request)
     {
-        $fees = $this->calculateFees($request->amount);
-        session(['payment_fees' => $fees]);
-        
+        $paymentMethod = $request->input('payment_method', 'authorize');
+        $fees = $this->calculateFees((float) $request->amount);
+
+        session([
+            'payment_fees' => $fees,
+            'wallet_payment_method' => $paymentMethod,
+        ]);
+
+        if ($paymentMethod === 'paypal') {
+            return redirect()->route('favor-member.wallet.paypal.init');
+        }
+
         return redirect()->route('favor-member.wallet.payment-form');
     }
 
     /**
-     * Show payment form
+     * Show Authorize.net payment form
      */
     public function showPaymentForm()
     {
         $fees = session('payment_fees');
+        $paymentMethod = session('wallet_payment_method', 'authorize');
         
         if (!$fees) {
             return redirect()->route('favor-member.dashboard')
                 ->with('error', 'Please specify an amount first');
         }
 
+        if ($paymentMethod !== 'authorize') {
+            return redirect()->route('favor-member.wallet.paypal.init');
+        }
+
         return view('favor-member.pages.payment-form', $fees);
     }
 
     /**
-     * Process payment
+     * Existing Authorize.net card processing flow
+     * Kept unchanged except payment-method safety check
      */
     public function processPayment(ProcessPaymentRequest $request)
     {
         $user = auth()->user();
         $fees = session('payment_fees');
+        $paymentMethod = session('wallet_payment_method', 'authorize');
         
         if (!$fees || !$user->cyclos_user_id) {
             return redirect()->route('favor-member.dashboard')
                 ->with('error', 'Invalid session or Cyclos account');
+        }
+
+        if ($paymentMethod !== 'authorize') {
+            return redirect()->route('favor-member.dashboard')
+                ->with('error', 'Invalid payment method selected for this transaction.');
         }
 
         DB::beginTransaction();
@@ -189,7 +213,7 @@ class WalletController extends Controller
                 return back()->with('error', 'Payment failed: ' . ($paymentResult['message'] ?? ''));
             }
 
-            $description = "Wallet funding: +{$fees['wallet_credit']} {$fees['currency_symbol']} " .
+            $description = "Wallet funding via Authorize.net: +{$fees['wallet_credit']} {$fees['currency_symbol']} " .
                           "(Tax: {$fees['tax_amount']} {$fees['currency_symbol']}, " .
                           "Processing: {$fees['processing_total']} {$fees['currency_symbol']}) - " .
                           "TXN: {$paymentResult['transaction_id']}";
@@ -208,7 +232,7 @@ class WalletController extends Controller
 
             DB::commit();
             
-            session()->forget('payment_fees');
+            session()->forget(['payment_fees', 'wallet_payment_method']);
             Cache::forget("cyclos_balance_{$user->cyclos_user_id}");
 
             return redirect()->route('favor-member.wallet.payment-success', [
@@ -222,10 +246,186 @@ class WalletController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Payment exception', ['error' => $e->getMessage()]);
+            Log::error('Authorize payment exception', ['error' => $e->getMessage()]);
             return redirect()->route('favor-member.dashboard')
                 ->with('error', 'An error occurred');
         }
+    }
+
+    /**
+     * Initialize PayPal payment
+     */
+    public function initPayPalPayment()
+    {
+        $user = auth()->user();
+        $fees = session('payment_fees');
+        $paymentMethod = session('wallet_payment_method');
+    
+        if (!$fees || !$user->cyclos_user_id) {
+            return redirect()->route('favor-member.dashboard')
+                ->with('error', 'Invalid session or Cyclos account');
+        }
+    
+        if ($paymentMethod !== 'paypal') {
+            return redirect()->route('favor-member.wallet.payment-form');
+        }
+    
+        try {
+            $description = "Wallet Funding - {$fees['wallet_credit']} {$fees['currency_symbol']}";
+    
+            $orderResult = $this->payPalService->createOrder(
+                $fees['total_amount'],
+                'USD',
+                $description,
+                route('favor-member.wallet.paypal.success'),
+                route('favor-member.wallet.paypal.cancel')
+            );
+    
+            if (!$orderResult['success']) {
+                Log::error('PayPal order creation failed', [
+                    'user_id' => $user->id,
+                    'message' => $orderResult['message'] ?? 'Unknown error'
+                ]);
+    
+                return redirect()->route('favor-member.dashboard')
+                    ->with('error', $orderResult['message'] ?? 'Unable to initialize PayPal payment.');
+            }
+    
+            session([
+                'paypal_wallet_order_id' => $orderResult['order_id'],
+            ]);
+    
+            return redirect()->away($orderResult['approval_url']);
+    
+        } catch (\Exception $e) {
+            Log::error('PayPal init exception', [
+                'error' => $e->getMessage()
+            ]);
+    
+            return redirect()->route('favor-member.dashboard')
+                ->with('error', 'Unable to initialize PayPal payment. Please try again.');
+        }
+    }
+
+    /**
+     * PayPal success callback
+     */
+    public function paypalSuccess(Request $request)
+    {
+        $user = auth()->user();
+        $fees = session('payment_fees');
+        $paymentMethod = session('wallet_payment_method');
+        $sessionOrderId = session('paypal_wallet_order_id');
+
+        if (!$fees || !$user->cyclos_user_id) {
+            return redirect()->route('favor-member.dashboard')
+                ->with('error', 'Invalid payment session.');
+        }
+
+        if ($paymentMethod !== 'paypal') {
+            return redirect()->route('favor-member.dashboard')
+                ->with('error', 'Invalid payment method.');
+        }
+
+        $orderId = $request->get('token') ?: $request->get('order_id') ?: $sessionOrderId;
+
+        if (!$orderId) {
+            return redirect()->route('favor-member.dashboard')
+                ->with('error', 'PayPal order ID missing.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $captureResult = $this->payPalService->captureOrder($orderId);
+
+            if (!$captureResult['success']) {
+                DB::rollBack();
+
+                Log::error('PayPal capture failed', [
+                    'user_id' => $user->id,
+                    'order_id' => $orderId,
+                    'message' => $captureResult['message'] ?? 'Unknown error'
+                ]);
+
+                return redirect()->route('favor-member.dashboard')
+                    ->with('error', $captureResult['message'] ?? 'PayPal payment capture failed.');
+            }
+
+            $description = "Wallet funding via PayPal: +{$fees['wallet_credit']} {$fees['currency_symbol']} " .
+                           "(Tax: {$fees['tax_amount']} {$fees['currency_symbol']}, " .
+                           "Processing: {$fees['processing_total']} {$fees['currency_symbol']}) - " .
+                           "PAYPAL ORDER: {$captureResult['order_id']} - " .
+                           "CAPTURE: {$captureResult['capture_id']}";
+
+            $cyclosResult = $this->cyclosPaymentService->addFunds(
+                $user->cyclos_user_id,
+                $fees['wallet_credit'],
+                $description
+            );
+
+            if (!$cyclosResult['success']) {
+                DB::rollBack();
+
+                Log::error('Cyclos wallet update failed after PayPal success', [
+                    'user_id' => $user->id,
+                    'order_id' => $captureResult['order_id'],
+                    'capture_id' => $captureResult['capture_id'] ?? null
+                ]);
+
+                return redirect()->route('favor-member.dashboard')
+                    ->with('error', 'PayPal payment completed but wallet update failed. Please contact support with Order ID: ' . $captureResult['order_id']);
+            }
+
+            DB::commit();
+
+            session()->forget([
+                'payment_fees',
+                'wallet_payment_method',
+                'paypal_wallet_order_id'
+            ]);
+
+            Cache::forget("cyclos_balance_{$user->cyclos_user_id}");
+
+            return redirect()->route('favor-member.wallet.payment-success', [
+                'amount' => $fees['wallet_credit'],
+                'tax_amount' => $fees['tax_amount'],
+                'processing_fee' => $fees['processing_total'],
+                'total_amount' => $fees['total_amount'],
+                'transaction_id' => $captureResult['capture_id'] ?? $captureResult['order_id'],
+                'currency_symbol' => $fees['currency_symbol']
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('PayPal success exception', [
+                'error' => $e->getMessage(),
+                'order_id' => $orderId
+            ]);
+
+            return redirect()->route('favor-member.dashboard')
+                ->with('error', 'An error occurred while finalizing PayPal payment.');
+        }
+    }
+
+    /**
+     * PayPal cancel callback
+     */
+    public function paypalCancel(Request $request)
+    {
+        Log::info('PayPal payment cancelled by user', [
+            'user_id' => auth()->id(),
+            'token' => $request->get('token')
+        ]);
+
+        session()->forget([
+            'wallet_payment_method',
+            'paypal_wallet_order_id'
+        ]);
+
+        return redirect()->route('favor-member.dashboard')
+            ->with('error', 'PayPal payment was cancelled.');
     }
 
     /**
@@ -281,9 +481,4 @@ class WalletController extends Controller
             'currencySymbol' => $this->getCurrencySymbol()
         ]);
     }
-
-    /**
-     * Get current currency symbol (AJAX)
-     */
-     
 }

@@ -16,10 +16,8 @@ class ModernPayPalService
     {
         $this->mode = config('paypal.mode', 'sandbox');
 
-        // Initialize PayPal client
         $this->provider = new PayPalClient;
 
-        // Set credentials based on mode
         $config = [
             'mode' => $this->mode,
             'sandbox' => [
@@ -34,15 +32,12 @@ class ModernPayPalService
             ],
             'payment_action' => 'Sale',
             'currency' => 'USD',
-            'notify_url' => '', // Webhook URL
+            'notify_url' => '',
             'locale' => 'en_US',
             'validate_ssl' => true,
         ];
 
-        // Set configuration
         $this->provider->setApiCredentials($config);
-
-        // Get access token
         $this->provider->getAccessToken();
 
         Log::info('Modern PayPal Service initialized', [
@@ -52,15 +47,18 @@ class ModernPayPalService
     }
 
     /**
-     * Create an order for subscription payment
+     * Create order
      */
-    public function createOrder($amount, $currency = 'USD', $description = 'Subscription Payment')
-    {
+    public function createOrder(
+        $amount,
+        $currency = 'USD',
+        $description = 'Subscription Payment',
+        ?string $returnUrl = null,
+        ?string $cancelUrl = null
+    ) {
         try {
-            // Generate unique reference ID
             $referenceId = 'SUB-' . Str::random(8) . '-' . time();
 
-            // Get pending subscription data
             $pendingSubscription = Session::get('pending_subscription', []);
 
             $customData = json_encode([
@@ -70,7 +68,6 @@ class ModernPayPalService
                 'timestamp' => now()->timestamp
             ]);
 
-            // Build order data
             $orderData = [
                 'intent' => 'CAPTURE',
                 'purchase_units' => [
@@ -86,23 +83,23 @@ class ModernPayPalService
                 ],
                 'application_context' => [
                     'brand_name' => config('app.name'),
-                    'return_url' => route('merchant.subscription.paypal.success'),
-                    'cancel_url' => route('merchant.subscription.paypal.cancel'),
+                    'return_url' => $returnUrl ?: route('merchant.subscription.paypal.success'),
+                    'cancel_url' => $cancelUrl ?: route('merchant.subscription.paypal.cancel'),
                     'user_action' => 'PAY_NOW',
                     'shipping_preference' => 'NO_SHIPPING'
                 ]
             ];
 
-            // Create order
             $response = $this->provider->createOrder($orderData);
 
             Log::info('PayPal order created', [
                 'order_id' => $response['id'] ?? null,
-                'status' => $response['status'] ?? null
+                'status' => $response['status'] ?? null,
+                'return_url' => $orderData['application_context']['return_url'],
+                'cancel_url' => $orderData['application_context']['cancel_url'],
             ]);
 
             if (isset($response['id']) && $response['id']) {
-                // Find approval URL
                 $approvalUrl = null;
                 foreach ($response['links'] as $link) {
                     if ($link['rel'] === 'approve') {
@@ -138,13 +135,9 @@ class ModernPayPalService
         }
     }
 
-    /**
-     * Capture payment for an order
-     */
     public function captureOrder($orderId)
     {
         try {
-            // Capture the order
             $response = $this->provider->capturePaymentOrder($orderId);
 
             Log::info('PayPal order captured', [
@@ -154,10 +147,8 @@ class ModernPayPalService
             ]);
 
             if (isset($response['status']) && $response['status'] === 'COMPLETED') {
-                // Extract capture details
                 $capture = $response['purchase_units'][0]['payments']['captures'][0] ?? null;
 
-                // Extract payer details
                 $payerEmail = $response['payer']['email_address'] ?? null;
                 $payerName = null;
 
@@ -197,9 +188,6 @@ class ModernPayPalService
         }
     }
 
-    /**
-     * Get order details
-     */
     public function getOrder($orderId)
     {
         try {
@@ -221,9 +209,6 @@ class ModernPayPalService
         }
     }
 
-    /**
-     * Get user-friendly error message
-     */
     protected function getUserFriendlyError($exception)
     {
         $message = 'Payment processing failed. Please try again.';
@@ -231,7 +216,6 @@ class ModernPayPalService
         try {
             $errorMessage = $exception->getMessage();
 
-            // Common PayPal error messages
             if (strpos($errorMessage, 'INSTRUMENT_DECLINED') !== false) {
                 return 'Your payment method was declined. Please try another payment method.';
             }
@@ -254,12 +238,10 @@ class ModernPayPalService
                 return 'A duplicate transaction was detected. Please try again.';
             }
 
-            // Extract message from exception if possible
             if (method_exists($exception, 'getMessage')) {
                 $message = $exception->getMessage();
             }
         } catch (\Exception $e) {
-            // Fall back to default message
         }
 
         return $message;
