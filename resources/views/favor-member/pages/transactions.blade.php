@@ -16,10 +16,7 @@
                             <h2 class="text-primary">{{ number_format($balance ?? 0, 2) }} {{ $currencySymbol }}</h2>
                         </div>
                         <div class="col-md-6 text-right">
-                            <a href="{{ route('favor-member.wallet.payment-form') }}" class="btn btn-success">
-                                <i class="fas fa-plus-circle mr-2"></i>
-                                Add Funds
-                            </a>
+                          
                             <a href="{{ route('favor-member.dashboard') }}" class="btn btn-secondary ml-2">
                                 <i class="fas fa-arrow-left mr-2"></i>
                                 Back
