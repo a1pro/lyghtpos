@@ -21,6 +21,11 @@ Route::prefix('favor-member')->name('favor-member.')->middleware(['auth', 'role:
         Route::post('/process-payment', [WalletController::class, 'processPayment'])->name('process-payment');
         Route::get('/payment-success', [WalletController::class, 'paymentSuccess'])->name('payment-success');
         Route::get('/transactions', [WalletController::class, 'transactions'])->name('transactions');
+
+        Route::get('/paypal/init', [WalletController::class, 'initPayPalPayment'])->name('paypal.init');
+        Route::get('/paypal/success', [WalletController::class, 'paypalSuccess'])->name('paypal.success');
+        Route::get('/paypal/cancel', [WalletController::class, 'paypalCancel'])->name('paypal.cancel');
+
     });
 
     // Cart
