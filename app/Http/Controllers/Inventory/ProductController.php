@@ -26,8 +26,7 @@ class ProductController extends Controller
         $user = Auth::user();
         $userId = Auth::id();
          
-        $role = $user['role_id'];
-        if($role==1){
+        if($user->isAdmin() || $user->isFavorMember()){
         $products = Product::query()
             ->search($request->search)
             ->latest()

@@ -141,21 +141,21 @@ class User extends Authenticatable
 
     public function isTradeMerchant(): bool
     {
-        return $this->account_type === 'TRADE_MERCHANT';
+        return $this->role_id === 2;
     }
 
     public function isTradeMember(): bool
     {
-        return $this->account_type === 'TRADE_MEMBER';
+        return $this->role_id === 6;
     }
 
     public function isOrganization(): bool
     {
-        return $this->account_type === 'ORGANIZATION';
+        return $this->role_id === 7;
     }
 
     public function isFavorMember(): bool
     {
-        return $this->account_type === 'FAVOR_MEMBER';
+        return $this->role_id === 8;
     }
 }
