@@ -30,6 +30,12 @@
                     </a>
                 </li>
 
+                <li class="nav-item">
+                    <a href="{{ route('favor-member.cart.index') }}" class="nav-link {{ request()->routeIs('favor-member.cart.index') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-cart-plus"></i>
+                        <p>Cart</p>
+                    </a>
+                </li>
 
                 <!-- Logout -->
                 <li class="nav-item">

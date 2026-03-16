@@ -28,6 +28,8 @@ class CartController extends Controller
 
         if ($user->isMerchant()) {
             return view('merchant.pages.cart.index');
+        } elseif ($user->isFavorMember()) {
+            return view('favor-member.pages.cart.index');
         } else {
             return view('cart.index');
         }

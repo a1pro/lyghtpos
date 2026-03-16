@@ -16,4 +16,6 @@ import "./components/Cart";
 
 import "./merchant/components/Cart";
 
+import "./favor-member/components/Cart";
+
 import "./components/Purchase"
