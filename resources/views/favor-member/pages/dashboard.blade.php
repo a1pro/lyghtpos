@@ -175,7 +175,8 @@
                                                 <div class="card-body text-center d-flex flex-column justify-content-center align-items-center">
                                                     <div class="payment-logo-wrap">
                                                         <img
-                                                            src="{{ asset('images/authorize.jpeg') }}"
+                                                            src="{{ asset('images/authorize.png') }}"
+                                                            width="180px"
                                                             alt="Authorize.net"
                                                             class="payment-logo">
                                                     </div>
@@ -202,7 +203,8 @@
                                                 <div class="card-body text-center d-flex flex-column justify-content-center align-items-center">
                                                     <div class="payment-logo-wrap">
                                                         <img
-                                                            src="{{ asset('images/paypal.jpeg') }}"
+                                                            src="{{ asset('images/paypal.png') }}"
+                                                            width="180px"
                                                             alt="PayPal"
                                                             class="payment-logo">
                                                     </div>
