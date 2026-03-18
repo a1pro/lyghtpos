@@ -21,6 +21,59 @@ use App\Http\Controllers\Merchant\PaymentController;
 use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
 use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
+use App\Http\Controllers\Merchant\MerchantProductController;
+
+
+Route::get('/test-correct-format', function() {
+    $cyclosUserId = auth()->user()->cyclos_user_id;
+    $baseUrl = config('services.cyclos.base_url');
+    $username = config('services.cyclos.username');
+    $password = config('services.cyclos.password');
+    $channel = config('services.cyclos.channel', 'webServices');
+    
+    // Use the exact format from your earlier successful test
+    $testData = [
+        'name' => 'Test Product ' . uniqid(),
+        'description' => 'Testing correct format',
+        'publicationPeriod' => [
+            'begin' => now()->toIso8601String(),
+            'end' => now()->addYear()->toIso8601String(),
+        ],
+        'categories' => ['-4143452130049399872'], // Using the actual ID, not internal name
+        'currency' => 'unit',
+        'price' => 25.00,
+        'unlimitedStock' => false,
+        'stockQuantity' => 10,
+        'allowDecimalQuantity' => false,
+        'kind' => 'simple',
+        'customValues' => [
+            'tradeType' => 'tradeTypeOffer'
+        ]
+    ];
+    
+    Log::info('Testing correct format', ['data' => $testData]);
+    
+    $response = Http::withBasicAuth($username, $password)
+        ->withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Channel' => $channel,
+        ])
+        ->post($baseUrl . "/api/{$cyclosUserId}/marketplace", $testData);
+    
+    $responseData = $response->json();
+    
+    Log::info('Response from correct format', [
+        'status' => $response->status(),
+        'response' => $responseData
+    ]);
+    
+    return response()->json([
+        'status' => $response->status(),
+        'response' => $responseData,
+        'sent_data' => $testData
+    ]);
+})->middleware('auth');
 
 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
@@ -43,6 +96,20 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         // View single payment
         Route::get('/{id}', 'show')->name('show');
     });
+
+    Route::prefix('products')->name('products.')->group(function(){
+        Route::get('/', [MerchantProductController::class, 'index'])->name('index');
+        Route::get('create', [MerchantProductController::class, 'create'])->name('create');
+        Route::post('/', [MerchantProductController::class, 'store'])->name('store');
+        Route::get('{product}', [MerchantProductController::class, 'show'])->name('show');
+        Route::get('{product}/edit', [MerchantProductController::class, 'edit'])->name('edit');
+        Route::put('{product}', [MerchantProductController::class, 'update'])->name('update');
+        Route::delete('{product}', [MerchantProductController::class, 'destroy'])->name('destroy');
+        
+        // AJAX search route
+        Route::get('search/ajax', [MerchantProductController::class, 'search'])->name('search');
+    });
+
 
     Route::prefix('subscription')->name('subscription.')->group(function () {
         Route::get('/plans', [PlanController::class, 'index'])->name('plans');
@@ -84,7 +151,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
-    Route::resource('products', ProductController::class)->names('products');
+  
     Route::resource('customers', CustomerController::class)->names('customers');
     Route::resource('orders', OrderController::class)->names('orders');
     Route::resource('suppliers', SupplierController::class)->names('suppliers');
