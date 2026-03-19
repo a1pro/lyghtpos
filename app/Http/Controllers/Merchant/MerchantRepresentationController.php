@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\UserGovernanceLayer;
 use App\Models\GovernanceLayer;
+
 class MerchantRepresentationController extends Controller
 {
     public function showForm()
@@ -17,35 +18,46 @@ class MerchantRepresentationController extends Controller
     public function submitForm(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'subject' => ['required', 'string', 'max:255'],
-            'pledge_value' => ['required'],
-            'currency' => ['required'],
+            'community' => ['required', 'string'],
+            'role' => ['required', 'string'],
+            'accepted_currencies' => ['required', 'array', 'min:1'],
+            'accepted_currencies.*' => ['string'],
+            'participate_vouchers' => ['nullable', 'boolean'],
+            'allow_barter' => ['nullable', 'boolean'],
+            'pledge_description' => ['nullable', 'string', 'max:1000'],
+            'pledge_value' => ['required', 'numeric', 'min:0'],
         ]);
-    
+
         if ($validator->fails()) {
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
-    
+
+        $participateVouchers = $request->has('participate_vouchers') ? 1 : 0;
+        $allowBarter = $request->has('allow_barter') ? 1 : 0;
+
         // Create or update the representation
         $representation = Representation::updateOrCreate(
             [
                 'user_id' => $request->input('user_id'),
-                'subject' => $request->input('subject'),
             ],
             [
-                'purpose' => $request->input('purpose'),
-                'futuristic_plan' => $request->input('futuristic_plan'),
+                'community' => $request->input('community'),
+                'role' => $request->input('role'),
+                'accepted_currencies' => json_encode($request->input('accepted_currencies')),
+                'participate_vouchers' => $participateVouchers,
+                'allow_barter' => $allowBarter,
+                'pledge_description' => $request->input('pledge_description'),
+
                 'pledge_value' => $request->input('pledge_value'),
-                'currency' => $request->input('currency'),
                 'status' => 'pending',
             ]
         );
-    
+
         // Governance layer logic moved here with representation_id
         $governanceData = GovernanceLayer::where('status', 'active')->get();
-    
+
         foreach ($governanceData as $govData) {
             UserGovernanceLayer::create([
                 'user_id'  => $request->input('user_id'),
@@ -53,7 +65,7 @@ class MerchantRepresentationController extends Controller
                 'representation_id' => $representation->id // Added representation_id
             ]);
         }
-    
+
         return redirect()->route('merchant.dashboard');
     }
 }
