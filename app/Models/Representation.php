@@ -19,7 +19,14 @@ class Representation extends Model
         'review_message',
         'last_reviewed',
         'reviewer_user_id',
-        'payment_status'
+        'payment_status',
+
+        'community',
+        'role',
+        'accepted_currencies',
+        'participate_vouchers',
+        'allow_barter',
+        'pledge_description',
     ];
 
     protected $casts = [
