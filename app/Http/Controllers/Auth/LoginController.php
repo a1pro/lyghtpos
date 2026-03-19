@@ -48,6 +48,10 @@ class LoginController extends Controller
                 return redirect()->route('organization-admin.dashboard');
             case 8: // Favor Member
                 return redirect()->route('favor-member.dashboard');
+            case 9:
+                return redirect()->route('merchant.manager.index');    
+            case 10:
+                return redirect()->route('merchant.cashier.balance.index');   
             default:
                 return redirect()->route('merchant.dashboard'); // fallback
         }

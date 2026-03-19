@@ -5,7 +5,7 @@ use App\Http\Controllers\Merchant\MerchantDashboardController;
 use App\Http\Controllers\Merchant\MerchantRepresentationController;
 use App\Http\Controllers\Merchant\PlanController;
 use App\Http\Controllers\Admin\HomeController;
-
+use App\Http\Controllers\Merchant\TeamMemberController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\PurchaseCartController;
 use App\Http\Controllers\Inventory\PurchaseController;
@@ -24,56 +24,6 @@ use net\authorize\api\controller as AnetController;
 use App\Http\Controllers\Merchant\MerchantProductController;
 
 
-Route::get('/test-correct-format', function() {
-    $cyclosUserId = auth()->user()->cyclos_user_id;
-    $baseUrl = config('services.cyclos.base_url');
-    $username = config('services.cyclos.username');
-    $password = config('services.cyclos.password');
-    $channel = config('services.cyclos.channel', 'webServices');
-    
-    // Use the exact format from your earlier successful test
-    $testData = [
-        'name' => 'Test Product ' . uniqid(),
-        'description' => 'Testing correct format',
-        'publicationPeriod' => [
-            'begin' => now()->toIso8601String(),
-            'end' => now()->addYear()->toIso8601String(),
-        ],
-        'categories' => ['-4143452130049399872'], // Using the actual ID, not internal name
-        'currency' => 'unit',
-        'price' => 25.00,
-        'unlimitedStock' => false,
-        'stockQuantity' => 10,
-        'allowDecimalQuantity' => false,
-        'kind' => 'simple',
-        'customValues' => [
-            'tradeType' => 'tradeTypeOffer'
-        ]
-    ];
-    
-    Log::info('Testing correct format', ['data' => $testData]);
-    
-    $response = Http::withBasicAuth($username, $password)
-        ->withHeaders([
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-            'Channel' => $channel,
-        ])
-        ->post($baseUrl . "/api/{$cyclosUserId}/marketplace", $testData);
-    
-    $responseData = $response->json();
-    
-    Log::info('Response from correct format', [
-        'status' => $response->status(),
-        'response' => $responseData
-    ]);
-    
-    return response()->json([
-        'status' => $response->status(),
-        'response' => $responseData,
-        'sent_data' => $testData
-    ]);
-})->middleware('auth');
 
 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
@@ -108,6 +58,15 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         
         // AJAX search route
         Route::get('search/ajax', [MerchantProductController::class, 'search'])->name('search');
+    });
+
+    Route::prefix('team-members')->name('team-members.')->group(function () {
+        Route::get('/', [TeamMemberController::class, 'index'])->name('index');
+        Route::get('/create', [TeamMemberController::class, 'create'])->name('create');
+        Route::post('/', [TeamMemberController::class, 'store'])->name('store');
+        Route::get('/{teamMember}/edit', [TeamMemberController::class, 'edit'])->name('edit');
+        Route::put('/{teamMember}', [TeamMemberController::class, 'update'])->name('update');
+        Route::delete('/{teamMember}', [TeamMemberController::class, 'destroy'])->name('destroy');
     });
 
 

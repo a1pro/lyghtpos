@@ -26,11 +26,20 @@
                 @if($status == 'approved')
                     <!-- POS -->
                     <li class="nav-item">
+                        <a href="{{ route('merchant.team-members.index') }}" class="nav-link {{ request()->routeIs('merchant.team-members.index') ? 'active' : '' }}">
+                            <i class="fa-solid fa-people-group"></i>
+                            <p>Team Members</p>
+                        </a>
+                    </li>
+
+
+                    <li class="nav-item">
                         <a href="{{ route('merchant.barter-assist-pos') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-pos') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-th-large"></i>
                             <p>{{ __('POS') }}</p>
                         </a>
                     </li>
+
 
                     <!-- Cash Price -->
                     <li class="nav-item">

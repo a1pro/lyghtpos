@@ -36,7 +36,9 @@ class User extends Authenticatable
         'account_type',
         'cyclos_user_id',
         'cyclos_group',
-        'cyclos_username'
+        'cyclos_username',
+        'merchant_id',
+        'status'
     ];
 
     /**
