@@ -45,14 +45,17 @@ class MerchantProductController extends Controller
                 'max_price' => $request->input('max_price'),
                 'page' => $request->input('page', 0),
                 'per_page' => $request->input('per_page', 10),
+                // 'kind' => 'webshop',
             ];
 
-            $rawProducts = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
+            $result = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
+            $rawProducts = $result['products'];
+            $headers = $result['headers'];
             $formattedProducts = $this->productService->formatProducts($rawProducts);
             
             $totalCount = count($rawProducts);
             $currentPage = $request->input('page', 1);
-            $perPage = $request->input('per_page', 10);
+            $perPage = $request->input('per_page', 4);
             
             $products = new \Illuminate\Pagination\LengthAwarePaginator(
                 $formattedProducts,
@@ -62,8 +65,22 @@ class MerchantProductController extends Controller
                 ['path' => $request->url(), 'query' => $request->query()]
             );
 
+            Log::info('Productsssss==========', [
+                'headers' => $headers,
+            ]);
+
+            $productsData = $products->toArray();
+            $productsData['pagination_headers'] = [
+                'x_current_page' => $headers['x-current-page'] ?? null,
+                'x_page_size' => $headers['x-page-size'] ?? null,
+                'x_total_count' => $headers['x-total-count'] ?? null,
+                'x_page_count' => $headers['x-page-count'] ?? null,
+                'x_has_next_page' => $headers['x-has-next-page'] ?? null,
+            ];
+
+
             return $request->wantsJson()
-                ? response()->json($products)
+                ? response()->json($productsData)
                 : view('merchant.pages.products.index', ['products' => $products]);
                 
         } catch (\Exception $e) {
@@ -234,7 +251,7 @@ class MerchantProductController extends Controller
     /**
      * Show the form for editing the specified product.
      */
-    public function edit(Request $request, string $productId): Factory|View
+    public function edit(Request $request, string $productId)
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;

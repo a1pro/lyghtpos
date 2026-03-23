@@ -15,6 +15,7 @@ import "./bootstrap";
 import "./components/Cart";
 
 import "./merchant/components/Cart";
+import "./merchant/components/Checkout";
 
 import "./favor-member/components/Cart";
 

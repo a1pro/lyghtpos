@@ -14,15 +14,15 @@ class AddToCartRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'barcode' => ['required', 'string', 'exists:products,barcode'],
+            'product_id' => ['required'],
+            'barcode' => ['nullable', 'string', 'exists:products,barcode'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'barcode.required' => __('cart.validation.barcode_required'),
-            'barcode.exists' => __('cart.validation.barcode_not_found'),
+            'product_id.required' => __('cart.validation.product_not_found'),
         ];
     }
 }

@@ -1502,10 +1502,10 @@ es6-symbol@3.1.1:
     d "1"
     es5-ext "~0.10.14"
 
-esbuild-linux-64@0.15.10:
+esbuild-windows-64@0.15.10:
   version "0.15.10"
-  resolved "https://registry.npmjs.org/esbuild-linux-64/-/esbuild-linux-64-0.15.10.tgz"
-  integrity sha512-jd8XfaSJeucMpD63YNMO1JCrdJhckHWcMv6O233bL4l6ogQKQOxBYSRP/XLWP+6kVTu0obXovuckJDcA0DKtQA==
+  resolved "https://registry.npmjs.org/esbuild-windows-64/-/esbuild-windows-64-0.15.10.tgz"
+  integrity sha512-2H0gdsyHi5x+8lbng3hLbxDWR7mKHWh5BXZGKVG830KUmXOOWFE2YKJ4tHRkejRduOGDrBvHBriYsGtmTv3ntA==
 
 esbuild@^0.15.9:
   version "0.15.10"
@@ -2282,6 +2282,11 @@ punycode@^2.1.0:
   resolved "https://registry.npmjs.org/punycode/-/punycode-2.1.1.tgz"
   integrity sha512-XRsRjdf+j5ml+y/6GKHPZbrF/8p2Yga0JPtdqTIY2Xe5ohJPD9saDJJLPvp9+NSBprVvevdXZybnj2cv8OEd0A==
 
+qrcode.react@^4.2.0:
+  version "4.2.0"
+  resolved "https://registry.npmjs.org/qrcode.react/-/qrcode.react-4.2.0.tgz"
+  integrity sha512-QpgqWi8rD9DsS9EP3z7BT+5lY5SFhsqGjpgW5DY/i3mK4M9DTBNz3ErMi8BWYEfI3L0d8GIbGmcdFAS1uIRGjA==
+
 quote-stream@^1.0.1:
   version "1.0.2"
   resolved "https://registry.npmjs.org/quote-stream/-/quote-stream-1.0.2.tgz"
@@ -2318,7 +2323,7 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react@^18.2.0:
+"react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", react@^18.2.0:
   version "18.2.0"
   resolved "https://registry.npmjs.org/react/-/react-18.2.0.tgz"
   integrity sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==
