@@ -103,7 +103,7 @@ class MerchantProductService
             }
 
             $data = $response->json();
-            
+
             Log::info('Marketplace data fetched successfully', [
                 'categories_count' => count($data['categories'] ?? []),
                 'currencies_count' => count($data['currencies'] ?? [])
@@ -111,7 +111,7 @@ class MerchantProductService
 
             // Cache the data for 1 hour
             Cache::put('cyclos_marketplace_data', $data, 3600);
-            
+
             $this->marketplaceData = $data;
             return $data;
         } catch (Exception $e) {
@@ -145,12 +145,12 @@ class MerchantProductService
     public function flattenCategories(array $categories, string $prefix = ''): array
     {
         $flattened = [];
-        
+
         foreach ($categories as $category) {
             $id = $category['id'] ?? null;
             $name = $category['name'] ?? 'Unknown';
             $children = $category['children'] ?? [];
-            
+
             if ($id) {
                 Log::debug('Found category', [
                     'id' => $id,
@@ -158,16 +158,16 @@ class MerchantProductService
                     'id_type' => gettype($id),
                     'id_length' => strlen($id)
                 ]);
-                
+
                 $displayName = $prefix ? $prefix . ' > ' . $name : $name;
                 $flattened[$id] = $displayName;
-                
+
                 if (!empty($children)) {
                     $flattened = $flattened + $this->flattenCategories($children, $displayName);
                 }
             }
         }
-        
+
         return $flattened;
     }
 
@@ -189,7 +189,7 @@ class MerchantProductService
             if ((string)$category['id'] === (string)$searchId) {
                 return $category['internalName'] ?? null;
             }
-            
+
             if (!empty($category['children'])) {
                 $found = $this->findInternalNameById($category['children'], $searchId);
                 if ($found) {
@@ -197,7 +197,7 @@ class MerchantProductService
                 }
             }
         }
-        
+
         return null;
     }
 
@@ -208,7 +208,7 @@ class MerchantProductService
     {
         try {
             $categories = $this->getMarketplaceCategories();
-            
+
             if (!empty($categories)) {
                 $flattened = $this->flattenCategories($categories);
                 if (!empty($flattened)) {
@@ -217,7 +217,7 @@ class MerchantProductService
                     }
                 }
             }
-            
+
             return null;
         } catch (Exception $e) {
             Log::error('Error getting default category', [
@@ -234,13 +234,13 @@ class MerchantProductService
     {
         $data = $this->getMarketplaceData();
         $customFields = $data['customFields'] ?? [];
-        
+
         foreach ($customFields as $field) {
             if (($field['internalName'] ?? '') === 'tradeType') {
                 return $field['possibleValues'] ?? [];
             }
         }
-        
+
         return [
             ['internalName' => 'tradeTypeOffer', 'value' => 'Offer'],
             ['internalName' => 'tradeTypeDemand', 'value' => 'Demand']
@@ -260,62 +260,86 @@ class MerchantProductService
      * Get all products for a user from Cyclos marketplace
      */
     public function getUserProducts(string $cyclosUserId, array $params = []): array
-{
-    try {
-        $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
+    {
+        try {
+            $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
 
-        Log::info('Fetching user products from Cyclos', [
-            'cyclos_user_id' => $cyclosUserId,
-            'url' => $url,
-            'params' => $params
-        ]);
-
-        $response = Http::withBasicAuth($this->username, $this->password)
-            ->withHeaders([
-                'Accept' => 'application/json',
-                'Channel' => $this->channel,
-            ])
-            ->timeout(30)
-            ->get($url, $params);
-
-        if ($response->failed()) {
-            Log::error('Failed to fetch Cyclos products', [
+            Log::info('Fetching user products from Cyclos', [
                 'cyclos_user_id' => $cyclosUserId,
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'url' => $url,
+                'params' => $params
             ]);
-            return [];
-        }
 
-        $products = $response->json();
-        
-        // Handle different response formats
-        if (is_array($products)) {
-            // Check if it's a paginated response with 'items' or 'data' key
-            if (isset($products['items']) && is_array($products['items'])) {
-                return $products['items'];
-            }
-            if (isset($products['data']) && is_array($products['data'])) {
-                return $products['data'];
-            }
-            // If it's a simple array of products, return as is
-            if (array_keys($products) === range(0, count($products) - 1)) {
-                return $products;
-            }
-            // If it's a single product wrapped in an array
-            if (isset($products['id'])) {
-                return [$products];
-            }
-        }
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->get($url, $params);
 
-        return is_array($products) ? $products : [];
-    } catch (Exception $e) {
-        Log::error('Exception in getUserProducts', [
-            'error' => $e->getMessage(),
-        ]);
-        return [];
+            if ($response->failed()) {
+                Log::error('Failed to fetch Cyclos products', [
+                    'cyclos_user_id' => $cyclosUserId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return ['products' => [], 'headers' => []];
+            }
+
+            $products = $response->json();
+
+            $headers = [
+                'x-current-page' => $response->header('X-Current-Page'),
+                'x-page-size' => $response->header('X-Page-Size'),
+                'x-total-count' => $response->header('X-Total-Count'),
+                'x-page-count' => $response->header('X-Page-Count'),
+                'x-has-next-page' => $response->header('X-Has-Next-Page'),
+            ];
+
+            Log::info('Cyclos API headers received', $headers);
+
+            // Helper function to add quantity field
+            $addQuantityField = function ($product) {
+                if (isset($product['unlimitedStock']) && $product['unlimitedStock'] === true) {
+                    $product['quantity'] = 1000000; // 1 million for unlimited stock
+                } elseif (isset($product['stockQuantity'])) {
+                    $product['quantity'] = (float) $product['stockQuantity'];
+                } else {
+                    $product['quantity'] = 1000000; // Default to unlimited
+                }
+                return $product;
+            };
+
+            // Handle different response formats and return both products and headers
+            if (is_array($products)) {
+                // Check if it's a paginated response with 'items' or 'data' key
+                if (isset($products['items']) && is_array($products['items'])) {
+                    $products['items'] = array_map($addQuantityField, $products['items']);
+                    return ['products' => $products['items'], 'headers' => $headers];
+                }
+                if (isset($products['data']) && is_array($products['data'])) {
+                    $products['data'] = array_map($addQuantityField, $products['data']);
+                    return ['products' => $products['data'], 'headers' => $headers];
+                }
+                // If it's a simple array of products
+                if (array_keys($products) === range(0, count($products) - 1)) {
+                    return ['products' => array_map($addQuantityField, $products), 'headers' => $headers];
+                }
+                // If it's a single product
+                if (isset($products['id'])) {
+                    return ['products' => [$addQuantityField($products)], 'headers' => $headers];
+                }
+            }
+
+            return ['products' => is_array($products) ? array_map($addQuantityField, $products) : [], 'headers' => $headers];
+        } catch (Exception $e) {
+            Log::error('Exception in getUserProducts', [
+                'error' => $e->getMessage(),
+            ]);
+            return ['products' => [], 'headers' => []];
+        }
     }
-}
 
     /**
      * Get a single product by ID
@@ -323,7 +347,7 @@ class MerchantProductService
     public function getProduct(string $cyclosUserId, string $productId): ?array
     {
         try {
-            $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace/{$productId}";
+            $url = $this->baseUrl . "/api/marketplace/{$productId}";
 
             Log::info('Fetching single product from Cyclos', [
                 'cyclos_user_id' => $cyclosUserId,
@@ -349,7 +373,20 @@ class MerchantProductService
                 return null;
             }
 
-            return $response->json();
+            $product = $response->json();
+
+            // Add quantity field based on stock information
+            if (is_array($product)) {
+                if (isset($product['unlimitedStock']) && $product['unlimitedStock'] === true) {
+                    $product['quantity'] = 1000000; // 1 million for unlimited stock
+                } elseif (isset($product['stockQuantity'])) {
+                    $product['quantity'] = (float) $product['stockQuantity'];
+                } else {
+                    $product['quantity'] = 1000000; // Default to unlimited
+                }
+            }
+
+            return $product;
         } catch (Exception $e) {
             Log::error('Exception in getProduct', [
                 'error' => $e->getMessage(),
@@ -375,7 +412,7 @@ class MerchantProductService
             ]);
 
             $fileContents = file_get_contents($image->getRealPath());
-            
+
             if ($fileContents === false) {
                 Log::error('Failed to read image file contents');
                 return null;
@@ -387,8 +424,8 @@ class MerchantProductService
                     'Channel' => $this->channel,
                 ])
                 ->attach(
-                    'file', 
-                    $fileContents, 
+                    'file',
+                    $fileContents,
                     $image->getClientOriginalName(),
                     ['Content-Type' => $image->getMimeType()]
                 )
@@ -405,9 +442,9 @@ class MerchantProductService
 
             $result = $response->json();
             $imageKey = $result['key'] ?? null;
-            
+
             Log::info('Image uploaded successfully', ['image_key' => $imageKey]);
-            
+
             return $imageKey;
         } catch (Exception $e) {
             Log::error('Exception in uploadImage', [
@@ -460,187 +497,187 @@ class MerchantProductService
     /**
      * Create a product in Cyclos marketplace
      */
-   /**
- * Create a product in Cyclos marketplace
- */
-public function createProduct(string $cyclosUserId, array $productData, ?UploadedFile $image = null): array
-{
-    try {
-        $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
+    /**
+     * Create a product in Cyclos marketplace
+     */
+    public function createProduct(string $cyclosUserId, array $productData, ?UploadedFile $image = null): array
+    {
+        try {
+            $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
 
-        // Upload image if provided
-        $imageKey = null;
-        if ($image) {
-            $imageKey = $this->uploadImage($cyclosUserId, $image);
-        }
+            // Upload image if provided
+            $imageKey = null;
+            if ($image) {
+                $imageKey = $this->uploadImage($cyclosUserId, $image);
+            }
 
-        // Get the category ID from the array (single category)
-        $categoryId = null;
-        if (isset($productData['categories']) && is_array($productData['categories']) && !empty($productData['categories'])) {
-            $categoryId = $productData['categories'][0];
-            
-            // Get the internal name for this category
-            $categories = $this->getMarketplaceCategories();
-            $internalName = $this->findInternalNameById($categories, $categoryId);
-            
-            Log::info('Found internal name for category', [
-                'category_id' => $categoryId,
-                'internal_name' => $internalName
-            ]);
-            
-            if (!$internalName) {
+            // Get the category ID from the array (single category)
+            $categoryId = null;
+            if (isset($productData['categories']) && is_array($productData['categories']) && !empty($productData['categories'])) {
+                $categoryId = $productData['categories'][0];
+
+                // Get the internal name for this category
+                $categories = $this->getMarketplaceCategories();
+                $internalName = $this->findInternalNameById($categories, $categoryId);
+
+                Log::info('Found internal name for category', [
+                    'category_id' => $categoryId,
+                    'internal_name' => $internalName
+                ]);
+
+                if (!$internalName) {
+                    return [
+                        'success' => false,
+                        'message' => 'Could not find internal name for selected category',
+                        'needs_category' => true
+                    ];
+                }
+
+                // Use internal name for the category
+                $categoryId = $internalName;
+            }
+
+            // If no category provided, return error
+            if (empty($categoryId)) {
+                Log::error('No category ID provided or found');
                 return [
                     'success' => false,
-                    'message' => 'Could not find internal name for selected category',
+                    'message' => 'A category is required. Please select a category.',
                     'needs_category' => true
                 ];
             }
-            
-            // Use internal name for the category
-            $categoryId = $internalName;
-        }
 
-        // If no category provided, return error
-        if (empty($categoryId)) {
-            Log::error('No category ID provided or found');
-            return [
-                'success' => false,
-                'message' => 'A category is required. Please select a category.',
-                'needs_category' => true
-            ];
-        }
+            // Determine publication period based on status
+            $isActive = isset($productData['status']) ? (bool) $productData['status'] : true;
 
-        // Determine publication period based on status
-        $isActive = isset($productData['status']) ? (bool) $productData['status'] : true;
-        
-        $beginDate = now();
-        $endDate = null;
-        
-        if ($isActive) {
-            $endDate = now()->addYear();
-        } else {
-            $beginDate = now()->subDays(1);
-            $endDate = now()->subDays(1);
-        }
+            $beginDate = now();
+            $endDate = null;
 
-        // Prepare the product data for Cyclos API
-        $cyclosProductData = [
-            'name' => $productData['name'],
-            'description' => $productData['description'] ?? '',
-            'publicationPeriod' => [
-                'begin' => $beginDate->toIso8601String(),
-                'end' => $endDate ? $endDate->toIso8601String() : null,
-            ],
-            'categories' => [$categoryId],
-            'currency' => 'unit',
-            'price' => (float) $productData['price'],
-            'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
-            'stockQuantity' => (int) ($productData['quantity'] ?? 1),
-            'allowDecimalQuantity' => false,
-            'kind' => 'simple',
-            'customValues' => [
-                'tradeType' => $productData['trade_type'] ?? 'tradeTypeOffer',
-            ],
-        ];
-
-        // Add barcode if provided
-        if (!empty($productData['barcode'])) {
-            $cyclosProductData['customValues']['barcode'] = $productData['barcode'];
-        }
-
-        // Add images if uploaded
-        if ($imageKey) {
-            $cyclosProductData['images'] = [$imageKey];
-        }
-
-        // Remove end date if null
-        if ($cyclosProductData['publicationPeriod']['end'] === null) {
-            unset($cyclosProductData['publicationPeriod']['end']);
-        }
-
-        Log::info('Creating product in Cyclos', [
-            'cyclos_user_id' => $cyclosUserId,
-            'url' => $url,
-            'category_internal_name' => $categoryId,
-            'is_active' => $isActive,
-            'product_data' => $cyclosProductData,
-        ]);
-
-        $response = Http::withBasicAuth($this->username, $this->password)
-            ->withHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'Channel' => $this->channel,
-            ])
-            ->timeout(30)
-            ->post($url, $cyclosProductData);
-
-        if ($response->failed()) {
-            $errorData = $response->json();
-            
-            $errorMessage = 'Failed to create product';
-            $needsCategory = false;
-            
-            if (isset($errorData['propertyErrors']['categories'])) {
-                $errorMessage = 'Category error: ' . implode(', ', $errorData['propertyErrors']['categories']);
-                $needsCategory = true;
-            } elseif (isset($errorData['message'])) {
-                $errorMessage = $errorData['message'];
-            } elseif (isset($errorData['code'])) {
-                $errorMessage = $errorData['code'] . ': ' . json_encode($errorData);
+            if ($isActive) {
+                $endDate = now()->addYear();
+            } else {
+                $beginDate = now()->subDays(1);
+                $endDate = now()->subDays(1);
             }
-            
-            Log::error('Failed to create product in Cyclos', [
-                'status' => $response->status(),
-                'error' => $errorData,
+
+            // Prepare the product data for Cyclos API
+            $cyclosProductData = [
+                'name' => $productData['name'],
+                'description' => $productData['description'] ?? '',
+                'publicationPeriod' => [
+                    'begin' => $beginDate->toIso8601String(),
+                    'end' => $endDate ? $endDate->toIso8601String() : null,
+                ],
+                'categories' => [$categoryId],
+                'currency' => 'unit',
+                'price' => (float) $productData['price'],
+                'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
+                'stockQuantity' => (int) ($productData['quantity'] ?? 1),
+                'allowDecimalQuantity' => false,
+                'kind' => 'simple',
+                'customValues' => [
+                    'tradeType' => $productData['trade_type'] ?? 'tradeTypeOffer',
+                ],
+            ];
+
+            // Add barcode if provided
+            if (!empty($productData['barcode'])) {
+                $cyclosProductData['customValues']['barcode'] = $productData['barcode'];
+            }
+
+            // Add images if uploaded
+            if ($imageKey) {
+                $cyclosProductData['images'] = [$imageKey];
+            }
+
+            // Remove end date if null
+            if ($cyclosProductData['publicationPeriod']['end'] === null) {
+                unset($cyclosProductData['publicationPeriod']['end']);
+            }
+
+            Log::info('Creating product in Cyclos', [
+                'cyclos_user_id' => $cyclosUserId,
+                'url' => $url,
                 'category_internal_name' => $categoryId,
-                'response_body' => $response->body(),
+                'is_active' => $isActive,
+                'product_data' => $cyclosProductData,
+            ]);
+
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($url, $cyclosProductData);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+
+                $errorMessage = 'Failed to create product';
+                $needsCategory = false;
+
+                if (isset($errorData['propertyErrors']['categories'])) {
+                    $errorMessage = 'Category error: ' . implode(', ', $errorData['propertyErrors']['categories']);
+                    $needsCategory = true;
+                } elseif (isset($errorData['message'])) {
+                    $errorMessage = $errorData['message'];
+                } elseif (isset($errorData['code'])) {
+                    $errorMessage = $errorData['code'] . ': ' . json_encode($errorData);
+                }
+
+                Log::error('Failed to create product in Cyclos', [
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                    'category_internal_name' => $categoryId,
+                    'response_body' => $response->body(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => $errorData,
+                    'needs_category' => $needsCategory
+                ];
+            }
+
+            $data = $response->json();
+
+            // Check if the response contains a valid product ID
+            $productId = null;
+            if (isset($data['id'])) {
+                $productId = $data['id'];
+            } elseif (isset($data['_id'])) {
+                $productId = $data['_id'];
+            } elseif (is_string($data) && strlen($data) > 10) {
+                // Some APIs return just the ID as a string
+                $productId = $data;
+            }
+
+            Log::info('Product created successfully in Cyclos', [
+                'product_id' => $productId,
+                'category_internal_name' => $categoryId,
+                'full_response' => $data
+            ]);
+
+            return [
+                'success' => true,
+                'product_id' => $productId,
+                'data' => $data,
+            ];
+        } catch (Exception $e) {
+            Log::error('Exception in createProduct', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
-                'message' => $errorMessage,
-                'errors' => $errorData,
-                'needs_category' => $needsCategory
+                'message' => 'Exception: ' . $e->getMessage(),
             ];
         }
-
-        $data = $response->json();
-
-        // Check if the response contains a valid product ID
-        $productId = null;
-        if (isset($data['id'])) {
-            $productId = $data['id'];
-        } elseif (isset($data['_id'])) {
-            $productId = $data['_id'];
-        } elseif (is_string($data) && strlen($data) > 10) {
-            // Some APIs return just the ID as a string
-            $productId = $data;
-        }
-
-        Log::info('Product created successfully in Cyclos', [
-            'product_id' => $productId,
-            'category_internal_name' => $categoryId,
-            'full_response' => $data
-        ]);
-
-        return [
-            'success' => true,
-            'product_id' => $productId,
-            'data' => $data,
-        ];
-    } catch (Exception $e) {
-        Log::error('Exception in createProduct', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-        ]);
-
-        return [
-            'success' => false,
-            'message' => 'Exception: ' . $e->getMessage(),
-        ];
     }
-}
     /**
      * Update a product in Cyclos marketplace
      */
@@ -655,7 +692,7 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
                 if ($existingImageKey) {
                     $this->deleteImage($cyclosUserId, $existingImageKey);
                 }
-                
+
                 $newImageKey = $this->uploadImage($cyclosUserId, $image);
                 if ($newImageKey) {
                     $imageKey = $newImageKey;
@@ -674,10 +711,10 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
 
             // Determine publication period based on status
             $isActive = isset($productData['status']) ? (bool) $productData['status'] : true;
-            
+
             $beginDate = now();
             $endDate = null;
-            
+
             if ($isActive) {
                 $endDate = now()->addYear();
             } else {
@@ -743,7 +780,7 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
 
             if ($response->failed()) {
                 $errorData = $response->json();
-                
+
                 Log::error('Failed to update product in Cyclos', [
                     'status' => $response->status(),
                     'error' => $errorData,
@@ -848,26 +885,30 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
     public function searchProducts(string $cyclosUserId, string $searchTerm = '', array $filters = []): array
     {
         $params = [];
-        
+
         if (!empty($searchTerm)) {
             $params['keywords'] = $searchTerm;
         }
-        
+
         if (!empty($filters['category'])) {
             $params['category'] = $filters['category'];
         }
-        
+
         if (!empty($filters['min_price'])) {
             $params['minPrice'] = (float) $filters['min_price'];
         }
-        
+
         if (!empty($filters['max_price'])) {
             $params['maxPrice'] = (float) $filters['max_price'];
         }
-        
+
+        if (!empty($filters['kind'])) {
+            $params['kind'] = $filters['kind'];
+        }
+
         $params['pageSize'] = $filters['per_page'] ?? 20;
         $params['pageNumber'] = $filters['page'] ?? 0;
-        
+
         return $this->getUserProducts($cyclosUserId, $params);
     }
 
@@ -875,44 +916,44 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
      * Format Cyclos product to match the expected format for views
      */
     public function formatProduct(array $rawProduct): array
-{
-    $imageKey = $rawProduct['images'][0] ?? null;
-    $imageUrl = $imageKey ? $this->baseUrl . "/api/files/{$imageKey}/data" : null;
+    {
+        $imageKey = $rawProduct['images'][0] ?? null;
+        $imageUrl = $imageKey ? $this->baseUrl . "/api/files/{$imageKey}/data" : null;
 
-    $customValues = $rawProduct['customValues'] ?? [];
-    $barcode = $customValues['barcode'] ?? 'N/A';
-    
-    // Get quantity - check both possible field names
-    $quantity = 0;
-    if (isset($rawProduct['stockQuantity'])) {
-        $quantity = (int) $rawProduct['stockQuantity'];
-    } elseif (isset($rawProduct['quantity'])) {
-        $quantity = (int) $rawProduct['quantity'];
+        $customValues = $rawProduct['customValues'] ?? [];
+        $barcode = $customValues['barcode'] ?? 'N/A';
+
+        // Get quantity - check both possible field names
+        $quantity = 0;
+        if (isset($rawProduct['stockQuantity'])) {
+            $quantity = (int) $rawProduct['stockQuantity'];
+        } elseif (isset($rawProduct['quantity'])) {
+            $quantity = (int) $rawProduct['quantity'];
+        }
+
+        // Get price
+        $price = (float) ($rawProduct['price'] ?? 0);
+
+        // Get creation date
+        $createdAt = $rawProduct['creationDate'] ?? $rawProduct['createdAt'] ?? null;
+        $updatedAt = $rawProduct['lastModifiedDate'] ?? $rawProduct['updatedAt'] ?? null;
+
+        return [
+            'id' => $rawProduct['id'] ?? $rawProduct['_id'] ?? null,
+            'name' => $rawProduct['name'] ?? 'Unnamed Product',
+            'description' => $rawProduct['description'] ?? '',
+            'barcode' => $barcode,
+            'price' => $price,
+            'quantity' => $quantity,
+            'unlimited_stock' => (bool) ($rawProduct['unlimitedStock'] ?? false),
+            'status' => $this->determineProductStatus($rawProduct),
+            'image_key' => $imageKey,
+            'image_url' => $imageUrl,
+            'created_at' => $createdAt,
+            'updated_at' => $updatedAt,
+            'raw' => $rawProduct,
+        ];
     }
-    
-    // Get price
-    $price = (float) ($rawProduct['price'] ?? 0);
-    
-    // Get creation date
-    $createdAt = $rawProduct['creationDate'] ?? $rawProduct['createdAt'] ?? null;
-    $updatedAt = $rawProduct['lastModifiedDate'] ?? $rawProduct['updatedAt'] ?? null;
-
-    return [
-        'id' => $rawProduct['id'] ?? $rawProduct['_id'] ?? null,
-        'name' => $rawProduct['name'] ?? 'Unnamed Product',
-        'description' => $rawProduct['description'] ?? '',
-        'barcode' => $barcode,
-        'price' => $price,
-        'quantity' => $quantity,
-        'unlimited_stock' => (bool) ($rawProduct['unlimitedStock'] ?? false),
-        'status' => $this->determineProductStatus($rawProduct),
-        'image_key' => $imageKey,
-        'image_url' => $imageUrl,
-        'created_at' => $createdAt,
-        'updated_at' => $updatedAt,
-        'raw' => $rawProduct,
-    ];
-}
 
 
     /**
@@ -921,11 +962,11 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
     public function formatProducts(array $rawProducts): array
     {
         $formatted = [];
-        
+
         foreach ($rawProducts as $product) {
             $formatted[] = $this->formatProduct($product);
         }
-        
+
         return $formatted;
     }
 
@@ -938,7 +979,7 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
         $publicationPeriod = $product['publicationPeriod'] ?? null;
         if ($publicationPeriod) {
             $now = now();
-            
+
             // Parse begin date
             $begin = null;
             if (isset($publicationPeriod['begin'])) {
@@ -948,7 +989,7 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
                     Log::warning('Failed to parse begin date', ['date' => $publicationPeriod['begin']]);
                 }
             }
-            
+
             // Parse end date
             $end = null;
             if (isset($publicationPeriod['end'])) {
@@ -958,7 +999,7 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
                     Log::warning('Failed to parse end date', ['date' => $publicationPeriod['end']]);
                 }
             }
-            
+
             // If begin date is in the future, product is not yet active
             if ($begin && $now < $begin) {
                 Log::debug('Product inactive - begin date in future', [
@@ -967,7 +1008,7 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
                 ]);
                 return false;
             }
-            
+
             // If end date is in the past, product is expired
             if ($end && $now > $end) {
                 Log::debug('Product inactive - end date in past', [
@@ -977,11 +1018,11 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
                 return false;
             }
         }
-        
+
         // Check stock
         $unlimitedStock = (bool) ($product['unlimitedStock'] ?? false);
         $stockQuantity = (int) ($product['stockQuantity'] ?? 0);
-        
+
         if (!$unlimitedStock && $stockQuantity <= 0) {
             Log::debug('Product inactive - out of stock', [
                 'unlimited' => $unlimitedStock,
@@ -989,7 +1030,7 @@ public function createProduct(string $cyclosUserId, array $productData, ?Uploade
             ]);
             return false;
         }
-        
+
         Log::debug('Product active');
         return true; // Active
     }

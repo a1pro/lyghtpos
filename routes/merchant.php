@@ -11,8 +11,9 @@ use App\Http\Controllers\Inventory\PurchaseCartController;
 use App\Http\Controllers\Inventory\PurchaseController;
 use App\Http\Controllers\Management\CustomerController;
 use App\Http\Controllers\Management\SupplierController;
+use App\Http\Controllers\Merchant\CheckoutController;
+use App\Http\Controllers\Merchant\MerchantCartController;
 use App\Http\Controllers\OrganizationAdmin\OrganizationAdminDashboardController;
-use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use Illuminate\Http\RedirectResponse;
@@ -115,11 +116,16 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::resource('orders', OrderController::class)->names('orders');
     Route::resource('suppliers', SupplierController::class)->names('suppliers');
 
-    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
-    Route::post('/cart/change-qty', [CartController::class, 'changeQty']);
-    Route::delete('/cart/delete', [CartController::class, 'delete']);
-    Route::delete('/cart/empty', [CartController::class, 'empty']);
+    Route::get('/cart', [MerchantCartController::class, 'index'])->name('cart.index');
+    Route::post('/cart', [MerchantCartController::class, 'store'])->name('cart.store');
+    Route::post('/cart/change-qty', [MerchantCartController::class, 'changeQty']);
+    Route::delete('/cart/delete', [MerchantCartController::class, 'delete']);
+    Route::delete('/cart/empty', [MerchantCartController::class, 'empty']);
+
+    Route::get('/cart/checkout', [MerchantCartController::class, 'checkout'])->name('cart.checkout');
+
+    Route::get('/checkout/data', [CheckoutController::class, 'getCheckoutData']);
+    Route::post('/checkout/process', [CheckoutController::class, 'processCheckout']);
 
     Route::get('/purchases/data', [PurchaseController::class, 'data'])->name('purchases.data');
     Route::get('/purchases/{purchase}/receipt', [PurchaseController::class, 'receipt'])->name('purchases.receipt');
