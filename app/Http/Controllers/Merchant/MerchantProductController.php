@@ -45,7 +45,7 @@ class MerchantProductController extends Controller
                 'max_price' => $request->input('max_price'),
                 'page' => $request->input('page', 0),
                 'per_page' => $request->input('per_page', 10),
-                // 'kind' => 'webshop',
+                'kind' => 'webshop',
             ];
 
             $result = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
