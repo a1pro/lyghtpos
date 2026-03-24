@@ -13,8 +13,8 @@ use App\Http\Controllers\Management\CustomerController;
 use App\Http\Controllers\Management\SupplierController;
 use App\Http\Controllers\Merchant\CheckoutController;
 use App\Http\Controllers\Merchant\MerchantCartController;
+use App\Http\Controllers\Merchant\MerchantOrderController;
 use App\Http\Controllers\OrganizationAdmin\OrganizationAdminDashboardController;
-use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\ProchargePaymentController;
@@ -113,7 +113,6 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
   
     Route::resource('customers', CustomerController::class)->names('customers');
-    Route::resource('orders', OrderController::class)->names('orders');
     Route::resource('suppliers', SupplierController::class)->names('suppliers');
 
     Route::get('/cart', [MerchantCartController::class, 'index'])->name('cart.index');
@@ -139,6 +138,11 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::post('/change-price', [PurchaseCartController::class, 'changePrice'])->name('change-price');
         Route::delete('/delete', [PurchaseCartController::class, 'delete'])->name('delete');
         Route::delete('/empty', [PurchaseCartController::class, 'empty'])->name('empty');
+    });
+
+    // Order routes
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [MerchantOrderController::class, 'index'])->name('index');
     });
 });
 

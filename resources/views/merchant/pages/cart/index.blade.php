@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', __('order.title'))
+@section('title', 'Cart')
 
 @section('content')
     <div id="merchant_cart"></div>
