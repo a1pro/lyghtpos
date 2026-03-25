@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AppSetting;
 use App\Models\Page;
 use App\Models\Representation;
 use App\Models\RepresentationReviewLog;
@@ -37,8 +38,6 @@ if (!function_exists('notifications')) {
     }
 }
 
-
-// ================Representation  ===================================
 if (!function_exists('payment_check')) {
     function payment_check()
     {
@@ -111,29 +110,27 @@ if (!function_exists('payment_check')) {
         }
     }
 }
+
+if (!function_exists('setting')) {
+    function setting($key, $group = null, $default = null)
+    {
+        $query = AppSetting::query();
+
+        if ($group) {
+            $query->where('group', $group);
+        }
+
+        $setting = $query->where('key', $key)->first();
+
+        return $setting ? $setting->value : $default;
+    }
 }
-    // ==========================================
-    if (!function_exists('setting')) {
-        function setting($key, $group = null, $default = null)
-        {
-            $query = AppSetting::query();
-            
-            if ($group) {
-                $query->where('group', $group);
-            }
-            
-            $setting = $query->where('key', $key)->first();
-            
-            return $setting ? $setting->value : $default;
-        }
+
+if (!function_exists('groupSettings')) {
+    function groupSettings($group)
+    {
+        return AppSetting::where('group', $group)
+            ->pluck('value', 'key')
+            ->toArray();
     }
-    
-    if (!function_exists('groupSettings')) {
-        function groupSettings($group)
-        {
-            return AppSetting::where('group', $group)
-                ->pluck('value', 'key')
-                ->toArray();
-        }
-    }
- 
+}
