@@ -5,6 +5,7 @@ namespace App\Services\Cyclos;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class CyclosUserService
 {
@@ -40,6 +41,7 @@ class CyclosUserService
 
         // Prepare username
         $username = $this->generateUsername($user);
+        $password = Str::random(10);
 
         // Prepare the request data
         $requestData = [
@@ -50,9 +52,9 @@ class CyclosUserService
             'passwords' => [
                 [
                     'type' => 'login',
-                    'value' => 'forGod!2248',
+                    'value' => $password,
                     'checkConfirmation' => true,
-                    'confirmationValue' => 'forGod!2248',
+                    'confirmationValue' => $password,
                     'forceChange' => false,
                 ]
             ],
@@ -67,6 +69,7 @@ class CyclosUserService
         Log::info('Cyclos user creation request', [
             'user_id' => $user->id,
             'username' => $username,
+            'password' => $password,
             'group' => $group,
             'url' => $this->baseUrl . '/api/users'
         ]);
@@ -90,7 +93,7 @@ class CyclosUserService
 
             if ($response->failed()) {
                 $errorData = $response->json();
-                
+
                 Log::error('Cyclos user creation failed', [
                     'user_id' => $user->id,
                     'role_id' => $user->role_id,
@@ -106,11 +109,11 @@ class CyclosUserService
             }
 
             $responseData = $response->json();
-            
+
             // FIXED: Extract data from the nested structure based on actual API response
             // The user data is inside the 'user' object
             $userData = $responseData['user'] ?? null;
-            
+
             if (!$userData) {
                 Log::error('Cyclos response missing user object', [
                     'user_id' => $user->id,
@@ -121,7 +124,7 @@ class CyclosUserService
 
             // Extract user ID from the nested user object
             $cyclosUserId = $userData['id'] ?? null;
-            
+
             // Extract username from principals array
             $cyclosUsername = $username; // Default to our generated username
             if (isset($responseData['principals']) && is_array($responseData['principals'])) {
@@ -132,16 +135,17 @@ class CyclosUserService
                     }
                 }
             }
-            
+
             // Get status
             $status = $responseData['status'] ?? 'active';
-            
+
             // Log success with extracted data
             Log::info('Cyclos user created successfully', [
                 'user_id' => $user->id,
                 'role_id' => $user->role_id,
                 'cyclos_user_id' => $cyclosUserId,
                 'cyclos_username' => $cyclosUsername,
+                'cyclos_password' => $password,
                 'group' => $group,
                 'status' => $status,
             ]);
@@ -160,10 +164,10 @@ class CyclosUserService
                 'response' => $responseData,
                 'group' => $group,
                 'username' => $cyclosUsername,
+                'password' => $password,
                 'user_id' => $cyclosUserId,
                 'status' => $status,
             ];
-            
         } catch (\Exception $e) {
             Log::error('Exception in Cyclos user creation', [
                 'user_id' => $user->id,
@@ -206,15 +210,15 @@ class CyclosUserService
         // Remove spaces and special characters
         $cleanFirstName = preg_replace('/[^a-zA-Z0-9]/', '', $user->first_name);
         $cleanLastName = preg_replace('/[^a-zA-Z0-9]/', '', $user->last_name);
-        
+
         // Create base username
         $baseUsername = strtolower($cleanFirstName . $cleanLastName);
-        
+
         // Ensure it's not too long (Cyclos typically has limits)
         if (strlen($baseUsername) > 20) {
             $baseUsername = substr($baseUsername, 0, 20);
         }
-        
+
         // Add user ID to ensure uniqueness
         return $baseUsername . $user->id;
     }
@@ -244,7 +248,6 @@ class CyclosUserService
             }
 
             return $response->json();
-            
         } catch (\Exception $e) {
             Log::error('Exception fetching Cyclos user', [
                 'cyclos_user_id' => $cyclosUserId,
@@ -280,10 +283,42 @@ class CyclosUserService
 
             $data = $response->json();
             return !empty($data['pageItems'] ?? []);
-            
         } catch (\Exception $e) {
             Log::error('Exception checking Cyclos user existence', [
                 'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * UPDATE User Cyclos password
+     */
+    public function updateUserPassword($cyclosUserId, $newPassword): bool
+    {
+        $endpoint = $this->baseUrl . "/api/{$cyclosUserId}/passwords/login/change";
+
+        try {
+            $payload = [
+                "newPassword" => $newPassword,
+                "forceChange" => false
+            ];
+
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->post($endpoint, $payload);
+
+            if ($response->failed()) {
+                return false;
+            }
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Exception updating Cyclos user password', [
+                'cyclos_user_id' => $cyclosUserId,
                 'error' => $e->getMessage()
             ]);
             return false;

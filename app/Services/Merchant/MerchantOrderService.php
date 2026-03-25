@@ -303,7 +303,8 @@ class MerchantOrderService
                 "draft" => false,
                 "items" => $orderData['items'],
                 'currency' => $orderData['currency'] ?? 'unit',
-                "buyer" => $orderData['buyer_id'] ?? $cyclosUserId
+                "buyer" => $orderData['buyer_id'],
+                "remarks" => $orderData['notes'] ?? null
             ];
 
             Log::info('Creating order in Cyclos', [

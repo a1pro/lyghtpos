@@ -22,23 +22,6 @@
 @endsection
 
 @section('content')
-@if(session('success'))
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    {{ session('success') }}
-    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-    </button>
-</div>
-@endif
-
-@if(session('error'))
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    {{ session('error') }}
-    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-    </button>
-</div>
-@endif
 
 <div class="card product-list">
     <div class="card-body">
@@ -96,6 +79,14 @@
                                    title="Change Password">
                                     <i class="fas fa-key"></i>
                                     <span class="d-none d-md-inline">Password</span>
+                                </a>
+
+                                <!-- Change Cyclos Password Button -->
+                                <a href="{{route('subadmin.merchants.change-cyclos-password', $merchant->id)}}" 
+                                   class="btn btn-sm btn-danger btn-icon" 
+                                   title="Change Password">
+                                    <i class="fas fa-key"></i>
+                                    <span class="d-none d-md-inline">Cyclos Password</span>
                                 </a>
                             </div>
                         </td>

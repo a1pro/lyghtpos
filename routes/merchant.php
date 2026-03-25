@@ -120,6 +120,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::post('/cart/change-qty', [MerchantCartController::class, 'changeQty']);
     Route::delete('/cart/delete', [MerchantCartController::class, 'delete']);
     Route::delete('/cart/empty', [MerchantCartController::class, 'empty']);
+    Route::get('/cart/customers', [MerchantCartController::class, 'getCustomers']);
 
     Route::get('/cart/checkout', [MerchantCartController::class, 'checkout'])->name('cart.checkout');
 

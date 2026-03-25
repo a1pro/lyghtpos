@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Cart\AddToCartRequest;
 use App\Http\Requests\Cart\ChangeQuantityRequest;
 use App\Http\Requests\Cart\RemoveFromCartRequest;
+use App\Models\User;
 use App\Services\Merchant\MerchantCartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,7 +56,7 @@ class MerchantCartController extends Controller
                 'message' => 'Product ID is required'
             ], 400);
         }
-        
+
         $result = $this->cartService->addToCart($productId, 1, Auth::user()->cyclos_user_id);
 
         if (!$result['success']) {
@@ -104,5 +105,27 @@ class MerchantCartController extends Controller
         $result = $this->cartService->emptyCart();
 
         return response()->json(['success' => $result['success']]);
+    }
+
+    /**
+     * Get Customers / Shoppers for cart
+     */
+    public function getCustomers(Request $request): JsonResponse
+    {
+        $customers = User::favorMembers()
+            ->whereNotNull('cyclos_user_id')
+            ->get(['id', 'first_name', 'last_name', 'cyclos_user_id']);
+
+        // Transform the data to send encrypted cyclos_user_id as id
+        $transformedCustomers = $customers->map(function ($customer) {
+            return [
+                'id' => encryptVal($customer->cyclos_user_id),
+                'first_name' => $customer->first_name,
+                'last_name' => $customer->last_name,
+                'name' => $customer->first_name . ' ' . $customer->last_name,
+            ];
+        });
+
+        return response()->json($transformedCustomers);
     }
 }
