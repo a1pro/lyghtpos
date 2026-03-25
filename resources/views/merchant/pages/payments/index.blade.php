@@ -138,7 +138,7 @@
                 <small class="text-muted">Process a new card payment</small>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
+        {{-- <div class="col-md-3 mb-3">
             <div class="quick-action-card" onclick="window.location='{{ route('merchant.payments.history') }}'">
                 <div class="quick-action-icon">
                     <i class="fas fa-history"></i>
@@ -146,7 +146,7 @@
                 <h6>Payment History</h6>
                 <small class="text-muted">View all transactions</small>
             </div>
-        </div>
+        </div> --}}
         <div class="col-md-3 mb-3">
             <div class="quick-action-card" onclick="window.location='{{ route('merchant.dashboard') }}'">
                 <div class="quick-action-icon">

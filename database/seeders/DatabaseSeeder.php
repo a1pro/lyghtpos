@@ -16,5 +16,6 @@ class DatabaseSeeder extends Seeder
         $this->call(RoleSeeder::class);
         $this->call(MerchantSubscriptionPlanSeeder::class);
         $this->call(GovernanctLayerData::class);
+        $this->call(AppSettingSeeder::class);
     }
 }
