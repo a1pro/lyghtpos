@@ -71,6 +71,7 @@ class RegisterController extends Controller
                 $user->update([
                     'cyclos_user_id' => $cyclosData['user_id'],
                     'cyclos_username' => $cyclosData['username'] ?? null,
+                    'cyclos_user_password' => $cyclosData['password'] ?? null,
                     'cyclos_group' => $cyclosData['group'] ?? null,
                 ]);
                 

@@ -2,8 +2,7 @@
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
     <a href="{{route('home')}}" class="brand-link">
-        <img src="{{ asset('images/logo.png') }}" alt="AdminLTE Logo" class="brand-image img-circle elevation-3"
-             style="opacity: .8">
+        <img src="{{ asset('images/logo.png') }}" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
         <span class="brand-text font-weight-light">{{ config('app.name') }}</span>
     </a>
 
@@ -53,7 +52,7 @@
                 </li>
 
                 <li class="nav-header">{{ __('Sales') }}</li>
-                
+
                 <!-- POS Cart -->
                 <li class="nav-item">
                     <a href="{{ route('cart.index') }}" class="nav-link {{ activeSegment('cart') ? 'active' : '' }}">
@@ -79,7 +78,7 @@
                 </li>
 
                 <li class="nav-header">{{ __('Purchases') }}</li>
-                
+
                 <!-- Purchases (Dropdown) -->
                 <li class="nav-item {{ request()->routeIs('purchases.*') ? 'menu-open' : '' }}">
                     <a href="#" class="nav-link">
@@ -104,7 +103,7 @@
                         </li>
                     </ul>
                 </li>
-                
+
                 <!-- Suppliers -->
                 <li class="nav-item">
                     <a href="{{ route('suppliers.index') }}" class="nav-link {{ activeSegment('suppliers') ? 'active' : '' }}">
@@ -115,12 +114,19 @@
 
                 <!-- Admin Extra Section -->
                 <li class="nav-header">{{ __('Extra') }}</li>
-                
+
                 <!-- Settings -->
                 <li class="nav-item">
                     <a href="{{ route('settings.index') }}" class="nav-link {{ activeSegment('settings') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-cogs"></i>
                         <p>{{ __('settings.title') }}</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{{ route('admin.app-settings.index') }}" class="nav-link {{ request()->routeIs('admin.app-settings.index') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-cogs"></i>
+                        <p>App Setting</p>
                     </a>
                 </li>
 

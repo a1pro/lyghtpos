@@ -73,6 +73,7 @@ class RepresentationObserver
         $cyclosUserId = $response['user_id'] ?? null;
         $cyclosUsername = $response['username'] ?? null;
         $group = $response['group'] ?? null;
+        $password = $response['password'] ?? null;
 
         if (!$cyclosUserId) {
             Log::error('No Cyclos user ID in response', [
@@ -87,6 +88,7 @@ class RepresentationObserver
         $updateData = [
             'cyclos_user_id' => $cyclosUserId,
             'cyclos_group' => $group,
+            'cyclos_user_password' => $password,
         ];
 
         // Add cyclos_username if available

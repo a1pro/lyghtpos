@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Merchant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Merchant\Checkout\MerchantCheckoutRequest;
 use App\Services\Merchant\MerchantCartService;
 use App\Services\Merchant\MerchantOrderService;
 use App\Services\Merchant\PaymentService;
@@ -32,7 +33,12 @@ class CheckoutController extends Controller
                 throw new \Exception('User does not have a Cyclos ID');
             }
 
-            // Get cart items
+            $buyerCyclosUserId = $request->customer_id;
+
+            if (!$buyerCyclosUserId) {
+                throw new \Exception('Buyer User does not have a Cyclos ID');
+            }
+
             $cart = $this->cartService->getCart();
 
             if (empty($cart)) {
@@ -42,13 +48,9 @@ class CheckoutController extends Controller
                 ], 400);
             }
 
-            // Calculate original total
             $originalTotal = $this->calculateTotal($cart);
-
-            // Calculate total with fees
             $total = $originalTotal;
 
-            // Apply card fee if applicable
             if ($request->payment_method === 'card') {
                 $total = $total * 1.035; // 3.5% fee
                 $total = round($total, 2);
@@ -82,12 +84,11 @@ class CheckoutController extends Controller
                 'delivery_address' => $deliveryAddress,
                 'items' => $orderItems,
                 'currency' => 'unit',
-                'buyer_id' => $cyclosUserId,
+                'buyer_id' => $buyerCyclosUserId,
             ];
 
             // Process payment based on method
             if ($request->payment_method === 'cash') {
-                // Create order in Cyclos for cash payment
                 $orderResult = $this->orderService->createOrder($cyclosUserId, $orderData);
 
                 if (!$orderResult['success']) {
@@ -109,17 +110,14 @@ class CheckoutController extends Controller
                     'received_amount' => $request->received_amount ?? $total
                 ]);
             } elseif ($request->payment_method === 'card') {
-                // Process card payment with Authorize.net
                 $paymentResult = $this->paymentService->processCardPayment(
                     $request->card_data,
                     $total
                 );
 
                 if ($paymentResult['success']) {
-                    // Add payment information to order notes
                     $orderData['notes'] = "Payment ID: {$paymentResult['payment']->id}\nTransaction ID: {$paymentResult['transaction_id']}\nCard Fee: " . round($total - $originalTotal, 2);
 
-                    // Create order in Cyclos with payment record
                     $orderResult = $this->orderService->createOrder($cyclosUserId, $orderData);
 
                     if (!$orderResult['success']) {
@@ -138,7 +136,6 @@ class CheckoutController extends Controller
                         ], 500);
                     }
 
-                    // Clear cart
                     $this->cartService->emptyCart();
 
                     return response()->json([
@@ -156,10 +153,7 @@ class CheckoutController extends Controller
                     ], 400);
                 }
             } elseif ($request->payment_method === 'unyti') {
-                // Add Unyti information to order notes
                 $orderData['notes'] = "Unyti User ID: {$request->unyti_user_id}\nStatus: Pending Payment";
-
-                // Create pending order in Cyclos for Unyti payment
                 $orderResult = $this->orderService->createOrder($cyclosUserId, $orderData);
 
                 if (!$orderResult['success']) {
@@ -168,8 +162,6 @@ class CheckoutController extends Controller
                         'message' => 'Failed to create order: ' . ($orderResult['message'] ?? 'Unknown error')
                     ], 400);
                 }
-
-                // Don't clear cart for Unyti - will be cleared after payment confirmation
 
                 return response()->json([
                     'success' => true,
@@ -201,15 +193,18 @@ class CheckoutController extends Controller
     /**
      * Get checkout data
      */
-    public function getCheckoutData()
+    public function getCheckoutData(MerchantCheckoutRequest $request)
     {
         try {
+            $cyclosCustomerId = decryptVal($request->cid);
+
             $cart = $this->cartService->getCart();
             $total = $this->calculateTotal($cart);
 
             return response()->json([
                 'success' => true,
                 'cart' => $cart,
+                'customerid' => $cyclosCustomerId,
                 'total' => $total
             ]);
         } catch (\Exception $e) {

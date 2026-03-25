@@ -10,6 +10,7 @@ class MerchantCheckout extends Component {
         this.state = {
             cart: [],
             amountDue: 0,
+            customerId: "",
             selectedPayment: "cash",
             loading: false,
             loadingCart: false,
@@ -63,20 +64,54 @@ class MerchantCheckout extends Component {
     }
 
     loadCart() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const encryptedCustomerId = urlParams.get('cid');
+
+        if (!encryptedCustomerId) {
+            Swal.fire({
+                title: "URL Malformed",
+                text: "Customer not found or url was malformed please try again",
+                icon: "warning",
+                confirmButtonText: "OK"
+            }).then(() => {
+                window.location.href = "/merchant/cart";
+            });
+            return;
+        }
+
         this.setState({ loadingCart: true });
         axios.get("/merchant/checkout/data", {
+            params: {
+                cid: encryptedCustomerId
+            },
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
         }).then((res) => {
             if (res.data.success) {
-                const { cart, total } = res.data;
-                this.setState({ cart, amountDue: total });
+                const { cart, total, customerid } = res.data;
+                if (!customerid || customerid === '') {
+                    Swal.fire({
+                        title: "URL Malformed",
+                        text: "Customer not found or url was malformed please try again",
+                        icon: "warning",
+                        confirmButtonText: "OK"
+                    }).then(() => {
+                        window.location.href = "/merchant/cart";
+                    });
+                    return;
+                }
+
+                this.setState({
+                    cart: cart,
+                    amountDue: total,
+                    customerId: customerid
+                });
             }
         }).catch((error) => {
             console.error("Error loading cart:", error);
-            this.setState({ cart: [], amountDue: 0 });
+            this.setState({ cart: [], amountDue: 0, customerId: "" });
         }).finally(() => {
             this.setState({ loadingCart: false });
         });
@@ -223,7 +258,20 @@ class MerchantCheckout extends Component {
         }
 
         // Show confirmation dialog before processing
-        const { amountDue, cardData } = this.state;
+        const { amountDue, cardData, customerId } = this.state;
+
+        if (!customerId || customerId === '') {
+            Swal.fire({
+                title: "URL Malformed",
+                text: "Customer not found or url was malformed please try again",
+                icon: "warning",
+                confirmButtonText: "OK"
+            }).then(() => {
+                window.location.href = "/merchant/cart";
+            });
+            return;
+        }
+
         const cardAmount = (amountDue * 1.035).toFixed(2);
 
         Swal.fire({
@@ -255,7 +303,19 @@ class MerchantCheckout extends Component {
     processCardPayment() {
         this.setState({ loading: true });
 
-        const { amountDue, cardData } = this.state;
+        const { amountDue, cardData, customerId } = this.state;
+
+        if (!customerId || customerId === '') {
+            Swal.fire({
+                title: "URL Malformed",
+                text: "Customer not found or url was malformed please try again",
+                icon: "warning",
+                confirmButtonText: "OK"
+            }).then(() => {
+                window.location.href = "/merchant/cart";
+            });
+            return;
+        }
 
         // Prepare card data for API
         const cardPayload = {
@@ -270,6 +330,7 @@ class MerchantCheckout extends Component {
         axios.post("/merchant/checkout/process", {
             payment_method: "card",
             amount: amountDue,
+            customer_id: customerId,
             card_data: cardPayload
         }).then((res) => {
             if (res.data.success) {
@@ -302,11 +363,24 @@ class MerchantCheckout extends Component {
     processCashPayment(receivedAmount) {
         this.setState({ loading: true });
 
-        const { amountDue } = this.state;
+        const { amountDue, customerId } = this.state;
+
+        if (!customerId || customerId === '') {
+            Swal.fire({
+                title: "URL Malformed",
+                text: "Customer not found or url was malformed please try again",
+                icon: "warning",
+                confirmButtonText: "OK"
+            }).then(() => {
+                window.location.href = "/merchant/cart";
+            });
+            return;
+        }
 
         axios.post("/merchant/checkout/process", {
             payment_method: "cash",
             amount: amountDue,
+            customer_id: customerId,
             received_amount: receivedAmount
         }).then((res) => {
             if (res.data.success) {
@@ -336,11 +410,24 @@ class MerchantCheckout extends Component {
     processUnytiPayment(unytiUserId) {
         this.setState({ loading: true });
 
-        const { amountDue } = this.state;
+        const { amountDue, customerId } = this.state;
+
+        if (!customerId || customerId === '') {
+            Swal.fire({
+                title: "URL Malformed",
+                text: "Customer not found or url was malformed please try again",
+                icon: "warning",
+                confirmButtonText: "OK"
+            }).then(() => {
+                window.location.href = "/merchant/cart";
+            });
+            return;
+        }
 
         axios.post("/merchant/checkout/process", {
             payment_method: "unyti",
             amount: amountDue,
+            customer_id: customerId,
             unyti_user_id: unytiUserId
         }).then((res) => {
             if (res.data.success) {
@@ -395,7 +482,19 @@ class MerchantCheckout extends Component {
     }
 
     handleUnytiPayment() {
-        const { amountDue } = this.state;
+        const { amountDue, customerId } = this.state;
+
+        if (!customerId || customerId === '') {
+            Swal.fire({
+                title: "URL Malformed",
+                text: "Customer not found or url was malformed please try again",
+                icon: "warning",
+                confirmButtonText: "OK"
+            }).then(() => {
+                window.location.href = "/merchant/cart";
+            });
+            return;
+        }
 
         Swal.fire({
             title: "Unyti Payment",
@@ -649,7 +748,7 @@ class MerchantCheckout extends Component {
     }
 
     render() {
-        const { cart = [], amountDue, selectedPayment, loading, loadingCart } = this.state;
+        const { cart = [], amountDue, selectedPayment, loading, loadingCart, customerId } = this.state;
         const cardAmount = (amountDue * 1.035).toFixed(2);
 
         return (

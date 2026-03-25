@@ -38,7 +38,8 @@ class User extends Authenticatable
         'cyclos_group',
         'cyclos_username',
         'merchant_id',
-        'status'
+        'status',
+        'cyclos_user_password',
     ];
 
     /**
@@ -159,5 +160,10 @@ class User extends Authenticatable
     public function isFavorMember(): bool
     {
         return $this->role_id === 8;
+    }
+
+    public function scopeFavorMembers($query)
+    {
+        return $query->where('role_id', 8);
     }
 }

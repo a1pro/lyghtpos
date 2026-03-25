@@ -57,7 +57,7 @@ class MerchantCart extends Component {
     }
 
     loadCustomers() {
-        axios.get(`/merchant/customers`, {
+        axios.get(`/merchant/cart/customers`, {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -285,42 +285,15 @@ class MerchantCart extends Component {
     }
 
     handleClickSubmit() {
-        window.location.href = "/merchant/cart/checkout";
-        return;
+        const { customer_id } = this.state;
 
-        if (!this.state.cart.length) {
-            Swal.fire("Error!", "Your cart is empty", "warning");
+        if (!customer_id) {
+            Swal.fire("Error!", "Please select customer", "error");
             return;
         }
-
-        Swal.fire({
-            title: this.state.translations["received_amount"] || "Received Amount",
-            input: "text",
-            inputValue: this.getTotal(this.state.cart),
-            cancelButtonText: this.state.translations["cancel_pay"] || "Cancel",
-            showCancelButton: true,
-            confirmButtonText: this.state.translations["confirm_pay"] || "Confirm",
-            showLoaderOnConfirm: true,
-            preConfirm: (amount) => {
-                return axios
-                    .post("/merchant/orders", {
-                        customer_id: this.state.customer_id,
-                        amount,
-                    })
-                    .then((res) => {
-                        this.loadCart();
-                        return res.data;
-                    })
-                    .catch((err) => {
-                        Swal.showValidationMessage(err.response?.data?.message || "Failed to process order");
-                    });
-            },
-            allowOutsideClick: () => !Swal.isLoading(),
-        }).then((result) => {
-            if (result.value) {
-                Swal.fire("Success!", "Order completed successfully!", "success");
-            }
-        });
+        
+        window.location.href = `/merchant/cart/checkout?cid=${customer_id}`;
+        return;
     }
 
     render() {
@@ -349,7 +322,7 @@ class MerchantCart extends Component {
                                 disabled={addingToCart !== null || updatingQty !== null}
                             >
                                 <option value="">
-                                    {translations["general_customer"] || "General Customer"}
+                                    {"Select Customer"}
                                 </option>
                                 {customers.map((cus) => (
                                     <option
