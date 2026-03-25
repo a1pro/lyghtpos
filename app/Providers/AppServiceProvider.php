@@ -16,7 +16,8 @@ use App\Repositories\Admin\Interfaces\GovernanceLayerRepositoryInterface;
 use App\Repositories\Admin\Eloquent\GovernanceLayerRepository;
 use App\Repositories\Merchant\Interfaces\PaymentRepositoryInterface;;
 use App\Repositories\Merchant\Eloquent\PaymentRepository;
-
+use App\Repositories\Admin\Interfaces\AppSettingInterfaces;
+use App\Repositories\Admin\Eloquent\AppSettingRepository;
 use App\Repositories\Merchant\Interfaces\TeamMemberRepositoryInterface;;
 use App\Repositories\Merchant\Eloquent\TeamMemberRepository;
 
@@ -42,6 +43,13 @@ class AppServiceProvider extends ServiceProvider
             TeamMemberRepositoryInterface::class,
             TeamMemberRepository::class
         );
+
+
+        $this->app->bind(
+            AppSettingInterfaces::class,
+            AppSettingRepository::class
+        );
+        
     }
 
     /**

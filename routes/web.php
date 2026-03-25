@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\GovernanceLayerController;
+use App\Http\Controllers\Admin\AppSettingController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\PurchaseCartController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use App\Http\Controllers\Admin\AdminMerchantController;
+
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Auth;
@@ -48,6 +50,19 @@ Route::prefix('merchants')->name('admin.merchants.')->group(function(){
     Route::post('/merchants/{id}/update-password', [AdminMerchantController::class, 'updatePassword'])->name('update-password');
     Route::get('/', [AdminMerchantController::class, 'renderMerchants'])->name('index');
 });
+
+
+Route::prefix('app-settings')->name('admin.app-settings.')->group(function() {
+    // Main settings page with left sidebar
+    Route::get('/', [AppSettingController::class, 'index'])->name('index');
+    
+    // Update settings for a specific group
+    Route::put('/{group}', [AppSettingController::class, 'update'])->name('update');
+    
+    // API endpoint to get group settings (optional)
+    Route::get('/api/{group}', [AppSettingController::class, 'getGroupSettings'])->name('api.get');
+});
+
 
     // =============================================End===========================================================
 

@@ -10,12 +10,61 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Config;
 use App\Models\Representation;
 use Illuminate\Support\Facades\DB;
+use App\Models\AppSetting;
 
 class PaymentService
 {
+    private $apiLoginId;
+    private $transactionKey;
+    private $sandboxMode;
+    private $currency;
+
     public function __construct(
         private PaymentRepositoryInterface $paymentRepository
-    ) {}
+    ) {
+        // Load settings from database
+        $this->loadSettings();
+    }
+
+    /**
+     * Load Authorize.net settings from database
+     */
+    private function loadSettings(): void
+    {
+        try {
+            // Get API Login ID from database
+            $apiLoginIdSetting = AppSetting::where('group', 'authorize')
+                ->where('key', 'AUTHORIZE_API_LOGIN_ID')
+                ->first();
+            
+            $this->apiLoginId = $apiLoginIdSetting ? $apiLoginIdSetting->value : null;
+            
+            // Get Transaction Key from database
+            $transactionKeySetting = AppSetting::where('group', 'authorize')
+                ->where('key', 'AUTHORIZE_TRANSACTION_KEY')
+                ->first();
+            
+            $this->transactionKey = $transactionKeySetting ? $transactionKeySetting->value : null;
+            
+            // Get mode from config or env (for sandbox/production)
+            $this->sandboxMode = config('authorize.sandbox_mode', env('AUTHORIZE_SANDBOX_MODE', true));
+            
+            // Get currency from config or env
+            $this->currency = config('authorize.currency', env('AUTHORIZE_CURRENCY', 'USD'));
+            
+            Log::info('Authorize.net settings loaded from database', [
+                'has_api_login_id' => !empty($this->apiLoginId),
+                'has_transaction_key' => !empty($this->transactionKey),
+                'sandbox_mode' => $this->sandboxMode,
+                'currency' => $this->currency
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to load Authorize.net settings from database', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 
     /**
      * Process a credit card payment
@@ -23,16 +72,28 @@ class PaymentService
     public function processCardPayment(array $cardData, float $amount): array
     {
         try {
+            // Validate that settings are loaded
+            if (empty($this->apiLoginId) || empty($this->transactionKey)) {
+                Log::error('Authorize.net credentials not configured in database');
+                return [
+                    'success' => false,
+                    'message' => 'Payment gateway is not properly configured. Please contact administrator.'
+                ];
+            }
+
             // Log the attempt (without sensitive data)
             Log::info('Processing Authorize.net payment', [
                 'amount' => $amount,
-                'card_last_four' => substr(str_replace(' ', '', $cardData['card_number']), -4)
+                'card_last_four' => substr(str_replace(' ', '', $cardData['card_number']), -4),
+                'has_api_login_id' => !empty($this->apiLoginId),
+                'has_transaction_key' => !empty($this->transactionKey),
+                'sandbox_mode' => $this->sandboxMode
             ]);
 
             // Create a merchantAuthenticationType object with authentication details
             $merchantAuthentication = new AnetAPI\MerchantAuthenticationType();
-            $merchantAuthentication->setName(config('authorize.api_login_id'));
-            $merchantAuthentication->setTransactionKey(config('authorize.transaction_key'));
+            $merchantAuthentication->setName($this->apiLoginId);
+            $merchantAuthentication->setTransactionKey($this->transactionKey);
 
             // Set the transaction's refId
             $refId = 'ref' . time();
@@ -83,8 +144,8 @@ class PaymentService
             // Create the controller and get the response
             $controller = new AnetController\CreateTransactionController($request);
             
-            // Set environment
-            $environment = config('authorize.sandbox_mode') 
+            // Set environment based on sandbox mode
+            $environment = $this->sandboxMode 
                 ? \net\authorize\api\constants\ANetEnvironment::SANDBOX 
                 : \net\authorize\api\constants\ANetEnvironment::PRODUCTION;
             
@@ -109,7 +170,7 @@ class PaymentService
                             'user_id' => auth()->id(),
                             'transaction_id' => $tresponse->getTransId(),
                             'amount' => $amount,
-                            'currency' => config('authorize.currency', 'USD'),
+                            'currency' => $this->currency,
                             'card_last_four' => substr(str_replace(' ', '', $cardData['card_number']), -4),
                             'card_type' => $this->detectCardType($cardData['card_number']),
                             'status' => 'completed',
@@ -165,7 +226,7 @@ class PaymentService
                             'user_id' => auth()->id(),
                             'transaction_id' => 'FAILED_' . time(),
                             'amount' => $amount,
-                            'currency' => config('authorize.currency', 'USD'),
+                            'currency' => $this->currency,
                             'status' => 'failed',
                             'response_message' => 'Payment failed: ' . $errorMessage,
                             'full_response' => json_encode([
@@ -207,7 +268,7 @@ class PaymentService
                         'user_id' => auth()->id(),
                         'transaction_id' => 'API_ERROR_' . time(),
                         'amount' => $amount,
-                        'currency' => config('authorize.currency', 'USD'),
+                        'currency' => $this->currency,
                         'status' => 'failed',
                         'response_message' => 'Payment processing error: ' . $errorMessage,
                         'full_response' => json_encode([
@@ -232,7 +293,7 @@ class PaymentService
                     'user_id' => auth()->id(),
                     'transaction_id' => 'NO_RESPONSE_' . time(),
                     'amount' => $amount,
-                    'currency' => config('authorize.currency', 'USD'),
+                    'currency' => $this->currency,
                     'status' => 'failed',
                     'response_message' => 'No response from payment gateway',
                     'full_response' => json_encode(['error' => 'No response from API'])
@@ -258,7 +319,7 @@ class PaymentService
                 'user_id' => auth()->id(),
                 'transaction_id' => 'EXCEPTION_' . time(),
                 'amount' => $amount,
-                'currency' => config('authorize.currency', 'USD'),
+                'currency' => $this->currency,
                 'status' => 'failed',
                 'response_message' => 'Payment processing error: ' . $e->getMessage(),
                 'full_response' => json_encode([
@@ -314,5 +375,22 @@ class PaymentService
         }
         
         return 'unknown';
+    }
+
+    /**
+     * Reload settings (useful after updating settings)
+     */
+    public function reloadSettings(): void
+    {
+        $this->loadSettings();
+        Log::info('Authorize.net settings reloaded');
+    }
+
+    /**
+     * Check if Authorize.net is configured
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->apiLoginId) && !empty($this->transactionKey);
     }
 }

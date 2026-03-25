@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use Illuminate\Support\Str;
+use App\Models\AppSetting;
 
 class CyclosUserService
 {
@@ -13,13 +14,99 @@ class CyclosUserService
     protected string $username;
     protected string $password;
     protected string $channel;
+    protected string $defaultGroup;
+    protected string $agreement;
+    protected ?string $adminUserId;
+    protected ?string $paymentTypeId;
+    protected ?string $currencyName;
+    protected ?string $currencySymbol;
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('services.cyclos.base_url'), '/');
-        $this->username = config('services.cyclos.username');
-        $this->password = config('services.cyclos.password');
-        $this->channel = config('services.cyclos.channel', 'webServices');
+        // Load settings from database
+        $this->loadSettings();
+    }
+
+    /**
+     * Load Cyclos settings from database
+     */
+    private function loadSettings(): void
+    {
+        try {
+            // Load base URL
+            $baseUrlSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_BASE_URL')
+                ->first();
+            $this->baseUrl = rtrim($baseUrlSetting ? $baseUrlSetting->value : '', '/');
+            
+            // Load API username
+            $usernameSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_API_USERNAME')
+                ->first();
+            $this->username = $usernameSetting ? $usernameSetting->value : '';
+            
+            // Load API password
+            $passwordSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_API_PASSWORD')
+                ->first();
+            $this->password = $passwordSetting ? $passwordSetting->value : '';
+            
+            // Load channel (default to 'webServices')
+            $this->channel = 'webServices';
+            
+            // Load default group from config or use 'members'
+            $this->defaultGroup = config('services.cyclos.default_group', 'members');
+            
+            // Load agreement from config or use default
+            $this->agreement = config('services.cyclos.agreement', 'default-agreement');
+            
+            // Load admin user ID
+            $adminUserIdSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_ADMIN_USER_ID')
+                ->first();
+            $this->adminUserId = $adminUserIdSetting ? $adminUserIdSetting->value : null;
+            
+            // Load payment type ID
+            $paymentTypeIdSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_PAYMENT_TYPE_ID')
+                ->first();
+            $this->paymentTypeId = $paymentTypeIdSetting ? $paymentTypeIdSetting->value : null;
+            
+            // Load currency name
+            $currencyNameSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_CURRENCY_NAME')
+                ->first();
+            $this->currencyName = $currencyNameSetting ? $currencyNameSetting->value : 'TradeTokens';
+            
+            // Load currency symbol
+            $currencySymbolSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_CURRENCY_SYMBOL')
+                ->first();
+            $this->currencySymbol = $currencySymbolSetting ? $currencySymbolSetting->value : 'TT';
+            
+            Log::info('Cyclos settings loaded from database', [
+                'base_url' => $this->baseUrl,
+                'has_username' => !empty($this->username),
+                'has_password' => !empty($this->password),
+                'has_admin_user_id' => !empty($this->adminUserId),
+                'has_payment_type_id' => !empty($this->paymentTypeId),
+                'currency_name' => $this->currencyName,
+                'currency_symbol' => $this->currencySymbol
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to load Cyclos settings from database', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Check if Cyclos is configured
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->baseUrl) && !empty($this->username) && !empty($this->password);
     }
 
     /**
@@ -30,6 +117,14 @@ class CyclosUserService
      */
     public function createUser(User $user): ?array
     {
+        // Check if Cyclos is configured
+        if (!$this->isConfigured()) {
+            Log::warning('Cyclos not configured, skipping user creation', [
+                'user_id' => $user->id
+            ]);
+            return null;
+        }
+
         // Skip for admin and subadmin
         if (in_array($user->role_id, [1, 5])) {
             Log::info("Skipping Cyclos API for user ID {$user->id} with role_id {$user->role_id}");
@@ -61,7 +156,7 @@ class CyclosUserService
             'skipActivationEmail' => true,
             'acceptAgreement' => true,
             'acceptAgreements' => [
-                config('services.cyclos.agreement', 'default-agreement')
+                $this->agreement
             ],
             'asMember' => false,
         ];
@@ -71,7 +166,8 @@ class CyclosUserService
             'username' => $username,
             'password' => $password,
             'group' => $group,
-            'url' => $this->baseUrl . '/api/users'
+            'url' => $this->baseUrl . '/api/users',
+            'has_admin_user_id' => !empty($this->adminUserId)
         ]);
 
         try {
@@ -112,6 +208,8 @@ class CyclosUserService
 
             // FIXED: Extract data from the nested structure based on actual API response
             // The user data is inside the 'user' object
+            
+            // Extract data from the nested structure based on actual API response
             $userData = $responseData['user'] ?? null;
 
             if (!$userData) {
@@ -193,9 +291,9 @@ class CyclosUserService
             case 6: // Trade Member
             case 7: // Organization
             case 8: // Favor Member
-                return config('services.cyclos.default_group', 'members');
+                return $this->defaultGroup;
             default:
-                return config('services.cyclos.default_group', 'members');
+                return $this->defaultGroup;
         }
     }
 
@@ -231,6 +329,12 @@ class CyclosUserService
      */
     public function getUser(string $cyclosUserId): ?array
     {
+        // Check if Cyclos is configured
+        if (!$this->isConfigured()) {
+            Log::warning('Cyclos not configured, cannot get user');
+            return null;
+        }
+
         try {
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
@@ -265,6 +369,12 @@ class CyclosUserService
      */
     public function userExists(string $email): bool
     {
+        // Check if Cyclos is configured
+        if (!$this->isConfigured()) {
+            Log::warning('Cyclos not configured, cannot check user existence');
+            return false;
+        }
+
         try {
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
@@ -323,5 +433,57 @@ class CyclosUserService
             ]);
             return false;
         }
+    }
+}
+
+      /**
+     * Get admin user ID
+     *
+     * @return string|null
+     */
+    public function getAdminUserId(): ?string
+    {
+        return $this->adminUserId;
+    }
+
+    /**
+     * Get payment type ID
+     *
+     * @return string|null
+     */
+    public function getPaymentTypeId(): ?string
+    {
+        return $this->paymentTypeId;
+    }
+
+    /**
+     * Get currency name
+     *
+     * @return string
+     */
+    public function getCurrencyName(): string
+    {
+        return $this->currencyName;
+    }
+
+    /**
+     * Get currency symbol
+     *
+     * @return string
+     */
+    public function getCurrencySymbol(): string
+    {
+        return $this->currencySymbol;
+    }
+
+    /**
+     * Reload settings (useful after updating settings)
+     */
+    public function reloadSettings(): void
+    {
+        $this->loadSettings();
+        Log::info('Cyclos settings reloaded', [
+            'is_configured' => $this->isConfigured()
+        ]);
     }
 }
