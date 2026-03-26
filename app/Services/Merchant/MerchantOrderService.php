@@ -2,6 +2,7 @@
 
 namespace App\Services\Merchant;
 
+use App\Models\AppSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\UploadedFile;
@@ -21,16 +22,74 @@ class MerchantOrderService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim((string) config('services.cyclos.base_url'), '/');
-        $this->username = (string) config('services.cyclos.username');
-        $this->password = (string) config('services.cyclos.password');
-        $this->channel = (string) config('services.cyclos.channel', 'webServices');
-        $this->currencyCode = (string) config('services.cyclos.currency_code', 'TT');
-        $this->currencySymbol = (string) config('services.cyclos.currency_symbol', 'TT');
-        $this->currencyName = (string) config('services.cyclos.currency_name', 'TradeTokens');
-        $this->adminUserId = (string) config('services.cyclos.admin_user_id');
+        $this->loadSettingsFromDatabase();
+    }
 
-        $this->validateRequiredConfig();
+    /**
+     * Load settings from database
+     */
+    protected function loadSettingsFromDatabase(): void
+    {
+        try {
+            // Load base URL
+            $baseUrlSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_BASE_URL')
+                ->first();
+            $this->baseUrl = rtrim($baseUrlSetting ? $baseUrlSetting->value : '', '/');
+
+            // Load API username
+            $usernameSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_API_USERNAME')
+                ->first();
+            $this->username = $usernameSetting ? $usernameSetting->value : '';
+
+            // Load API password
+            $passwordSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_API_PASSWORD')
+                ->first();
+            $this->password = $passwordSetting ? $passwordSetting->value : '';
+
+            // Load channel
+            $this->channel = 'webServices';
+
+            // Load admin user ID
+            $adminUserIdSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_ADMIN_USER_ID')
+                ->first();
+            $this->adminUserId = $adminUserIdSetting ? $adminUserIdSetting->value : '';
+
+            // Load currency settings
+            $currencyCodeSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_CURRENCY_CODE')
+                ->first();
+            $this->currencyCode = $currencyCodeSetting ? $currencyCodeSetting->value : 'TT';
+
+            $currencySymbolSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_CURRENCY_SYMBOL')
+                ->first();
+            $this->currencySymbol = $currencySymbolSetting ? $currencySymbolSetting->value : 'TT';
+
+            $currencyNameSetting = AppSetting::where('group', 'cyclos')
+                ->where('key', 'CYCLOS_CURRENCY_NAME')
+                ->first();
+            $this->currencyName = $currencyNameSetting ? $currencyNameSetting->value : 'TradeTokens';
+
+            Log::info('MerchantOrderService settings loaded from database', [
+                'base_url' => $this->baseUrl,
+                'username' => $this->username,
+                'has_password' => !empty($this->password),
+                'admin_user_id' => $this->adminUserId,
+                'currency' => $this->currencyName
+            ]);
+
+            $this->validateRequiredConfig();
+
+        } catch (Exception $e) {
+            Log::error('Failed to load MerchantOrderService settings', [
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
 
     protected function validateRequiredConfig(): void
@@ -38,22 +97,25 @@ class MerchantOrderService
         $missing = [];
 
         if (empty($this->baseUrl)) {
-            $missing[] = 'services.cyclos.base_url';
+            $missing[] = 'CYCLOS_BASE_URL';
         }
 
         if (empty($this->username)) {
-            $missing[] = 'services.cyclos.username';
+            $missing[] = 'CYCLOS_API_USERNAME';
         }
 
         if (empty($this->password)) {
-            $missing[] = 'services.cyclos.password';
+            $missing[] = 'CYCLOS_API_PASSWORD';
         }
 
         if (empty($this->adminUserId)) {
-            $missing[] = 'services.cyclos.admin_user_id';
+            $missing[] = 'CYCLOS_ADMIN_USER_ID';
         }
 
         if (!empty($missing)) {
+            Log::error('Missing required Cyclos configuration', [
+                'missing' => $missing
+            ]);
             throw new \RuntimeException(
                 'Missing required Cyclos configuration: ' . implode(', ', $missing)
             );
@@ -203,8 +265,6 @@ class MerchantOrderService
                 'prefix' => $currency['prefix'] ?? '',
                 'decimal_digits' => $currency['decimalDigits'] ?? 2
             ],
-            // Note: Items are not included in list view, only in detail view
-            // For now, we'll set items as empty array
             'items' => []
         ];
     }
@@ -279,7 +339,8 @@ class MerchantOrderService
     public function createOrder(string $cyclosUserId, array $orderData): array
     {
         try {
-            $url = $this->baseUrl . "/api/{$cyclosUserId}/orders";
+            // Use admin user ID for the URL to have proper permissions
+            $url = $this->baseUrl . "/api/{$this->adminUserId}/orders";
 
             // Prepare the order data for Cyclos API
             $cyclosOrderData = [
@@ -292,28 +353,32 @@ class MerchantOrderService
                     ],
                 ],
                 "deliveryAddress" => $orderData['delivery_address'] ?? [
-                    "addressLine1" => "arizona 1158",
-                    "street" => "arizona main street",
-                    "buildingNumber" => "1158",
-                    "zip" => "85003",
-                    "city" => "Arizona",
-                    "region" => "Arizona",
+                    "addressLine1" => "",
+                    "street" => "",
+                    "buildingNumber" => "",
+                    "zip" => "",
+                    "city" => "",
+                    "region" => "",
                     "country" => "US"
                 ],
                 "draft" => false,
                 "items" => $orderData['items'],
                 'currency' => $orderData['currency'] ?? 'unit',
                 "buyer" => $orderData['buyer_id'],
-                "remarks" => $orderData['notes'] ?? null
+                "remarks" => $orderData['notes'] ?? null,
+                "merchant" => $cyclosUserId // Add merchant to the order
             ];
 
             Log::info('Creating order in Cyclos', [
-                'cyclos_user_id' => $cyclosUserId,
+                'admin_user_id' => $this->adminUserId,
+                'merchant_cyclos_id' => $cyclosUserId,
+                'buyer_cyclos_id' => $orderData['buyer_id'],
                 'url' => $url,
                 'order_data' => $cyclosOrderData,
             ]);
 
-            $response = Http::withBasicAuth("tonymerchant20", "12345678")
+            // Use database credentials (jackdoe25 is stored in DB)
+            $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
@@ -324,7 +389,7 @@ class MerchantOrderService
 
             if ($response->failed()) {
                 $errorData = $response->json();
-                $errorMessage = $errorData['message'] ?? 'Failed to create order';
+                $errorMessage = $errorData['message'] ?? $errorData['code'] ?? 'Failed to create order';
 
                 Log::error('Failed to create order in Cyclos', [
                     'status' => $response->status(),
@@ -336,14 +401,21 @@ class MerchantOrderService
                     'success' => false,
                     'message' => $errorMessage,
                     'errors' => $errorData,
+                    'status_code' => $response->status()
                 ];
             }
 
             $data = $response->json();
 
+            Log::info('Order created successfully in Cyclos', [
+                'order_id' => $data['id'] ?? null,
+                'order_number' => $data['number'] ?? null
+            ]);
+
             return [
                 'success' => true,
-                'order_id' => $data ?? null,
+                'order_id' => $data['id'] ?? null,
+                'order_number' => $data['number'] ?? null,
                 'data' => $data,
             ];
         } catch (Exception $e) {

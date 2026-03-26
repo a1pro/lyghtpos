@@ -26,78 +26,85 @@ class MerchantProductController extends Controller
     /**
      * Display a listing of the products.
      */
-    public function index(Request $request): Factory|View|JsonResponse
-    {
-        $user = Auth::user();
-        $cyclosUserId = $user->cyclos_user_id;
-        
-        if (!$cyclosUserId) {
-            return $request->wantsJson()
-                ? response()->json(['error' => 'Cyclos user ID not found'], 400)
-                : view('merchant.pages.products.index', ['products' => [], 'error' => 'Cyclos user ID not found']);
-        }
-
-        try {
-            $searchTerm = $request->input('search', '');
-            $filters = [
-                'category' => $request->input('category'),
-                'min_price' => $request->input('min_price'),
-                'max_price' => $request->input('max_price'),
-                'page' => $request->input('page', 0),
-                'per_page' => $request->input('per_page', 10),
-                'kind' => 'webshop',
-            ];
-
-            $result = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
-            $rawProducts = $result['products'];
-            $headers = $result['headers'];
-            $formattedProducts = $this->productService->formatProducts($rawProducts);
-            
-            $totalCount = count($rawProducts);
-            $currentPage = $request->input('page', 1);
-            $perPage = $request->input('per_page', 4);
-            
-            $products = new \Illuminate\Pagination\LengthAwarePaginator(
-                $formattedProducts,
-                $totalCount,
-                $perPage,
-                $currentPage,
-                ['path' => $request->url(), 'query' => $request->query()]
-            );
-
-            Log::info('Productsssss==========', [
-                'headers' => $headers,
-            ]);
-
-            $productsData = $products->toArray();
-            $productsData['pagination_headers'] = [
-                'x_current_page' => $headers['x-current-page'] ?? null,
-                'x_page_size' => $headers['x-page-size'] ?? null,
-                'x_total_count' => $headers['x-total-count'] ?? null,
-                'x_page_count' => $headers['x-page-count'] ?? null,
-                'x_has_next_page' => $headers['x-has-next-page'] ?? null,
-            ];
-
-
-            return $request->wantsJson()
-                ? response()->json($productsData)
-                : view('merchant.pages.products.index', ['products' => $products]);
-                
-        } catch (\Exception $e) {
-            Log::error('Error fetching products from Cyclos', [
-                'error' => $e->getMessage(),
-                'user_id' => $user->id,
-                'cyclos_user_id' => $cyclosUserId
-            ]);
-
-            return $request->wantsJson()
-                ? response()->json(['error' => 'Failed to fetch products'], 500)
-                : view('merchant.pages.products.index', [
-                    'products' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1),
-                    'error' => 'Failed to fetch products: ' . $e->getMessage()
-                ]);
-        }
+   /**
+ * Display a listing of the products.
+ */
+public function index(Request $request): Factory|View|JsonResponse
+{
+    $user = Auth::user();
+    $cyclosUserId = $user->cyclos_user_id;
+    
+    if (!$cyclosUserId) {
+        return $request->wantsJson()
+            ? response()->json(['error' => 'Cyclos user ID not found'], 400)
+            : view('merchant.pages.products.index', ['products' => [], 'error' => 'Cyclos user ID not found']);
     }
+
+    try {
+        $searchTerm = $request->input('search', '');
+        $filters = [
+            'category' => $request->input('category'),
+            'min_price' => $request->input('min_price'),
+            'max_price' => $request->input('max_price'),
+            'page' => $request->input('page', 0),
+            'per_page' => $request->input('per_page', 10),
+            'kind' => 'webshop',
+        ];
+
+        $result = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
+        $rawProducts = $result['products'];
+        $headers = $result['headers'];
+        
+        Log::info('Products fetched successfully', [
+            'total_products' => count($rawProducts),
+            'headers' => $headers,
+            'sample_product' => count($rawProducts) > 0 ? $rawProducts[0] : null
+        ]);
+        
+        $formattedProducts = $this->productService->formatProducts($rawProducts);
+        
+        // Get total count from headers or fallback to count
+        $totalCount = $headers['x-total-count'] ?? count($rawProducts);
+        $currentPage = $request->input('page', 1);
+        $perPage = $request->input('per_page', 10);
+        
+        $products = new \Illuminate\Pagination\LengthAwarePaginator(
+            $formattedProducts,
+            $totalCount,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $productsData = $products->toArray();
+        $productsData['pagination_headers'] = [
+            'x_current_page' => $headers['x-current-page'] ?? null,
+            'x_page_size' => $headers['x-page-size'] ?? null,
+            'x_total_count' => $headers['x-total-count'] ?? null,
+            'x_page_count' => $headers['x-page-count'] ?? null,
+            'x_has_next_page' => $headers['x-has-next-page'] ?? null,
+        ];
+
+        return $request->wantsJson()
+            ? response()->json($productsData)
+            : view('merchant.pages.products.index', ['products' => $products]);
+            
+    } catch (\Exception $e) {
+        Log::error('Error fetching products from Cyclos', [
+            'error' => $e->getMessage(),
+            'user_id' => $user->id,
+            'cyclos_user_id' => $cyclosUserId,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return $request->wantsJson()
+            ? response()->json(['error' => 'Failed to fetch products: ' . $e->getMessage()], 500)
+            : view('merchant.pages.products.index', [
+                'products' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1),
+                'error' => 'Failed to fetch products: ' . $e->getMessage()
+            ]);
+    }
+}
 
     /**
      * Show the form for creating a new product.

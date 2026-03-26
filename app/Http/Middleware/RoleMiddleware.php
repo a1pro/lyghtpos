@@ -1,4 +1,5 @@
 <?php
+// app/Http/Middleware/RoleMiddleware.php
 
 namespace App\Http\Middleware;
 
@@ -22,28 +23,51 @@ class RoleMiddleware
             abort(403, 'Unauthorized.');
         }
 
-        // Get user's role name and id
-        $userRole = $user->role;
-        $userRoleName = $userRole->name;
-        $userRoleId = $userRole->id;
+        // Get user's role - handle role_id
+        $userRoleName = null;
+        
+        // Check if role relationship exists and has name
+        if (method_exists($user, 'role') && $user->role) {
+            $userRoleName = $user->role->name;
+        }
+        // Check if role_id exists directly
+        elseif (isset($user->role_id)) {
+            // Map role_id to role name
+            $roleMap = [
+                1 => 'admin',
+                2 => 'merchant',
+                3 => 'subadmin',
+                6 => 'member',
+                7 => 'organization',
+                8 => 'favor_member',
+            ];
+            $userRoleName = $roleMap[$user->role_id] ?? null;
+        }
+        // Check if role is a direct string field
+        elseif (isset($user->role) && is_string($user->role)) {
+            $userRoleName = $user->role;
+        }
+
+        // If user has no role assigned
+        if (!$userRoleName) {
+            abort(403, 'User role not assigned.');
+        }
 
         // Check if user's role is in the allowed roles
         if (!in_array($userRoleName, $roles)) {
-            
-            // Role ID 2 (merchant) trying to access role ID 1 (admin) routes
-            if ($userRoleId == 2) {
+            // Redirect based on role
+            if ($userRoleName === 'merchant') {
                 return redirect()->route('merchant.dashboard')
                     ->with('error', 'Unauthorized access. You do not have permission to view this page.');
             }
             
-            // Role ID 1 (admin) trying to access role ID 2 (merchant) routes
-            if ($userRoleId == 1) {
+            if ($userRoleName === 'admin') {
                 return redirect()->route('home')
                     ->with('error', 'Unauthorized access. You do not have permission to view this page.');
             }
             
             // For any other role combinations
-            abort(403, 'Unauthorized.');
+            abort(403, 'Unauthorized. This area is restricted to: ' . implode(', ', $roles));
         }
 
         return $next($request);

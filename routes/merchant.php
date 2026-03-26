@@ -23,8 +23,12 @@ use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
 use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
 use App\Http\Controllers\Merchant\MerchantProductController;
+use App\Http\Controllers\Merchant\WalletController;
+use App\Http\Controllers\Merchant\TransactionController;
 
 
+
+// Add to routes/web.php
 
 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
@@ -60,6 +64,33 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         // AJAX search route
         Route::get('search/ajax', [MerchantProductController::class, 'search'])->name('search');
     });
+
+    Route::prefix('wallet')->name('wallet.')->group(function(){
+        
+        // Dashboard and overview
+        Route::get('/', [WalletController::class, 'index'])->name('index');
+        Route::get('/dashboard', [WalletController::class, 'dashboard'])->name('dashboard');
+        
+        // Payout routes
+        Route::get('/payout', [WalletController::class, 'showPayoutForm'])->name('payout');
+        Route::post('/payout', [WalletController::class, 'requestPayout'])->name('request-payout');
+        Route::get('/payout/{payout}', [WalletController::class, 'payoutDetails'])->name('payout.details');
+        Route::delete('/payout/{payout}', [WalletController::class, 'cancelPayout'])->name('payout.cancel');  // ← This is the correct name
+        
+        // History and transactions
+        Route::get('/history', [WalletController::class, 'history'])->name('history');
+        Route::get('/transactions', [WalletController::class, 'transactions'])->name('transactions');
+        
+        // AJAX endpoints
+        Route::get('/balance', [WalletController::class, 'getBalance'])->name('balance');
+        Route::get('/transactions/ajax', [WalletController::class, 'getTransactions'])->name('transactions.ajax');
+        Route::get('/payouts/ajax', [WalletController::class, 'getPayouts'])->name('payouts.ajax');
+        
+        // Reports
+        Route::get('/report', [WalletController::class, 'report'])->name('report');
+        Route::get('/export', [WalletController::class, 'export'])->name('export');
+    });
+
 
     Route::prefix('team-members')->name('team-members.')->group(function () {
         Route::get('/', [TeamMemberController::class, 'index'])->name('index');
@@ -115,18 +146,47 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::resource('customers', CustomerController::class)->names('customers');
     Route::resource('suppliers', SupplierController::class)->names('suppliers');
 
-    Route::get('/cart', [MerchantCartController::class, 'index'])->name('cart.index');
-    Route::post('/cart', [MerchantCartController::class, 'store'])->name('cart.store');
-    Route::post('/cart/change-qty', [MerchantCartController::class, 'changeQty']);
-    Route::delete('/cart/delete', [MerchantCartController::class, 'delete']);
-    Route::delete('/cart/empty', [MerchantCartController::class, 'empty']);
-    Route::get('/cart/customers', [MerchantCartController::class, 'getCustomers']);
+    // =============================================
+    // Cart Routes (Preserved and Extended)
+    // =============================================
+   // In your merchant routes group
+Route::prefix('cart')->name('cart.')->group(function () {
+    Route::get('/', [MerchantCartController::class, 'index'])->name('index');
+    Route::post('/', [MerchantCartController::class, 'store'])->name('store');
+    Route::post('/change-qty', [MerchantCartController::class, 'changeQty']);
+    Route::delete('/delete', [MerchantCartController::class, 'delete']);
+    Route::delete('/empty', [MerchantCartController::class, 'empty']);
+    Route::get('/customers', [MerchantCartController::class, 'getCustomers']);
+    Route::get('/checkout', [MerchantCartController::class, 'checkout'])->name('checkout');
+    Route::post('/payment/process', [MerchantCartController::class, 'processPayment'])->name('payment.process');
+});
 
-    Route::get('/cart/checkout', [MerchantCartController::class, 'checkout'])->name('cart.checkout');
+    // =============================================
+    // Transaction Routes (New)
+    // =============================================
+    Route::prefix('transactions')->name('transactions.')->controller(TransactionController::class)->group(function () {
+        // List all transactions
+        Route::get('/', 'index')->name('index');
+        
+        // Get transaction summary/stats
+        Route::get('/summary', 'summary')->name('summary');
+        
+        // View single transaction
+        Route::get('/{transactionId}', 'show')->name('show');
+        
+        // Download transaction receipt
+        Route::get('/{transactionId}/receipt', 'receipt')->name('receipt');
+    });
 
+    // =============================================
+    // Checkout Routes (Existing)
+    // =============================================
     Route::get('/checkout/data', [CheckoutController::class, 'getCheckoutData']);
     Route::post('/checkout/process', [CheckoutController::class, 'processCheckout']);
 
+    // =============================================
+    // Purchase Routes (Existing)
+    // =============================================
     Route::get('/purchases/data', [PurchaseController::class, 'data'])->name('purchases.data');
     Route::get('/purchases/{purchase}/receipt', [PurchaseController::class, 'receipt'])->name('purchases.receipt');
     Route::resource('purchases', PurchaseController::class);
@@ -160,3 +220,4 @@ Route::prefix('organization')->name('organization-admin.')->middleware(['auth', 
 });
 
 /** **************** FAVOR MEMBER ************************ */
+// Add your favor member routes here if needed

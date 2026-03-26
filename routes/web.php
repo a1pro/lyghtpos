@@ -12,6 +12,9 @@ use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use App\Http\Controllers\Admin\AdminMerchantController;
+use App\Http\Controllers\Admin\AdminPayoutController;
+
+
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
@@ -43,6 +46,19 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
     Route::resource('orders', OrderController::class);
     Route::resource('suppliers', SupplierController::class);
 
+
+
+    Route::prefix('payouts')->name('admin.payouts.')->group(function () {
+        Route::get('/', [AdminPayoutController::class, 'index'])->name('index');
+        Route::get('/{payout}', [AdminPayoutController::class, 'show'])->name('show');
+        Route::get('/{payout}/wallet-balance', [AdminPayoutController::class, 'getWalletBalance'])->name('wallet-balance');
+        Route::post('/{payout}/status', [AdminPayoutController::class, 'updateStatus'])->name('update-status');
+        Route::post('/bulk-update', [AdminPayoutController::class, 'bulkUpdate'])->name('bulk-update');
+        Route::get('/export', [AdminPayoutController::class, 'export'])->name('export');
+        Route::get('/statistics', [AdminPayoutController::class, 'getStatistics'])->name('statistics');
+    });
+    
+
     // ===================================Merchant List===========================================================
 
 Route::prefix('merchants')->name('admin.merchants.')->group(function(){
@@ -50,6 +66,8 @@ Route::prefix('merchants')->name('admin.merchants.')->group(function(){
     Route::post('/merchants/{id}/update-password', [AdminMerchantController::class, 'updatePassword'])->name('update-password');
     Route::get('/', [AdminMerchantController::class, 'renderMerchants'])->name('index');
 });
+
+
 
 
 Route::prefix('app-settings')->name('admin.app-settings.')->group(function() {

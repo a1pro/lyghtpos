@@ -18,16 +18,55 @@
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
+        <!-- Wallet Balance Dropdown -->
+        <li class="nav-item dropdown">
+            <a class="nav-link" data-toggle="dropdown" href="#" role="button">
+                <i class="fas fa-wallet text-success"></i>
+                <span class="font-weight-bold ml-1">
+                    {{ config('app.currency_symbol', '$') }} {{ number_format(walletBalance(), 2) }}
+                </span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right" style="min-width: 250px;">
+                <div class="dropdown-header bg-light">
+                    <strong>Wallet Balance</strong>
+                </div>
+                <div class="dropdown-item text-center py-3">
+                    <h3 class="text-success mb-0">
+                        {{ config('app.currency_symbol', '$') }} {{ number_format(walletBalance(), 2) }}
+                    </h3>
+                    <small class="text-muted">Available for payout</small>
+                </div>
+                <div class="dropdown-divider"></div>
+                <a href="{{ route('merchant.wallet.index') }}" class="dropdown-item">
+                    <i class="fas fa-chart-line mr-2"></i> Wallet Dashboard
+                </a>
+                <a href="{{ route('merchant.wallet.payout') }}" class="dropdown-item">
+                    <i class="fas fa-paper-plane mr-2"></i> Request Payout
+                </a>
+                <a href="{{ route('merchant.wallet.history') }}" class="dropdown-item">
+                    <i class="fas fa-history mr-2"></i> Payout History
+                </a>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item text-muted small">
+                    <i class="fas fa-info-circle"></i> Min payout: $10
+                </div>
+            </div>
+        </li>
+
         <!-- Notifications Dropdown -->
         <li class="nav-item dropdown">
             <a class="nav-link" data-toggle="dropdown" href="#" id="notificationDropdown">
                 <i class="far fa-bell"></i>
-                <!-- Notification Badge -->
-               
+                @php
+                    $notificationCount = count(notifications());
+                @endphp
+                @if($notificationCount > 0)
+                    <span class="navbar-badge badge badge-warning">{{ $notificationCount }}</span>
+                @endif
             </a>
             <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" id="notificationMenu">
                 <span class="dropdown-item dropdown-header" id="notificationHeader">
-                    Notifications
+                    Notifications ({{ $notificationCount }})
                 </span>
                 <div class="dropdown-divider"></div>
                 
@@ -66,8 +105,8 @@
                             
                             <div class="dropdown-item notification-item">
                                 <div class="d-flex align-items-start">
-                                    <div class="notification-icon" style="background-color: #f0f0f0;">
-                                        <i class="fas fa-bell" style="color: #007bff;"></i>
+                                    <div class="notification-icon">
+                                        <i class="fas fa-bell"></i>
                                     </div>
                                     <div class="notification-content">
                                         <div class="notification-message">
@@ -89,7 +128,7 @@
                 
                 <!-- View All Link -->
                 <div class="dropdown-divider"></div>
-                <a href="#" class="dropdown-item dropdown-footer">
+                <a href="" class="dropdown-item dropdown-footer">
                     View All Notifications
                 </a>
             </div>
@@ -112,6 +151,12 @@
                 <i class="fas fa-user-circle"></i> {{ auth()->user()->getFullname() }}
             </a>
             <div class="dropdown-menu dropdown-menu-right">
+                <a href=" " class="dropdown-item">
+                    <i class="fas fa-user mr-2"></i> Profile
+                </a>
+                <a href="" class="dropdown-item">
+                    <i class="fas fa-cog mr-2"></i> Settings
+                </a>
                 <div class="dropdown-divider"></div>
                 <a href="{{ route('logout') }}" class="dropdown-item"
                    onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
@@ -267,6 +312,15 @@
     
     .badge-warning {
         animation: pulse 2s infinite;
+    }
+    
+    /* Wallet dropdown styles */
+    .wallet-balance {
+        transition: all 0.3s ease;
+    }
+    
+    .wallet-balance:hover {
+        transform: scale(1.05);
     }
     
     /* Responsive adjustments */
