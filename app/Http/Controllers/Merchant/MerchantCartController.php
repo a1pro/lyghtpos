@@ -8,6 +8,8 @@ use App\Http\Requests\Cart\ChangeQuantityRequest;
 use App\Http\Requests\Cart\RemoveFromCartRequest;
 use App\Models\User;
 use App\Services\Merchant\MerchantCartService;
+use App\Services\Merchant\PaymentService;
+use App\Services\Merchant\TransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,10 +18,17 @@ use Illuminate\View\View;
 class MerchantCartController extends Controller
 {
     protected MerchantCartService $cartService;
+    protected PaymentService $paymentService;
+    protected TransactionService $transactionService;
 
-    public function __construct(MerchantCartService $cartService)
-    {
+    public function __construct(
+        MerchantCartService $cartService,
+        PaymentService $paymentService,
+        TransactionService $transactionService
+    ) {
         $this->cartService = $cartService;
+        $this->paymentService = $paymentService;
+        $this->transactionService = $transactionService;
     }
 
     /**
@@ -35,13 +44,201 @@ class MerchantCartController extends Controller
         return view('merchant.pages.cart.index');
     }
 
+    /**
+     * Display the checkout page.
+     */
     public function checkout(Request $request): View|JsonResponse
     {
         if ($request->wantsJson()) {
-            //
+            // Return checkout data for AJAX requests
+            return $this->getCheckoutData($request);
         }
 
         return view('merchant.pages.checkout.index');
+    }
+
+    /**
+     * Get checkout data (cart items, total, customer info)
+     */
+    public function getCheckoutData(Request $request): JsonResponse
+    {
+        try {
+            $encryptedCustomerId = $request->get('cid');
+            
+            if (!$encryptedCustomerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer ID is required'
+                ], 400);
+            }
+            
+            // Decrypt the customer ID
+            $customerId = decryptVal($encryptedCustomerId);
+            
+            // Get cart items
+            $cart = $this->cartService->getCart();
+            $cartItems = $cart['items'] ?? [];
+            
+            // Calculate total
+            $total = 0;
+            foreach ($cartItems as $item) {
+                $total += ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'cart' => $cartItems,
+                'total' => round($total, 2),
+                'customerid' => $encryptedCustomerId
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to get checkout data', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load checkout data'
+            ], 500);
+        }
+    }
+
+    /**
+     * Process checkout payment
+     */
+    public function processCheckout(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'payment_method' => 'required|in:cash,card,unyti',
+                'amount' => 'required|numeric|min:0',
+                'customer_id' => 'required|string',
+                'received_amount' => 'required_if:payment_method,cash|numeric|min:0',
+                'card_data' => 'required_if:payment_method,card|array',
+                'unyti_user_id' => 'required_if:payment_method,unyti|string'
+            ]);
+            
+            // Decrypt customer ID
+            $customerId = decryptVal($validated['customer_id']);
+            $customer = User::where('cyclos_user_id', $customerId)->first();
+            
+            if (!$customer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer not found'
+                ], 404);
+            }
+            
+            // Get current cart
+            $cart = $this->cartService->getCart();
+            $cartItems = $cart['items'] ?? [];
+            $totalAmount = $validated['amount'];
+            
+            if (empty($cartItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cart is empty'
+                ], 400);
+            }
+            
+            $transaction = null;
+            
+            // Process based on payment method
+            switch ($validated['payment_method']) {
+                case 'card':
+                    // Process card payment
+                    $paymentResult = $this->paymentService->processCardPayment(
+                        $validated['card_data'],
+                        $totalAmount
+                    );
+                    
+                    if (!$paymentResult['success']) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $paymentResult['message']
+                        ], 400);
+                    }
+                    
+                    // Create transaction with fee calculations
+                    $transaction = $this->transactionService->createCardPaymentTransaction(
+                        $paymentResult,
+                        $totalAmount,
+                        $customer->id,
+                        $customer->cyclos_user_id,
+                        $cartItems
+                    );
+                    
+                    // Clear the cart after successful payment
+                    $this->cartService->emptyCart();
+                    
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Payment processed successfully',
+                        'order_id' => $transaction->id,
+                        'transaction_id' => $transaction->transaction_id,
+                        'amount_paid' => $totalAmount,
+                        'card_fee' => $transaction->platform_fee,
+                        'amount_after_fee' => $transaction->amount_after_platform_fee
+                    ]);
+                    
+                case 'cash':
+                    // Create transaction for cash payment
+                    $transaction = $this->transactionService->createCashPaymentTransaction(
+                        $totalAmount,
+                        $validated['received_amount'],
+                        $customer->id,
+                        $customer->cyclos_user_id,
+                        $cartItems
+                    );
+                    
+                    // Clear the cart
+                    $this->cartService->emptyCart();
+                    
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Cash payment recorded successfully',
+                        'order_id' => $transaction->id,
+                        'transaction_id' => $transaction->transaction_id,
+                        'amount_paid' => $validated['received_amount'],
+                        'change_due' => round($validated['received_amount'] - $totalAmount, 2)
+                    ]);
+                    
+                case 'unyti':
+                    // Create transaction for Unyti payment
+                    $transaction = $this->transactionService->createUnytiPaymentTransaction(
+                        $totalAmount,
+                        $validated['unyti_user_id'],
+                        $customer->id,
+                        $customer->cyclos_user_id,
+                        $cartItems
+                    );
+                    
+                    // Clear the cart
+                    $this->cartService->emptyCart();
+                    
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Unyti payment initiated successfully',
+                        'order_id' => $transaction->id,
+                        'transaction_id' => $transaction->transaction_id
+                    ]);
+                    
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid payment method'
+                    ], 400);
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('Checkout processing failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process checkout: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

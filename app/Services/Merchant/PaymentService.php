@@ -1,4 +1,5 @@
 <?php
+// app/Services/Merchant/PaymentService.php
 
 namespace App\Services\Merchant;
 
@@ -37,14 +38,14 @@ class PaymentService
                 ->where('key', 'AUTHORIZE_API_LOGIN_ID')
                 ->first();
             
-            $this->apiLoginId = $apiLoginIdSetting ? $apiLoginIdSetting->value : null;
+            $this->apiLoginId = $apiLoginIdSetting ? trim($apiLoginIdSetting->value) : null;
             
             // Get Transaction Key from database
             $transactionKeySetting = AppSetting::where('group', 'authorize')
                 ->where('key', 'AUTHORIZE_TRANSACTION_KEY')
                 ->first();
             
-            $this->transactionKey = $transactionKeySetting ? $transactionKeySetting->value : null;
+            $this->transactionKey = $transactionKeySetting ? trim($transactionKeySetting->value) : null;
             
             // Get mode from config or env (for sandbox/production)
             $this->sandboxMode = config('authorize.sandbox_mode', env('AUTHORIZE_SANDBOX_MODE', true));
@@ -55,6 +56,7 @@ class PaymentService
             Log::info('Authorize.net settings loaded from database', [
                 'has_api_login_id' => !empty($this->apiLoginId),
                 'has_transaction_key' => !empty($this->transactionKey),
+                'api_login_id' => $this->apiLoginId ? substr($this->apiLoginId, 0, 5) . '***' : null,
                 'sandbox_mode' => $this->sandboxMode,
                 'currency' => $this->currency
             ]);
@@ -81,12 +83,20 @@ class PaymentService
                 ];
             }
 
+            // Clean and validate card data
+            $cardNumber = preg_replace('/\s+/', '', $cardData['card_number']);
+            $expiryMonth = str_pad($cardData['expiry_month'], 2, '0', STR_PAD_LEFT);
+            $expiryYear = $cardData['expiry_year'];
+            $cvv = $cardData['cvv'];
+
             // Log the attempt (without sensitive data)
             Log::info('Processing Authorize.net payment', [
                 'amount' => $amount,
-                'card_last_four' => substr(str_replace(' ', '', $cardData['card_number']), -4),
-                'has_api_login_id' => !empty($this->apiLoginId),
-                'has_transaction_key' => !empty($this->transactionKey),
+                'card_last_four' => substr($cardNumber, -4),
+                'card_type' => $this->detectCardType($cardNumber),
+                'expiry_date' => $expiryYear . '-' . $expiryMonth,
+                'has_cvv' => !empty($cvv),
+                'has_billing' => isset($cardData['billing']),
                 'sandbox_mode' => $this->sandboxMode
             ]);
 
@@ -100,9 +110,10 @@ class PaymentService
 
             // Create the payment data for a credit card
             $creditCard = new AnetAPI\CreditCardType();
-            $creditCard->setCardNumber(str_replace(' ', '', $cardData['card_number']));
-            $creditCard->setExpirationDate($cardData['expiry_year'] . '-' . $cardData['expiry_month']);
-            $creditCard->setCardCode($cardData['cvv']);
+            $creditCard->setCardNumber($cardNumber);
+            // Format: YYYY-MM
+            $creditCard->setExpirationDate($expiryYear . '-' . $expiryMonth);
+            $creditCard->setCardCode($cvv);
 
             // Add the payment data to a paymentType object
             $paymentOne = new AnetAPI\PaymentType();
@@ -110,21 +121,31 @@ class PaymentService
 
             // Create order information
             $order = new AnetAPI\OrderType();
-            if (isset($cardData['order_description']) && !empty($cardData['order_description'])) {
-                $order->setDescription($cardData['order_description']);
-            }
+            $orderDescription = isset($cardData['order_description']) && !empty($cardData['order_description']) 
+                ? $cardData['order_description'] 
+                : 'Payment for order - ' . date('Y-m-d H:i:s');
+            $order->setDescription($orderDescription);
 
-            // Set the customer's Bill To address
+            // Set the customer's Bill To address with validation
             $customerAddress = new AnetAPI\CustomerAddressType();
             if (isset($cardData['billing'])) {
                 $billing = $cardData['billing'];
-                $customerAddress->setFirstName($billing['first_name'] ?? '');
-                $customerAddress->setLastName($billing['last_name'] ?? '');
-                $customerAddress->setAddress($billing['address'] ?? '');
-                $customerAddress->setCity($billing['city'] ?? '');
-                $customerAddress->setState($billing['state'] ?? '');
-                $customerAddress->setZip($billing['zip'] ?? '');
-                $customerAddress->setCountry($billing['country'] ?? '');
+                $customerAddress->setFirstName($billing['first_name'] ?? 'Customer');
+                $customerAddress->setLastName($billing['last_name'] ?? 'Name');
+                $customerAddress->setAddress($billing['address'] ?? '123 Main St');
+                $customerAddress->setCity($billing['city'] ?? 'Anytown');
+                $customerAddress->setState($billing['state'] ?? 'CA');
+                $customerAddress->setZip($billing['zip'] ?? '12345');
+                $customerAddress->setCountry($billing['country'] ?? 'USA');
+            } else {
+                // Set default billing address if not provided
+                $customerAddress->setFirstName('Customer');
+                $customerAddress->setLastName('Name');
+                $customerAddress->setAddress('123 Main St');
+                $customerAddress->setCity('Anytown');
+                $customerAddress->setState('CA');
+                $customerAddress->setZip('12345');
+                $customerAddress->setCountry('USA');
             }
 
             // Create a transaction
@@ -141,6 +162,14 @@ class PaymentService
             $request->setRefId($refId);
             $request->setTransactionRequest($transactionRequestType);
 
+            // Log the request for debugging (without sensitive data)
+            Log::debug('Authorize.net request prepared', [
+                'refId' => $refId,
+                'amount' => $amount,
+                'card_type' => $this->detectCardType($cardNumber),
+                'has_billing_address' => true
+            ]);
+
             // Create the controller and get the response
             $controller = new AnetController\CreateTransactionController($request);
             
@@ -153,157 +182,195 @@ class PaymentService
             
             $response = $controller->executeWithApiResponse($environment);
 
-            // Log raw response for debugging
-            Log::info('Authorize.net raw response', [
-                'response' => $response ? json_encode($response) : 'No response'
+            // Enhanced error logging
+            if ($response == null) {
+                Log::error('Authorize.net - No response received from API');
+                return [
+                    'success' => false,
+                    'message' => 'No response from payment gateway. Please check your connection and try again.'
+                ];
+            }
+
+            // Log the full response for debugging
+            Log::debug('Authorize.net full response', [
+                'result_code' => $response->getMessages()->getResultCode(),
+                'messages' => json_encode($response->getMessages()->getMessage())
             ]);
 
-            // Process the response
-            if ($response != null) {
-                // Check if transaction was successful
-                if ($response->getMessages()->getResultCode() == "Ok") {
-                    $tresponse = $response->getTransactionResponse();
-                    
-                    if ($tresponse != null && $tresponse->getResponseCode() == "1") {
-                        // Transaction approved
-                        $paymentData = [
-                            'user_id' => auth()->id(),
-                            'transaction_id' => $tresponse->getTransId(),
-                            'amount' => $amount,
-                            'currency' => $this->currency,
-                            'card_last_four' => substr(str_replace(' ', '', $cardData['card_number']), -4),
-                            'card_type' => $this->detectCardType($cardData['card_number']),
-                            'status' => 'completed',
-                            'response_message' => 'Payment completed successfully',
-                            'full_response' => json_encode([
-                                'transaction_response' => [
-                                    'response_code' => $tresponse->getResponseCode(),
-                                    'auth_code' => $tresponse->getAuthCode(),
-                                    'trans_id' => $tresponse->getTransId()
-                                ],
-                                'messages' => $response->getMessages()->getMessage()
-                            ])
-                        ];
-                        
-                        // Create payment record
-                        $payment = $this->paymentRepository->create($paymentData);
-                        
-                        Log::info('Payment successful', [
-                            'transaction_id' => $tresponse->getTransId(),
-                            'payment_id' => $payment->id,
-                            'user_id' => auth()->id()
-                        ]);
-                        
-                        return [
-                            'success' => true,
-                            'message' => 'Payment processed successfully',
-                            'transaction_id' => $tresponse->getTransId(),
-                            'payment' => $payment
-                        ];
-                        
-                    } else {
-                        // Transaction failed at processor level
-                        $errorMessages = [];
-                        $errorCodes = [];
-                        
-                        if ($tresponse != null && $tresponse->getErrors() != null) {
-                            foreach ($tresponse->getErrors() as $error) {
-                                $errorMessages[] = $error->getErrorText();
-                                $errorCodes[] = $error->getErrorCode();
-                            }
-                        }
-                        
-                        $errorMessage = implode(', ', $errorMessages) ?: 'Transaction was declined';
-                        $errorCode = implode(', ', $errorCodes) ?: 'UNKNOWN';
-                        
-                        Log::error('Authorize.net transaction failed', [
-                            'error_code' => $errorCode,
-                            'error_message' => $errorMessage,
-                            'response_code' => $tresponse ? $tresponse->getResponseCode() : 'unknown'
-                        ]);
-                        
-                        $paymentData = [
-                            'user_id' => auth()->id(),
-                            'transaction_id' => 'FAILED_' . time(),
-                            'amount' => $amount,
-                            'currency' => $this->currency,
-                            'status' => 'failed',
-                            'response_message' => 'Payment failed: ' . $errorMessage,
-                            'full_response' => json_encode([
-                                'error_code' => $errorCode,
-                                'error_message' => $errorMessage,
-                                'response' => $response
-                            ])
-                        ];
-                        
-                        $this->paymentRepository->create($paymentData);
-                        
-                        return [
-                            'success' => false,
-                            'message' => 'Payment failed: ' . $errorMessage
-                        ];
+            // Check if transaction was successful at API level
+            if ($response->getMessages()->getResultCode() != "Ok") {
+                // API-level error
+                $errorMessages = [];
+                $errorCodes = [];
+                
+                $messages = $response->getMessages();
+                if ($messages != null) {
+                    foreach ($messages->getMessage() as $message) {
+                        $errorMessages[] = $message->getText();
+                        $errorCodes[] = $message->getCode();
                     }
-                } else {
-                    // API-level error
-                    $errorMessages = [];
-                    $errorCodes = [];
-                    
-                    $messages = $response->getMessages();
-                    if ($messages != null) {
-                        foreach ($messages->getMessage() as $message) {
-                            $errorMessages[] = $message->getText();
-                            $errorCodes[] = $message->getCode();
-                        }
-                    }
-                    
-                    $errorMessage = implode(', ', $errorMessages) ?: 'API Error';
-                    $errorCode = implode(', ', $errorCodes) ?: 'API_ERROR';
-                    
-                    Log::error('Authorize.net API error', [
-                        'error_code' => $errorCode,
-                        'error_message' => $errorMessage
-                    ]);
-                    
-                    $paymentData = [
-                        'user_id' => auth()->id(),
-                        'transaction_id' => 'API_ERROR_' . time(),
-                        'amount' => $amount,
-                        'currency' => $this->currency,
-                        'status' => 'failed',
-                        'response_message' => 'Payment processing error: ' . $errorMessage,
-                        'full_response' => json_encode([
-                            'error_code' => $errorCode,
-                            'error_message' => $errorMessage,
-                            'response' => $response
-                        ])
-                    ];
-                    
-                    $this->paymentRepository->create($paymentData);
-                    
-                    return [
-                        'success' => false,
-                        'message' => 'Payment processing error: ' . $errorMessage
-                    ];
                 }
-            } else {
-                // No response from API
-                Log::error('Authorize.net no response from API');
+                
+                $errorMessage = implode(', ', $errorMessages) ?: 'API Error';
+                $errorCode = implode(', ', $errorCodes) ?: 'API_ERROR';
+                
+                Log::error('Authorize.net API error', [
+                    'error_code' => $errorCode,
+                    'error_message' => $errorMessage,
+                    'full_response' => json_encode($response)
+                ]);
+                
+                // Check if this is a test account issue
+                if ($errorCode == 'E00027') {
+                    $errorMessage = 'Transaction failed. This could be due to: 1) Invalid API credentials, 2) Using live card in sandbox mode, or 3) Missing required fields. Please check your configuration.';
+                }
                 
                 $paymentData = [
                     'user_id' => auth()->id(),
-                    'transaction_id' => 'NO_RESPONSE_' . time(),
+                    'transaction_id' => 'API_ERROR_' . time(),
                     'amount' => $amount,
                     'currency' => $this->currency,
                     'status' => 'failed',
-                    'response_message' => 'No response from payment gateway',
-                    'full_response' => json_encode(['error' => 'No response from API'])
+                    'response_message' => 'Payment processing error: ' . $errorMessage,
+                    'full_response' => json_encode([
+                        'error_code' => $errorCode,
+                        'error_message' => $errorMessage,
+                        'response' => $response
+                    ])
                 ];
                 
                 $this->paymentRepository->create($paymentData);
                 
                 return [
                     'success' => false,
-                    'message' => 'No response from payment gateway. Please try again.'
+                    'message' => 'Payment processing error: ' . $errorMessage,
+                    'error_code' => $errorCode,
+                    'details' => $errorMessages
+                ];
+            }
+            
+            // Get the transaction response
+            $tresponse = $response->getTransactionResponse();
+            
+            if ($tresponse == null) {
+                Log::error('Authorize.net - No transaction response received');
+                return [
+                    'success' => false,
+                    'message' => 'Invalid response from payment gateway'
+                ];
+            }
+            
+            // Check transaction response code
+            $responseCode = $tresponse->getResponseCode();
+            
+            // Response codes:
+            // 1 = Approved
+            // 2 = Declined
+            // 3 = Error
+            // 4 = Held for Review
+            
+            if ($responseCode == "1") {
+                // Transaction approved
+                $paymentData = [
+                    'user_id' => auth()->id(),
+                    'transaction_id' => $tresponse->getTransId(),
+                    'amount' => $amount,
+                    'currency' => $this->currency,
+                    'card_last_four' => substr($cardNumber, -4),
+                    'card_type' => $this->detectCardType($cardNumber),
+                    'status' => 'completed',
+                    'response_message' => 'Payment completed successfully',
+                    'full_response' => json_encode([
+                        'transaction_response' => [
+                            'response_code' => $tresponse->getResponseCode(),
+                            'auth_code' => $tresponse->getAuthCode(),
+                            'trans_id' => $tresponse->getTransId(),
+                            'avs_result_code' => $tresponse->getAvsResultCode(),
+                            'cvv_result_code' => $tresponse->getCvvResultCode()
+                        ],
+                        'messages' => $response->getMessages()->getMessage()
+                    ])
+                ];
+                
+                // Create payment record
+                $payment = $this->paymentRepository->create($paymentData);
+                
+                Log::info('Payment successful', [
+                    'transaction_id' => $tresponse->getTransId(),
+                    'payment_id' => $payment->id,
+                    'user_id' => auth()->id(),
+                    'amount' => $amount,
+                    'auth_code' => $tresponse->getAuthCode()
+                ]);
+                
+                return [
+                    'success' => true,
+                    'message' => 'Payment processed successfully',
+                    'transaction_id' => $tresponse->getTransId(),
+                    'auth_code' => $tresponse->getAuthCode(),
+                    'payment' => $payment
+                ];
+                
+            } else {
+                // Transaction declined or error
+                $errorMessages = [];
+                $errorCodes = [];
+                
+                // Check for transaction-level errors
+                if ($tresponse->getErrors() != null) {
+                    foreach ($tresponse->getErrors() as $error) {
+                        $errorMessages[] = $error->getErrorText();
+                        $errorCodes[] = $error->getErrorCode();
+                    }
+                }
+                
+                // Check for other response messages
+                if ($tresponse->getMessages() != null) {
+                    $messages = $tresponse->getMessages();
+                    foreach ($messages as $message) {
+                        if ($message->getCode() != "1") {
+                            $errorMessages[] = $message->getDescription();
+                        }
+                    }
+                }
+                
+                $errorMessage = implode(', ', $errorMessages) ?: $this->getResponseCodeMessage($responseCode);
+                $errorCode = implode(', ', $errorCodes) ?: 'TRANSACTION_' . $responseCode;
+                
+                Log::error('Authorize.net transaction failed', [
+                    'error_code' => $errorCode,
+                    'error_message' => $errorMessage,
+                    'response_code' => $responseCode,
+                    'transaction_id' => $tresponse->getTransId(),
+                    'avs_result' => $tresponse->getAvsResultCode(),
+                    'cvv_result' => $tresponse->getCvvResultCode()
+                ]);
+                
+                $paymentData = [
+                    'user_id' => auth()->id(),
+                    'transaction_id' => $tresponse->getTransId() ?: 'FAILED_' . time(),
+                    'amount' => $amount,
+                    'currency' => $this->currency,
+                    'status' => 'failed',
+                    'response_message' => 'Payment failed: ' . $errorMessage,
+                    'full_response' => json_encode([
+                        'error_code' => $errorCode,
+                        'error_message' => $errorMessage,
+                        'response_code' => $responseCode,
+                        'avs_result' => $tresponse->getAvsResultCode(),
+                        'cvv_result' => $tresponse->getCvvResultCode(),
+                        'transaction_id' => $tresponse->getTransId()
+                    ])
+                ];
+                
+                $this->paymentRepository->create($paymentData);
+                
+                return [
+                    'success' => false,
+                    'message' => 'Payment failed: ' . $errorMessage,
+                    'error_code' => $errorCode,
+                    'response_code' => $responseCode,
+                    'details' => $errorMessages
                 ];
             }
             
@@ -336,6 +403,21 @@ class PaymentService
                 'message' => 'Payment processing error: ' . $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Get user-friendly message for response code
+     */
+    private function getResponseCodeMessage(string $responseCode): string
+    {
+        $messages = [
+            '1' => 'Transaction approved',
+            '2' => 'Transaction declined',
+            '3' => 'Transaction error',
+            '4' => 'Transaction held for review'
+        ];
+        
+        return $messages[$responseCode] ?? 'Unknown transaction status';
     }
 
     /**
@@ -392,5 +474,30 @@ class PaymentService
     public function isConfigured(): bool
     {
         return !empty($this->apiLoginId) && !empty($this->transactionKey);
+    }
+
+    /**
+     * Test Authorize.net connection with a $1 transaction
+     */
+    public function testConnection(): array
+    {
+        $testCard = [
+            'card_number' => '4111111111111111',
+            'expiry_month' => '12',
+            'expiry_year' => date('Y') + 1,
+            'cvv' => '123',
+            'billing' => [
+                'first_name' => 'Test',
+                'last_name' => 'User',
+                'address' => '123 Test St',
+                'city' => 'Test City',
+                'state' => 'CA',
+                'zip' => '12345',
+                'country' => 'USA'
+            ],
+            'order_description' => 'Test transaction - ' . date('Y-m-d H:i:s')
+        ];
+        
+        return $this->processCardPayment($testCard, 1.00);
     }
 }

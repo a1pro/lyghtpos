@@ -133,4 +133,27 @@ if (!function_exists('groupSettings')) {
             ->pluck('value', 'key')
             ->toArray();
     }
+
+
+}
+ 
+
+if (!function_exists('walletBalance')) {
+    function walletBalance()
+    {
+        if (!auth()->check()) {
+            return 0;
+        }
+        
+        return auth()->user()->wallet_amount ?? 0;
+    }
+}
+
+if (!function_exists('formatMoney')) {
+    function formatMoney($amount)
+    {
+        $currency = config('app.currency_symbol', '$');
+        return $currency . ' ' . number_format($amount, 2);
+    }
+
 }

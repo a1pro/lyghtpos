@@ -40,6 +40,7 @@ class User extends Authenticatable
         'merchant_id',
         'status',
         'cyclos_user_password',
+        'wallet_amount'
     ];
 
     /**
@@ -165,5 +166,28 @@ class User extends Authenticatable
     public function scopeFavorMembers($query)
     {
         return $query->where('role_id', 8);
+    }
+
+    public function payouts()
+    {
+        return $this->hasMany(Payout::class, 'merchant_id');
+    }
+
+    // Add transactions relationship (if not exists)
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class, 'merchant_id');
+    }
+
+    // Add notifications relationship
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    // Get full name
+    public function getFullnameAttribute()
+    {
+        return $this->first_name . ' ' . $this->last_name;
     }
 }

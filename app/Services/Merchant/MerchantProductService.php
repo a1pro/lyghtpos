@@ -109,10 +109,9 @@ class MerchantProductService
                 'currencies_count' => count($data['currencies'] ?? [])
             ]);
 
-            // Cache the data for 1 hour
             Cache::put('cyclos_marketplace_data', $data, 3600);
-
             $this->marketplaceData = $data;
+            
             return $data;
         } catch (Exception $e) {
             Log::error('Exception in getMarketplaceData', [
@@ -152,13 +151,6 @@ class MerchantProductService
             $children = $category['children'] ?? [];
 
             if ($id) {
-                Log::debug('Found category', [
-                    'id' => $id,
-                    'name' => $name,
-                    'id_type' => gettype($id),
-                    'id_length' => strlen($id)
-                ]);
-
                 $displayName = $prefix ? $prefix . ' > ' . $name : $name;
                 $flattened[$id] = $displayName;
 
@@ -258,16 +250,47 @@ class MerchantProductService
 
     /**
      * Get all products for a user from Cyclos marketplace
+     * FIXED: Properly handles the API response format shown in the screenshot
      */
     public function getUserProducts(string $cyclosUserId, array $params = []): array
     {
         try {
+            // Build URL with the correct endpoint
             $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
+            
+            // Prepare query parameters
+            $queryParams = [];
+            
+            // Add pagination parameters if provided
+            if (isset($params['pageSize'])) {
+                $queryParams['pageSize'] = $params['pageSize'];
+            }
+            
+            if (isset($params['pageNumber'])) {
+                $queryParams['pageNumber'] = $params['pageNumber'];
+            }
+            
+            // Add search/filter parameters
+            if (!empty($params['keywords'])) {
+                $queryParams['keywords'] = $params['keywords'];
+            }
+            
+            if (!empty($params['category'])) {
+                $queryParams['category'] = $params['category'];
+            }
+            
+            if (!empty($params['minPrice'])) {
+                $queryParams['minPrice'] = $params['minPrice'];
+            }
+            
+            if (!empty($params['maxPrice'])) {
+                $queryParams['maxPrice'] = $params['maxPrice'];
+            }
 
             Log::info('Fetching user products from Cyclos', [
                 'cyclos_user_id' => $cyclosUserId,
                 'url' => $url,
-                'params' => $params
+                'query_params' => $queryParams,
             ]);
 
             $response = Http::withBasicAuth($this->username, $this->password)
@@ -276,7 +299,7 @@ class MerchantProductService
                     'Channel' => $this->channel,
                 ])
                 ->timeout(30)
-                ->get($url, $params);
+                ->get($url, $queryParams);
 
             if ($response->failed()) {
                 Log::error('Failed to fetch Cyclos products', [
@@ -287,8 +310,9 @@ class MerchantProductService
                 return ['products' => [], 'headers' => []];
             }
 
-            $products = $response->json();
-
+            $responseData = $response->json();
+            
+            // Extract pagination headers from response headers
             $headers = [
                 'x-current-page' => $response->header('X-Current-Page'),
                 'x-page-size' => $response->header('X-Page-Size'),
@@ -296,46 +320,82 @@ class MerchantProductService
                 'x-page-count' => $response->header('X-Page-Count'),
                 'x-has-next-page' => $response->header('X-Has-Next-Page'),
             ];
+            
+            Log::info('Cyclos API response received', [
+                'headers' => $headers,
+                'response_type' => gettype($responseData),
+                'is_array' => is_array($responseData),
+                'response_keys' => is_array($responseData) ? array_keys($responseData) : null,
+                'response_sample' => is_array($responseData) ? array_slice($responseData, 0, 2) : null
+            ]);
 
-            Log::info('Cyclos API headers received', $headers);
-
-            // Helper function to add quantity field
-            $addQuantityField = function ($product) {
+            // Helper function to add quantity field and format product
+            $formatProduct = function ($product) {
+                if (!is_array($product)) {
+                    return $product;
+                }
+                
+                // Add quantity field based on stock information
                 if (isset($product['unlimitedStock']) && $product['unlimitedStock'] === true) {
-                    $product['quantity'] = 1000000; // 1 million for unlimited stock
+                    $product['quantity'] = 1000000;
                 } elseif (isset($product['stockQuantity'])) {
                     $product['quantity'] = (float) $product['stockQuantity'];
                 } else {
-                    $product['quantity'] = 1000000; // Default to unlimited
+                    $product['quantity'] = 1000000;
                 }
+                
+                // Ensure we have an ID field
+                if (!isset($product['id']) && isset($product['_id'])) {
+                    $product['id'] = $product['_id'];
+                }
+                
                 return $product;
             };
 
-            // Handle different response formats and return both products and headers
-            if (is_array($products)) {
-                // Check if it's a paginated response with 'items' or 'data' key
-                if (isset($products['items']) && is_array($products['items'])) {
-                    $products['items'] = array_map($addQuantityField, $products['items']);
-                    return ['products' => $products['items'], 'headers' => $headers];
+            $products = [];
+            
+            // Handle different response formats based on actual API response
+            // According to the screenshot, the API returns an array of products directly
+            if (is_array($responseData)) {
+                // Check if it's a paginated response with 'items' key
+                if (isset($responseData['items']) && is_array($responseData['items'])) {
+                    $products = array_map($formatProduct, $responseData['items']);
+                    Log::info('Products found in items key', ['count' => count($products)]);
                 }
-                if (isset($products['data']) && is_array($products['data'])) {
-                    $products['data'] = array_map($addQuantityField, $products['data']);
-                    return ['products' => $products['data'], 'headers' => $headers];
+                // Check if it's a paginated response with 'data' key
+                elseif (isset($responseData['data']) && is_array($responseData['data'])) {
+                    $products = array_map($formatProduct, $responseData['data']);
+                    Log::info('Products found in data key', ['count' => count($products)]);
                 }
-                // If it's a simple array of products
-                if (array_keys($products) === range(0, count($products) - 1)) {
-                    return ['products' => array_map($addQuantityField, $products), 'headers' => $headers];
+                // Check if it's a simple array of products (most likely based on screenshot)
+                elseif (array_keys($responseData) === range(0, count($responseData) - 1)) {
+                    $products = array_map($formatProduct, $responseData);
+                    Log::info('Products found as simple array', ['count' => count($products)]);
                 }
-                // If it's a single product
-                if (isset($products['id'])) {
-                    return ['products' => [$addQuantityField($products)], 'headers' => $headers];
+                // Check if it's a single product object
+                elseif (isset($responseData['id']) || isset($responseData['_id'])) {
+                    $products = [$formatProduct($responseData)];
+                    Log::info('Single product found', ['id' => $responseData['id'] ?? $responseData['_id'] ?? 'unknown']);
+                }
+                // If none of the above, log the structure and return empty
+                else {
+                    Log::warning('Unexpected response format from Cyclos API', [
+                        'structure' => array_keys($responseData),
+                        'sample' => json_encode(array_slice($responseData, 0, 1))
+                    ]);
+                    $products = [];
                 }
             }
 
-            return ['products' => is_array($products) ? array_map($addQuantityField, $products) : [], 'headers' => $headers];
+            return [
+                'products' => $products,
+                'headers' => $headers
+            ];
+            
         } catch (Exception $e) {
             Log::error('Exception in getUserProducts', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             return ['products' => [], 'headers' => []];
         }
@@ -375,14 +435,18 @@ class MerchantProductService
 
             $product = $response->json();
 
-            // Add quantity field based on stock information
+            // Format the product
             if (is_array($product)) {
                 if (isset($product['unlimitedStock']) && $product['unlimitedStock'] === true) {
-                    $product['quantity'] = 1000000; // 1 million for unlimited stock
+                    $product['quantity'] = 1000000;
                 } elseif (isset($product['stockQuantity'])) {
                     $product['quantity'] = (float) $product['stockQuantity'];
                 } else {
-                    $product['quantity'] = 1000000; // Default to unlimited
+                    $product['quantity'] = 1000000;
+                }
+                
+                if (!isset($product['id']) && isset($product['_id'])) {
+                    $product['id'] = $product['_id'];
                 }
             }
 
@@ -494,9 +558,6 @@ class MerchantProductService
         }
     }
 
-    /**
-     * Create a product in Cyclos marketplace
-     */
     /**
      * Create a product in Cyclos marketplace
      */
@@ -651,7 +712,6 @@ class MerchantProductService
             } elseif (isset($data['_id'])) {
                 $productId = $data['_id'];
             } elseif (is_string($data) && strlen($data) > 10) {
-                // Some APIs return just the ID as a string
                 $productId = $data;
             }
 
@@ -678,6 +738,7 @@ class MerchantProductService
             ];
         }
     }
+
     /**
      * Update a product in Cyclos marketplace
      */
@@ -955,7 +1016,6 @@ class MerchantProductService
         ];
     }
 
-
     /**
      * Format a collection of Cyclos products
      */
@@ -1002,19 +1062,11 @@ class MerchantProductService
 
             // If begin date is in the future, product is not yet active
             if ($begin && $now < $begin) {
-                Log::debug('Product inactive - begin date in future', [
-                    'now' => $now->toDateTimeString(),
-                    'begin' => $begin->toDateTimeString()
-                ]);
                 return false;
             }
 
             // If end date is in the past, product is expired
             if ($end && $now > $end) {
-                Log::debug('Product inactive - end date in past', [
-                    'now' => $now->toDateTimeString(),
-                    'end' => $end->toDateTimeString()
-                ]);
                 return false;
             }
         }
@@ -1024,14 +1076,9 @@ class MerchantProductService
         $stockQuantity = (int) ($product['stockQuantity'] ?? 0);
 
         if (!$unlimitedStock && $stockQuantity <= 0) {
-            Log::debug('Product inactive - out of stock', [
-                'unlimited' => $unlimitedStock,
-                'quantity' => $stockQuantity
-            ]);
             return false;
         }
 
-        Log::debug('Product active');
-        return true; // Active
+        return true;
     }
 }

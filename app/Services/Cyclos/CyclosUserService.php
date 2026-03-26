@@ -434,7 +434,7 @@ class CyclosUserService
             return false;
         }
     }
-}
+
 
       /**
      * Get admin user ID
