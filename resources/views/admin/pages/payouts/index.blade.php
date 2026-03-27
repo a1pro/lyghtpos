@@ -180,7 +180,7 @@
                                 <td>
                                     <input type="checkbox" class="payout-checkbox" value="{{ $payout->id }}" data-status="{{ $payout->status }}">
                                 </td>
-                                <td>{{ $payout->id }}</td>
+                                <td>{{ $loop->iteration }}</td>
                                 <td>
                                     <a href="{{ route('admin.payouts.show', $payout->id) }}">
                                         {{ $payout->payout_reference }}
