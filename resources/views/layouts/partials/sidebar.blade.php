@@ -27,6 +27,15 @@
                     </a>
                 </li>
 
+
+                <li class="nav-item">
+                    <a href="{{ route('admin.payouts.index') }}" class="nav-link {{ request()->routeIs('admin.payouts.index') ? 'active' : '' }}">
+                        <i class="fa-solid fa-cash-register"></i>
+                        <p>Payout</p>
+                    </a>
+                </li>
+
+
                 <!-- Merchants -->
                 <li class="nav-item">
                     <a href="{{ route('admin.merchants.index') }}" class="nav-link {{ activeSegment('merchants') ? 'active' : '' }}">
