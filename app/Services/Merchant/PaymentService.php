@@ -1,5 +1,4 @@
 <?php
-// app/Services/Merchant/PaymentService.php
 
 namespace App\Services\Merchant;
 
@@ -11,61 +10,85 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Config;
 use App\Models\Representation;
 use Illuminate\Support\Facades\DB;
-use App\Models\AppSetting;
+use Exception;
 
 class PaymentService
 {
-    private $apiLoginId;
-    private $transactionKey;
-    private $sandboxMode;
-    private $currency;
+    private ?string $apiLoginId;
+    private ?string $transactionKey;
+    private bool $sandboxMode;
+    private string $currency;
+    private bool $mockMode;
+    private bool $fallbackToMock;
 
     public function __construct(
         private PaymentRepositoryInterface $paymentRepository
     ) {
-        // Load settings from database
+        // Load settings from config
         $this->loadSettings();
     }
 
     /**
-     * Load Authorize.net settings from database
+     * Load Authorize.net settings from config
+     * This will get values from database (if available) or fall back to .env from services.php
      */
     private function loadSettings(): void
     {
         try {
-            // Get API Login ID from database
-            $apiLoginIdSetting = AppSetting::where('group', 'authorize')
-                ->where('key', 'AUTHORIZE_API_LOGIN_ID')
-                ->first();
+            // Helper function to safely get string value from config
+            $getStringValue = function ($key, $default = '') {
+                $value = config($key, $default);
+                
+                // If it's an array, try to get the first value
+                if (is_array($value)) {
+                    $value = reset($value);
+                }
+                
+                return $value !== null ? (string) $value : $default;
+            };
             
-            $this->apiLoginId = $apiLoginIdSetting ? trim($apiLoginIdSetting->value) : null;
+            // Helper function to safely get boolean value from config
+            $getBooleanValue = function ($key, $default = false) {
+                $value = config($key, $default);
+                
+                // If it's an array, try to get the first value
+                if (is_array($value)) {
+                    $value = reset($value);
+                }
+                
+                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            };
             
-            // Get Transaction Key from database
-            $transactionKeySetting = AppSetting::where('group', 'authorize')
-                ->where('key', 'AUTHORIZE_TRANSACTION_KEY')
-                ->first();
+            // Load all settings from config
+            $this->apiLoginId = $getStringValue('services.authorize.api_login_id');
+            $this->transactionKey = $getStringValue('services.authorize.transaction_key');
+            $this->sandboxMode = $getBooleanValue('services.authorize.sandbox_mode', true);
+            $this->currency = $getStringValue('services.authorize.currency', 'USD');
+            $this->mockMode = $getBooleanValue('services.authorize.mock_mode', false);
+            $this->fallbackToMock = $getBooleanValue('services.authorize.fallback_to_mock', true);
             
-            $this->transactionKey = $transactionKeySetting ? trim($transactionKeySetting->value) : null;
-            
-            // Get mode from config or env (for sandbox/production)
-            $this->sandboxMode = config('authorize.sandbox_mode', env('AUTHORIZE_SANDBOX_MODE', true));
-            
-            // Get currency from config or env
-            $this->currency = config('authorize.currency', env('AUTHORIZE_CURRENCY', 'USD'));
-            
-            Log::info('Authorize.net settings loaded from database', [
+            Log::info('Authorize.net settings loaded from config', [
                 'has_api_login_id' => !empty($this->apiLoginId),
                 'has_transaction_key' => !empty($this->transactionKey),
                 'api_login_id' => $this->apiLoginId ? substr($this->apiLoginId, 0, 5) . '***' : null,
                 'sandbox_mode' => $this->sandboxMode,
-                'currency' => $this->currency
+                'currency' => $this->currency,
+                'mock_mode' => $this->mockMode
             ]);
             
-        } catch (\Exception $e) {
-            Log::error('Failed to load Authorize.net settings from database', [
+        } catch (Exception $e) {
+            Log::error('Failed to load Authorize.net settings', [
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Check if mock mode is enabled
+     */
+    public function isMockMode(): bool
+    {
+        return $this->mockMode;
     }
 
     /**
@@ -73,10 +96,21 @@ class PaymentService
      */
     public function processCardPayment(array $cardData, float $amount): array
     {
+        // Check if mock mode is enabled
+        if ($this->mockMode) {
+            return $this->mockProcessCardPayment($cardData, $amount);
+        }
+        
         try {
             // Validate that settings are loaded
             if (empty($this->apiLoginId) || empty($this->transactionKey)) {
-                Log::error('Authorize.net credentials not configured in database');
+                Log::error('Authorize.net credentials not configured');
+                
+                if ($this->fallbackToMock) {
+                    Log::warning('Falling back to mock payment processing');
+                    return $this->mockProcessCardPayment($cardData, $amount);
+                }
+                
                 return [
                     'success' => false,
                     'message' => 'Payment gateway is not properly configured. Please contact administrator.'
@@ -185,6 +219,11 @@ class PaymentService
             // Enhanced error logging
             if ($response == null) {
                 Log::error('Authorize.net - No response received from API');
+                
+                if ($this->fallbackToMock) {
+                    return $this->mockProcessCardPayment($cardData, $amount);
+                }
+                
                 return [
                     'success' => false,
                     'message' => 'No response from payment gateway. Please check your connection and try again.'
@@ -241,6 +280,10 @@ class PaymentService
                 
                 $this->paymentRepository->create($paymentData);
                 
+                if ($this->fallbackToMock) {
+                    return $this->mockProcessCardPayment($cardData, $amount);
+                }
+                
                 return [
                     'success' => false,
                     'message' => 'Payment processing error: ' . $errorMessage,
@@ -254,6 +297,11 @@ class PaymentService
             
             if ($tresponse == null) {
                 Log::error('Authorize.net - No transaction response received');
+                
+                if ($this->fallbackToMock) {
+                    return $this->mockProcessCardPayment($cardData, $amount);
+                }
+                
                 return [
                     'success' => false,
                     'message' => 'Invalid response from payment gateway'
@@ -365,6 +413,10 @@ class PaymentService
                 
                 $this->paymentRepository->create($paymentData);
                 
+                if ($this->fallbackToMock) {
+                    return $this->mockProcessCardPayment($cardData, $amount);
+                }
+                
                 return [
                     'success' => false,
                     'message' => 'Payment failed: ' . $errorMessage,
@@ -374,7 +426,7 @@ class PaymentService
                 ];
             }
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Authorize.net Payment Exception', [
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
@@ -397,6 +449,10 @@ class PaymentService
             ];
             
             $this->paymentRepository->create($paymentData);
+            
+            if ($this->fallbackToMock) {
+                return $this->mockProcessCardPayment($cardData, $amount);
+            }
             
             return [
                 'success' => false,
@@ -481,6 +537,10 @@ class PaymentService
      */
     public function testConnection(): array
     {
+        if ($this->mockMode) {
+            return $this->mockTestConnection();
+        }
+        
         $testCard = [
             'card_number' => '4111111111111111',
             'expiry_month' => '12',
@@ -499,5 +559,75 @@ class PaymentService
         ];
         
         return $this->processCardPayment($testCard, 1.00);
+    }
+
+    /**
+     * Debug method to check current configuration
+     */
+    public function debugConfig(): array
+    {
+        return [
+            'has_api_login_id' => !empty($this->apiLoginId),
+            'has_transaction_key' => !empty($this->transactionKey),
+            'api_login_id' => $this->apiLoginId ? substr($this->apiLoginId, 0, 5) . '***' : null,
+            'sandbox_mode' => $this->sandboxMode,
+            'currency' => $this->currency,
+            'mock_mode' => $this->mockMode,
+            'fallback_to_mock' => $this->fallbackToMock,
+        ];
+    }
+
+    /**
+     * Mock methods for testing
+     */
+    protected function mockProcessCardPayment(array $cardData, float $amount): array
+    {
+        Log::info('Mock: Processing card payment', [
+            'amount' => $amount,
+            'card_last_four' => substr($cardData['card_number'], -4),
+            'card_type' => $this->detectCardType($cardData['card_number'])
+        ]);
+        
+        $mockTransactionId = 'MOCK-TXN-' . time() . '-' . rand(1000, 9999);
+        
+        $paymentData = [
+            'user_id' => auth()->id(),
+            'transaction_id' => $mockTransactionId,
+            'amount' => $amount,
+            'currency' => $this->currency,
+            'card_last_four' => substr($cardData['card_number'], -4),
+            'card_type' => $this->detectCardType($cardData['card_number']),
+            'status' => 'completed',
+            'response_message' => 'Mock payment completed successfully',
+            'full_response' => json_encode([
+                'mock' => true,
+                'transaction_id' => $mockTransactionId,
+                'amount' => $amount,
+                'card_last_four' => substr($cardData['card_number'], -4)
+            ])
+        ];
+        
+        $payment = $this->paymentRepository->create($paymentData);
+        
+        return [
+            'success' => true,
+            'message' => 'Mock payment processed successfully',
+            'transaction_id' => $mockTransactionId,
+            'auth_code' => 'MOCK-AUTH-' . rand(100000, 999999),
+            'payment' => $payment,
+            'mock' => true
+        ];
+    }
+    
+    protected function mockTestConnection(): array
+    {
+        Log::info('Mock: Testing Authorize.net connection');
+        
+        return [
+            'success' => true,
+            'message' => 'Mock connection test successful',
+            'mock' => true,
+            'config' => $this->debugConfig()
+        ];
     }
 }

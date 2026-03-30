@@ -10,16 +10,20 @@ use App\Models\AppSetting;
 
 class CyclosUserService
 {
-    protected string $baseUrl;
-    protected string $username;
-    protected string $password;
-    protected string $channel;
-    protected string $defaultGroup;
-    protected string $agreement;
-    protected ?string $adminUserId;
-    protected ?string $paymentTypeId;
-    protected ?string $currencyName;
-    protected ?string $currencySymbol;
+    protected $baseUrl;
+    protected $username;
+    protected $password;
+    protected $channel;
+    protected $defaultGroup;
+    protected $agreement;
+    protected $adminUserId;
+    protected $paymentTypeId;
+    protected $currencyName;
+    protected $currencySymbol;
+    protected $currencyCode;
+    protected $mockMode;
+    protected $fallbackToMock;
+    protected $useApiPassword;
 
     public function __construct()
     {
@@ -33,69 +37,59 @@ class CyclosUserService
     private function loadSettings(): void
     {
         try {
-            // Load base URL
-            $baseUrlSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_BASE_URL')
-                ->first();
-            $this->baseUrl = rtrim($baseUrlSetting ? $baseUrlSetting->value : '', '/');
+            // Debug: Check what's actually in the config
+            $cyclosConfig = config('services.cyclos');
             
-            // Load API username
-            $usernameSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_API_USERNAME')
-                ->first();
-            $this->username = $usernameSetting ? $usernameSetting->value : '';
+            Log::info('Cyclos config structure', [
+                'config_type' => gettype($cyclosConfig),
+                'config_keys' => is_array($cyclosConfig) ? array_keys($cyclosConfig) : 'not array',
+                'full_config' => $cyclosConfig
+            ]);
             
-            // Load API password
-            $passwordSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_API_PASSWORD')
-                ->first();
-            $this->password = $passwordSetting ? $passwordSetting->value : '';
+            // Now try to get the base_url properly
+            $baseUrlConfig = config('services.cyclos.base_url');
             
-            // Load channel (default to 'webServices')
-            $this->channel = 'webServices';
+            Log::info('Base URL config', [
+                'type' => gettype($baseUrlConfig),
+                'value' => $baseUrlConfig
+            ]);
             
-            // Load default group from config or use 'members'
+            // Fix: Check if base_url is an array and extract the string value
+            $baseUrl = '';
+            if (is_array($baseUrlConfig)) {
+                // If it's an array, try to get the first value or handle accordingly
+                $baseUrl = reset($baseUrlConfig) ?: '';
+                Log::warning('base_url was an array, extracted first value', [
+                    'original' => $baseUrlConfig,
+                    'extracted' => $baseUrl
+                ]);
+            } else {
+                $baseUrl = $baseUrlConfig ?: '';
+            }
+            
+            $this->baseUrl = rtrim($baseUrl, '/');
+            $this->username = config('services.cyclos.username', '');
+            $this->password = config('services.cyclos.password', '');
+            $this->channel = config('services.cyclos.channel', 'webServices');
             $this->defaultGroup = config('services.cyclos.default_group', 'members');
-            
-            // Load agreement from config or use default
             $this->agreement = config('services.cyclos.agreement', 'default-agreement');
+            $this->adminUserId = config('services.cyclos.admin_user_id');
+            $this->paymentTypeId = config('services.cyclos.payment_type_id');
+            $this->currencyName = config('services.cyclos.currency_name', 'TradeTokens');
+            $this->currencySymbol = config('services.cyclos.currency_symbol', 'TT');
+            $this->currencyCode = config('services.cyclos.currency_code', 'TT');
+            $this->mockMode = config('services.cyclos.mock_mode', false);
+            $this->fallbackToMock = config('services.cyclos.fallback_to_mock', true);
+            $this->useApiPassword = config('services.cyclos.use_api_password', true);
             
-            // Load admin user ID
-            $adminUserIdSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_ADMIN_USER_ID')
-                ->first();
-            $this->adminUserId = $adminUserIdSetting ? $adminUserIdSetting->value : null;
-            
-            // Load payment type ID
-            $paymentTypeIdSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_PAYMENT_TYPE_ID')
-                ->first();
-            $this->paymentTypeId = $paymentTypeIdSetting ? $paymentTypeIdSetting->value : null;
-            
-            // Load currency name
-            $currencyNameSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_CURRENCY_NAME')
-                ->first();
-            $this->currencyName = $currencyNameSetting ? $currencyNameSetting->value : 'TradeTokens';
-            
-            // Load currency symbol
-            $currencySymbolSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_CURRENCY_SYMBOL')
-                ->first();
-            $this->currencySymbol = $currencySymbolSetting ? $currencySymbolSetting->value : 'TT';
-            
-            Log::info('Cyclos settings loaded from database', [
+            Log::info('Cyclos settings loaded from config', [
                 'base_url' => $this->baseUrl,
                 'has_username' => !empty($this->username),
                 'has_password' => !empty($this->password),
-                'has_admin_user_id' => !empty($this->adminUserId),
-                'has_payment_type_id' => !empty($this->paymentTypeId),
-                'currency_name' => $this->currencyName,
-                'currency_symbol' => $this->currencySymbol
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Failed to load Cyclos settings from database', [
+            Log::error('Failed to load Cyclos settings', [
                 'error' => $e->getMessage()
             ]);
         }

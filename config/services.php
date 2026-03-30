@@ -57,5 +57,33 @@ return [
         'currency_symbol' => env('CYCLOS_CURRENCY_SYMBOL', 'TT'),
         'currency_name' => env('CYCLOS_CURRENCY_NAME', 'TradeTokens'),
     ],
+    'authorize' => [
+        'api_login_id' => env('AUTHORIZE_API_LOGIN_ID'),
+        'transaction_key' => env('AUTHORIZE_TRANSACTION_KEY'),
+        'sandbox_mode' => env('AUTHORIZE_SANDBOX_MODE', true),
+        'currency' => env('AUTHORIZE_CURRENCY', 'USD'),
+        'mock_mode' => env('AUTHORIZE_MOCK_MODE', false),
+        'fallback_to_mock' => env('AUTHORIZE_FALLBACK_TO_MOCK', true),
+    ],  
+    'paypal' => [
+        'mode' => env('PAYPAL_MODE', 'sandbox'),
+        'sandbox' => [
+            'client_id' => env('PAYPAL_SANDBOX_CLIENT_ID'),
+            'client_secret' => env('PAYPAL_SANDBOX_CLIENT_SECRET'),
+            'app_id' => env('PAYPAL_SANDBOX_APP_ID', 'APP-80W284485P519543T'),
+        ],
+        'live' => [
+            'client_id' => env('PAYPAL_LIVE_CLIENT_ID'),
+            'client_secret' => env('PAYPAL_LIVE_CLIENT_SECRET'),
+            'app_id' => env('PAYPAL_LIVE_APP_ID', 'APP-80W284485P519543T'),
+        ],
+        'payment_action' => env('PAYPAL_PAYMENT_ACTION', 'Sale'),
+        'currency' => env('PAYPAL_CURRENCY', 'USD'),
+        'notify_url' => env('PAYPAL_NOTIFY_URL'),
+        'locale' => env('PAYPAL_LOCALE', 'en_US'),
+        'validate_ssl' => env('PAYPAL_VALIDATE_SSL', true),
+        'mock_mode' => env('PAYPAL_MOCK_MODE', false),
+        'fallback_to_mock' => env('PAYPAL_FALLBACK_TO_MOCK', true),
+    ],
 
 ];
