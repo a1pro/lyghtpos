@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use App\Services\Cyclos\CyclosUserService;
+use App\Http\Requests\Auth\RegisterRequest;
 use Log;
 
 class RegisterController extends Controller
@@ -35,23 +36,9 @@ class RegisterController extends Controller
         return view('auth.register');
     }
 
-    public function register(Request $request)
+    public function register(RegisterRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'account_type' => ['required', 'in:TRADE_MERCHANT,TRADE_MEMBER,ORGANIZATION,FAVOR_MEMBER'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'business_name' => ['required_if:account_type,TRADE_MERCHANT', 'string', 'max:255'],
-            'primary_contact_name' => ['required_if:account_type,TRADE_MERCHANT', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:255'],
-            'location' => ['required', 'string', 'max:255'],
-            'website' => ['nullable', 'string', 'max:255'],
-            'consent_language_authorizing' => ['nullable', 'string'],
-            'communyti_enrollment' => ['nullable'],
-            'advocate_contact' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validator = Validator::make($request->all(), $request->rules());
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -127,7 +114,13 @@ class RegisterController extends Controller
 
         return $user;
     }
-
+    public function checkEmail(Request $request)
+    {
+        $email = $request->input('email');
+        $exists = User::where('email', $email)->exists();
+        
+        return response()->json($exists ? false : true);
+    }
     /**
      * Create Cyclos user directly for favor members
      */

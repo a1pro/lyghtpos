@@ -24,7 +24,7 @@ use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
 use App\Http\Controllers\Merchant\MerchantProductController;
 use App\Http\Controllers\Merchant\WalletController;
-use App\Http\Controllers\Merchant\TransactionController;
+// use App\Http\Controllers\Merchant\TransactionController;
 
 
 
@@ -164,19 +164,19 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // =============================================
     // Transaction Routes (New)
     // =============================================
-    Route::prefix('transactions')->name('transactions.')->controller(TransactionController::class)->group(function () {
-        // List all transactions
-        Route::get('/', 'index')->name('index');
+    // Route::prefix('transactions')->name('transactions.')->controller(TransactionController::class)->group(function () {
+    //     // List all transactions
+    //     Route::get('/', 'index')->name('index');
         
-        // Get transaction summary/stats
-        Route::get('/summary', 'summary')->name('summary');
+    //     // Get transaction summary/stats
+    //     Route::get('/summary', 'summary')->name('summary');
         
-        // View single transaction
-        Route::get('/{transactionId}', 'show')->name('show');
+    //     // View single transaction
+    //     Route::get('/{transactionId}', 'show')->name('show');
         
-        // Download transaction receipt
-        Route::get('/{transactionId}/receipt', 'receipt')->name('receipt');
-    });
+    //     // Download transaction receipt
+    //     Route::get('/{transactionId}/receipt', 'receipt')->name('receipt');
+    // });
 
     // =============================================
     // Checkout Routes (Existing)

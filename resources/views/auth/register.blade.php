@@ -25,7 +25,74 @@
         border-color: #007bff;
         background-color: #f8fbff;
     }
-
+    
+    /* Password wrapper styles */
+    .password-wrapper {
+        position: relative;
+        width: 100%;
+    }
+    
+    .password-wrapper input {
+        padding-right: 40px;
+        width: 100%;
+    }
+    
+    .password-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        z-index: 10;
+        background: transparent;
+        border: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .password-toggle i {
+        font-size: 18px;
+        color: #6c757d;
+        pointer-events: none;
+    }
+    
+    .password-toggle:hover i {
+        color: #007bff;
+    }
+    
+    .error-message {
+        color: #dc3545;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    
+    .is-invalid {
+        border-color: #dc3545 !important;
+    }
+    
+    /* Fix for validation messages */
+    .invalid-feedback {
+        display: block;
+    }
+    
+    /* Ensure proper spacing for password fields */
+    .form-group .col-md-6 {
+        position: relative;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .password-toggle i {
+            font-size: 16px;
+        }
+        
+        .password-wrapper input {
+            padding-right: 35px;
+        }
+    }
 </style>
 @endsection
 
@@ -41,7 +108,7 @@
                 </div>
 
                 <div class="card-body">
-                    <form method="POST" action="{{ route('register') }}">
+                    <form method="POST" action="{{ route('register') }}" id="registrationForm">
                         @csrf
                         <!-- Personal Information Section -->
                         <h5 class="text-center mb-3">Personal Information</h5>
@@ -88,7 +155,7 @@
                         <div class="form-group row">
                             <label for="business_name" class="col-md-4 col-form-label text-md-right">{{ __('Business Name') }}</label>
                             <div class="col-md-6">
-                                <input id="business_name" type="text" class="form-control @error('business_name') is-invalid @enderror" name="business_name" value="{{ old('business_name') ?: (session('registration.step1.business_name') ?? '') }}" required autocomplete="business_name">
+                                <input id="business_name" type="text" class="form-control @error('business_name') is-invalid @enderror" name="business_name" value="{{ old('business_name') ?: (session('registration.step1.business_name') ?? '') }}" autocomplete="business_name">
                                 @error('business_name')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -100,7 +167,7 @@
                         <div class="form-group row">
                             <label for="primary_contact_name" class="col-md-4 col-form-label text-md-right">{{ __('Primary Contact Name') }}</label>
                             <div class="col-md-6">
-                                <input id="primary_contact_name" type="text" class="form-control @error('primary_contact_name') is-invalid @enderror" name="primary_contact_name" value="{{ old('primary_contact_name') ?: (session('registration.step1.primary_contact_name') ?? '') }}" required autocomplete="name">
+                                <input id="primary_contact_name" type="text" class="form-control @error('primary_contact_name') is-invalid @enderror" name="primary_contact_name" value="{{ old('primary_contact_name') ?: (session('registration.step1.primary_contact_name') ?? '') }}" autocomplete="name">
                                 @error('primary_contact_name')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -136,7 +203,7 @@
                         <div class="form-group row">
                             <label for="website" class="col-md-4 col-form-label text-md-right">{{ __('Website') }}</label>
                             <div class="col-md-6">
-                                <input id="website" type="url" class="form-control @error('website') is-invalid @enderror" name="website" value="{{ old('website') ?: (session('registration.step1.website') ?? '') }}" required autocomplete="url" placeholder="https://example.com">
+                                <input id="website" type="url" class="form-control @error('website') is-invalid @enderror" name="website" value="{{ old('website') ?: (session('registration.step1.website') ?? '') }}" autocomplete="url" placeholder="https://example.com">
                                 @error('website')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -144,13 +211,14 @@
                                 @enderror
                             </div>
                         </div>
+                        
                         <!-- Additional Information Section -->
                         <h5 class="text-center mb-3">Additional Information</h5>
 
                         <div class="form-group row">
                             <label for="consent_language_authorizing" class="col-md-4 col-form-label text-md-right">{{ __('Consent Language Authorizing') }}</label>
                             <div class="col-md-6">
-                                <input id="consent_language_authorizing" type="text" class="form-control @error('consent_language_authorizing') is-invalid @enderror" name="consent_language_authorizing" value="{{ old('consent_language_authorizing') }}" required>
+                                <input id="consent_language_authorizing" type="text" class="form-control @error('consent_language_authorizing') is-invalid @enderror" name="consent_language_authorizing" value="{{ old('consent_language_authorizing') }}">
                                 @error('consent_language_authorizing')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -160,9 +228,9 @@
                         </div>
 
                         <div class="form-group row">
-                            <label for="Communyti_enrollment" class="col-md-4 col-form-label text-md-right">{{ __('Communyti Enrollment') }}</label>
+                            <label for="communyti_enrollment" class="col-md-4 col-form-label text-md-right">{{ __('Communyti Enrollment') }}</label>
                             <div class="col-md-6">
-                                <input id="communyti_enrollment" type="text" class="form-control @error('communyti_enrollment') is-invalid @enderror" name="communyti_enrollment" value="{{ old('communyti_enrollment') }}" required>
+                                <input id="communyti_enrollment" type="text" class="form-control @error('communyti_enrollment') is-invalid @enderror" name="communyti_enrollment" value="{{ old('communyti_enrollment') }}">
                                 @error('communyti_enrollment')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -174,7 +242,7 @@
                         <div class="form-group row">
                             <label for="advocate_contact" class="col-md-4 col-form-label text-md-right">{{ __('Advocate Contact') }}</label>
                             <div class="col-md-6">
-                                <input id="advocate_contact" type="text" class="form-control @error('advocate_contact') is-invalid @enderror" name="advocate_contact" value="{{ old('advocate_contact') }}" required>
+                                <input id="advocate_contact" type="text" class="form-control @error('advocate_contact') is-invalid @enderror" name="advocate_contact" value="{{ old('advocate_contact') }}" autocomplete="tel">
                                 @error('advocate_contact')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -266,7 +334,12 @@
                         <div class="form-group row">
                             <label for="password" class="col-md-4 col-form-label text-md-right">{{ __('Password') }}</label>
                             <div class="col-md-6">
-                                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password">
+                                <div class="password-wrapper">
+                                    <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password">
+                                    <button type="button" class="password-toggle" data-target="password">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                </div>
                                 <small class="form-text text-muted">Minimum 8 characters</small>
                                 @error('password')
                                 <span class="invalid-feedback" role="alert">
@@ -279,9 +352,15 @@
                         <div class="form-group row">
                             <label for="password-confirm" class="col-md-4 col-form-label text-md-right">{{ __('Confirm Password') }}</label>
                             <div class="col-md-6">
-                                <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password">
+                                <div class="password-wrapper">
+                                    <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password">
+                                    <button type="button" class="password-toggle" data-target="password-confirm">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                        
                         <div class="form-group row mb-0 mt-4">
                             <div class="col-md-6 offset-md-4">
                                 <button type="submit" class="btn btn-primary btn-block">
@@ -299,4 +378,198 @@
         </div>
     </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Password show/hide functionality
+    $('.password-toggle').on('click', function(e) {
+        e.preventDefault();
+        const targetId = $(this).data('target');
+        const passwordField = $('#' + targetId);
+        const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
+        
+        passwordField.attr('type', type);
+        
+        // Toggle eye icon
+        const icon = $(this).find('i');
+        icon.toggleClass('fa-eye fa-eye-slash');
+        
+        // Change button color when password is visible
+        if (type === 'text') {
+            $(this).css('opacity', '0.8');
+        } else {
+            $(this).css('opacity', '1');
+        }
+    });
+
+    // jQuery Validation
+    $('#registrationForm').validate({
+        rules: {
+            first_name: {
+                required: true,
+                maxlength: 255
+            },
+            last_name: {
+                required: true,
+                maxlength: 255
+            },
+            email: {
+                required: true,
+                email: true,
+                maxlength: 255,
+                remote: {
+                    url: "{{ route('check.email') }}",
+                    type: "post",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        email: function() {
+                            return $('#email').val();
+                        }
+                    }
+                }
+            },
+            password: {
+                required: true,
+                minlength: 8
+            },
+            password_confirmation: {
+                required: true,
+                equalTo: "#password"
+            },
+            account_type: {
+                required: true
+            },
+            business_name: {
+                required: function() {
+                    return $('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT';
+                },
+                maxlength: 255
+            },
+            primary_contact_name: {
+                required: function() {
+                    return $('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT';
+                },
+                maxlength: 255
+            },
+            phone: {
+                required: true,
+                digits: true,
+                minlength: 8,
+                maxlength: 14
+            },
+            location: {
+                required: true,
+                maxlength: 255
+            },
+            website: {
+                url: true,
+                maxlength: 255
+            },
+            advocate_contact: {
+                digits: true,
+                minlength: 8,
+                maxlength: 14
+            }
+        },
+        messages: {
+            phone: {
+                required: "Phone number is required",
+                digits: "Please enter a valid phone number",
+                minlength: "Please enter a valid phone number (8-14 digits)",
+                maxlength: "Please enter a valid phone number (8-14 digits)"
+            },
+            advocate_contact: {
+                digits: "Please enter a valid phone number",
+                minlength: "Please enter a valid phone number (8-14 digits)",
+                maxlength: "Please enter a valid phone number (8-14 digits)"
+            },
+            website: {
+                url: "Please enter a valid URL (e.g., https://example.com)"
+            },
+            password: {
+                minlength: "Password must be at least 8 characters"
+            }
+        },
+        errorElement: 'div',
+        errorClass: 'error-message',
+        highlight: function(element) {
+            $(element).addClass('is-invalid');
+        },
+        unhighlight: function(element) {
+            $(element).removeClass('is-invalid');
+        },
+        errorPlacement: function(error, element) {
+            if (element.attr('name') === 'account_type') {
+                error.insertAfter('.account-type-card:last');
+            } else if (element.parent().hasClass('password-wrapper')) {
+                error.insertAfter(element.parent());
+            } else {
+                error.insertAfter(element);
+            }
+        },
+        submitHandler: function(form) {
+            form.submit();
+        }
+    });
+
+    // Update validation rules when account type changes
+    $('input[name="account_type"]').on('change', function() {
+        if ($(this).val() === 'TRADE_MERCHANT') {
+            $('#business_name').rules('add', {
+                required: true,
+                messages: {
+                    required: "Business name is required"
+                }
+            });
+            $('#primary_contact_name').rules('add', {
+                required: true,
+                messages: {
+                    required: "Primary contact name is required"
+                }
+            });
+        } else {
+            $('#business_name').rules('remove', 'required');
+            $('#primary_contact_name').rules('remove', 'required');
+        }
+    });
+
+    // Add real-time phone validation with custom message
+    $('#phone, #advocate_contact').on('input', function() {
+        const value = $(this).val();
+        const phoneRegex = /^\d{8,14}$/;
+        
+        if (value && !phoneRegex.test(value)) {
+            $(this).addClass('is-invalid');
+            if ($(this).next('.error-message').length === 0 && !$(this).parent().find('.error-message').length) {
+                const errorMsg = $('<div class="error-message">Please enter a valid phone number (8-14 digits)</div>');
+                $(this).after(errorMsg);
+            }
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.error-message').remove();
+            $(this).parent().find('.error-message').remove();
+        }
+    });
+    
+    // Initialize validation for conditional fields based on account type
+    if ($('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT') {
+        $('#business_name').rules('add', {
+            required: true,
+            messages: {
+                required: "Business name is required"
+            }
+        });
+        $('#primary_contact_name').rules('add', {
+            required: true,
+            messages: {
+                required: "Primary contact name is required"
+            }
+        });
+    }
+});
+</script>
 @endsection
