@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Services\Merchant;
+
+use App\Mail\Merchant\Customers\NewCustomerCreated;
+use App\Models\User;
+use App\Models\Customer;
+use App\Services\Cyclos\CyclosUserService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Exception;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+
+class MerchantCustomerService
+{
+    protected string $baseUrl;
+    protected string $username;
+    protected string $password;
+    protected string $channel;
+    protected string $currencyCode;
+    protected string $currencySymbol;
+    protected string $currencyName;
+    protected string $adminUserId;
+    protected ?array $marketplaceData = null;
+
+    protected CyclosUserService $cyclosUserService;
+
+    public function __construct(CyclosUserService $cyclosUserService)
+    {
+        $this->baseUrl = rtrim((string) config('services.cyclos.base_url'), '/');
+        $this->username = (string) config('services.cyclos.username');
+        $this->password = (string) config('services.cyclos.password');
+        $this->channel = (string) config('services.cyclos.channel', 'webServices');
+
+        $this->currencyCode = (string) config('services.cyclos.currency_code', 'FT');
+        $this->currencySymbol = (string) config('services.cyclos.currency_symbol', 'FT');
+        $this->currencyName = (string) config('services.cyclos.currency_name', 'FavorTokens');
+        $this->adminUserId = (string) config('services.cyclos.admin_user_id');
+
+        $this->cyclosUserService = $cyclosUserService;
+
+        $this->validateRequiredConfig();
+    }
+
+    protected function validateRequiredConfig(): void
+    {
+        $missing = [];
+
+        if (empty($this->baseUrl)) {
+            $missing[] = 'services.cyclos.base_url';
+        }
+
+        if (empty($this->username)) {
+            $missing[] = 'services.cyclos.username';
+        }
+
+        if (empty($this->password)) {
+            $missing[] = 'services.cyclos.password';
+        }
+
+        if (empty($this->adminUserId)) {
+            $missing[] = 'services.cyclos.admin_user_id';
+        }
+
+        if (!empty($missing)) {
+            throw new \RuntimeException(
+                'Missing required Cyclos configuration: ' . implode(', ', $missing)
+            );
+        }
+    }
+
+    public function createCustomer(array $data)
+    {
+        DB::beginTransaction();
+
+        try {
+            $plainPassword = Str::random(12);
+            $user = User::create([
+                'merchant_id' => $data['merchant_id'],
+                'role_id' => 11,
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'password' => Hash::make($plainPassword),
+            ]);
+
+            $cyclosUserResponse = $this->cyclosUserService->createUser($user);
+
+            if (!$cyclosUserResponse || !isset($cyclosUserResponse['user_id'])) {
+                throw new Exception('Cyclos user creation failed');
+            }
+
+            $user->update([
+                'cyclos_user_id' => $cyclosUserResponse['user_id'],
+                'cyclos_group' => $cyclosUserResponse['group'] ?? null,
+                'cyclos_username' => $cyclosUserResponse['username'] ?? null,
+                'cyclos_user_password' => $cyclosUserResponse['password'] ?? null,
+            ]);
+
+            $customer = Customer::create([
+                ...$data,
+                'user_id' => $data['merchant_id'],
+            ]);
+
+            DB::commit();
+    
+            Mail::to($user->email)
+                ->queue(new NewCustomerCreated($user, $plainPassword));
+
+            return $customer;
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+}

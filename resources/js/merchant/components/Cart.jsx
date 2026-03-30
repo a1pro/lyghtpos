@@ -303,7 +303,7 @@ class MerchantCart extends Component {
             <div className="row">
                 <div className="col-md-6 col-lg-4">
                     <div className="row mb-2">
-                        <div className="col">
+                        {/* <div className="col">
                             <form onSubmit={this.handleScanBarcode}>
                                 <input
                                     type="text"
@@ -314,23 +314,36 @@ class MerchantCart extends Component {
                                     disabled={addingToCart !== null || updatingQty !== null}
                                 />
                             </form>
-                        </div>
+                        </div> */}
                         <div className="col">
-                            <select
-                                className="form-control"
-                                onChange={this.setCustomerId}
-                                disabled={addingToCart !== null || updatingQty !== null}
-                            >
-                                <option value="">
-                                    {"Select Customer"}
-                                </option>
-                                {customers.map((cus) => (
-                                    <option
-                                        key={cus.id}
-                                        value={cus.id}
-                                    >{`${cus.first_name} ${cus.last_name}`}</option>
-                                ))}
-                            </select>
+                            <div className="d-flex gap-2">
+                                <select
+                                    className="form-control"
+                                    onChange={this.setCustomerId}
+                                    disabled={addingToCart !== null || updatingQty !== null}
+                                    style={{ flex: 1 }}
+                                >
+                                    <option value="">
+                                        {"Select Customer"}
+                                    </option>
+                                    {customers.map((cus) => (
+                                        <option
+                                            key={cus.id}
+                                            value={cus.id}
+                                        >{`${cus.first_name} ${cus.last_name}`}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => window.location.href = '/merchant/customers/create'}
+                                    disabled={addingToCart !== null || updatingQty !== null}
+                                    style={{ whiteSpace: 'nowrap' }}
+                                >
+                                    <i className="fas fa-plus me-1"></i>
+                                    Add Customer
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div className="user-cart">
