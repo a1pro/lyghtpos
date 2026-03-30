@@ -313,8 +313,8 @@ class CyclosUserService
         $baseUsername = strtolower($cleanFirstName . $cleanLastName);
 
         // Ensure it's not too long (Cyclos typically has limits)
-        if (strlen($baseUsername) > 20) {
-            $baseUsername = substr($baseUsername, 0, 20);
+        if (strlen($baseUsername) > 45) {
+            $baseUsername = substr($baseUsername, 0, 45);
         }
 
         // Add user ID to ensure uniqueness

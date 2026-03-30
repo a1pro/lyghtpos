@@ -309,8 +309,8 @@ class MerchantCartController extends Controller
      */
     public function getCustomers(Request $request): JsonResponse
     {
-        $customers = User::favorMembers()
-            ->whereNotNull('cyclos_user_id')
+        $customers = User::whereNotNull('cyclos_user_id')
+            ->whereIn('role_id', [8, 11]) // 8 = Favor member, 11 = Merchant Customer
             ->get(['id', 'first_name', 'last_name', 'cyclos_user_id']);
 
         // Transform the data to send encrypted cyclos_user_id as id
