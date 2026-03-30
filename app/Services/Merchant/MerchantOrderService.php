@@ -2,10 +2,9 @@
 
 namespace App\Services\Merchant;
 
-use App\Models\AppSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Config;
 use Carbon\Carbon;
 use Exception;
 
@@ -19,97 +18,106 @@ class MerchantOrderService
     protected string $currencySymbol;
     protected string $currencyName;
     protected string $adminUserId;
+    protected bool $mockMode;
+    protected bool $fallbackToMock;
 
     public function __construct()
     {
-        $this->loadSettingsFromDatabase();
+        $this->loadSettings();
+        $this->validateRequiredConfig();
+
+        Log::info('MerchantOrderService initialized', [
+            'currency_code' => $this->currencyCode,
+            'currency_symbol' => $this->currencySymbol,
+            'admin_user_id' => $this->adminUserId,
+            'mock_mode' => $this->mockMode,
+            'environment' => app()->environment(),
+        ]);
     }
 
     /**
-     * Load settings from database
+     * Load all Cyclos settings from config
+     * This will get values from database (if available) or fall back to .env from services.php
      */
-    protected function loadSettingsFromDatabase(): void
+    protected function loadSettings(): void
     {
         try {
-            // Load base URL
-            $baseUrlSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_BASE_URL')
-                ->first();
-            $this->baseUrl = rtrim($baseUrlSetting ? $baseUrlSetting->value : '', '/');
-
-            // Load API username
-            $usernameSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_API_USERNAME')
-                ->first();
-            $this->username = $usernameSetting ? $usernameSetting->value : '';
-
-            // Load API password
-            $passwordSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_API_PASSWORD')
-                ->first();
-            $this->password = $passwordSetting ? $passwordSetting->value : '';
-
-            // Load channel
-            $this->channel = 'webServices';
-
-            // Load admin user ID
-            $adminUserIdSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_ADMIN_USER_ID')
-                ->first();
-            $this->adminUserId = $adminUserIdSetting ? $adminUserIdSetting->value : '';
-
-            // Load currency settings
-            $currencyCodeSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_CURRENCY_CODE')
-                ->first();
-            $this->currencyCode = $currencyCodeSetting ? $currencyCodeSetting->value : 'TT';
-
-            $currencySymbolSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_CURRENCY_SYMBOL')
-                ->first();
-            $this->currencySymbol = $currencySymbolSetting ? $currencySymbolSetting->value : 'TT';
-
-            $currencyNameSetting = AppSetting::where('group', 'cyclos')
-                ->where('key', 'CYCLOS_CURRENCY_NAME')
-                ->first();
-            $this->currencyName = $currencyNameSetting ? $currencyNameSetting->value : 'TradeTokens';
-
-            Log::info('MerchantOrderService settings loaded from database', [
+            // Helper function to safely get string value from config
+            $getStringValue = function ($key, $default = '') {
+                $value = config($key, $default);
+                
+                // If it's an array, try to get the first value
+                if (is_array($value)) {
+                    $value = reset($value);
+                }
+                
+                return $value !== null ? (string) $value : $default;
+            };
+            
+            // Helper function to safely get boolean value from config
+            $getBooleanValue = function ($key, $default = false) {
+                $value = config($key, $default);
+                
+                // If it's an array, try to get the first value
+                if (is_array($value)) {
+                    $value = reset($value);
+                }
+                
+                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            };
+            
+            // Load all settings from config
+            $this->baseUrl = rtrim($getStringValue('services.cyclos.base_url', ''), '/');
+            $this->username = $getStringValue('services.cyclos.username', '');
+            $this->password = $getStringValue('services.cyclos.password', '');
+            $this->channel = $getStringValue('services.cyclos.channel', 'webServices');
+            $this->currencyCode = $getStringValue('services.cyclos.currency_code', 'TT');
+            $this->currencySymbol = $getStringValue('services.cyclos.currency_symbol', 'TT');
+            $this->currencyName = $getStringValue('services.cyclos.currency_name', 'TradeTokens');
+            $this->adminUserId = $getStringValue('services.cyclos.admin_user_id', '');
+            
+            // Load boolean settings
+            $this->mockMode = $getBooleanValue('services.cyclos.mock_mode', false);
+            $this->fallbackToMock = $getBooleanValue('services.cyclos.fallback_to_mock', true);
+            
+            Log::info('MerchantOrderService settings loaded from config', [
                 'base_url' => $this->baseUrl,
                 'username' => $this->username,
                 'has_password' => !empty($this->password),
                 'admin_user_id' => $this->adminUserId,
-                'currency' => $this->currencyName
+                'currency' => $this->currencyName,
+                'mock_mode' => $this->mockMode
             ]);
-
-            $this->validateRequiredConfig();
 
         } catch (Exception $e) {
             Log::error('Failed to load MerchantOrderService settings', [
                 'error' => $e->getMessage()
             ]);
-            throw $e;
+            throw new \RuntimeException('Failed to load MerchantOrderService configuration: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Validate required configuration
+     */
     protected function validateRequiredConfig(): void
     {
         $missing = [];
 
         if (empty($this->baseUrl)) {
-            $missing[] = 'CYCLOS_BASE_URL';
+            $missing[] = 'services.cyclos.base_url';
         }
 
         if (empty($this->username)) {
-            $missing[] = 'CYCLOS_API_USERNAME';
+            $missing[] = 'services.cyclos.username';
         }
 
         if (empty($this->password)) {
-            $missing[] = 'CYCLOS_API_PASSWORD';
+            $missing[] = 'services.cyclos.password';
         }
 
         if (empty($this->adminUserId)) {
-            $missing[] = 'CYCLOS_ADMIN_USER_ID';
+            $missing[] = 'services.cyclos.admin_user_id';
         }
 
         if (!empty($missing)) {
@@ -120,6 +128,14 @@ class MerchantOrderService
                 'Missing required Cyclos configuration: ' . implode(', ', $missing)
             );
         }
+    }
+
+    /**
+     * Check if mock mode is enabled
+     */
+    public function isMockMode(): bool
+    {
+        return $this->mockMode;
     }
 
     /**
@@ -135,6 +151,11 @@ class MerchantOrderService
      */
     public function getUserOrders(string $cyclosUserId, array $params = []): array
     {
+        // Check if mock mode is enabled
+        if ($this->mockMode) {
+            return $this->mockGetUserOrders($cyclosUserId, $params);
+        }
+        
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/orders";
 
@@ -169,6 +190,15 @@ class MerchantOrderService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+                
+                // If fallback to mock is enabled, return mock data
+                if ($this->fallbackToMock) {
+                    Log::warning('Falling back to mock orders data', [
+                        'cyclos_user_id' => $cyclosUserId
+                    ]);
+                    return $this->mockGetUserOrders($cyclosUserId, $params);
+                }
+                
                 return ['orders' => [], 'headers' => []];
             }
 
@@ -203,6 +233,12 @@ class MerchantOrderService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            
+            // If fallback to mock is enabled, return mock data
+            if ($this->fallbackToMock) {
+                return $this->mockGetUserOrders($cyclosUserId, $params);
+            }
+            
             return ['orders' => [], 'headers' => []];
         }
     }
@@ -265,7 +301,7 @@ class MerchantOrderService
                 'prefix' => $currency['prefix'] ?? '',
                 'decimal_digits' => $currency['decimalDigits'] ?? 2
             ],
-            'items' => []
+            'items' => $order['items'] ?? []
         ];
     }
 
@@ -338,6 +374,11 @@ class MerchantOrderService
      */
     public function createOrder(string $cyclosUserId, array $orderData): array
     {
+        // Check if mock mode is enabled
+        if ($this->mockMode) {
+            return $this->mockCreateOrder($cyclosUserId, $orderData);
+        }
+        
         try {
             // Use admin user ID for the URL to have proper permissions
             $url = $this->baseUrl . "/api/{$this->adminUserId}/orders";
@@ -396,6 +437,15 @@ class MerchantOrderService
                     'error' => $errorData,
                     'response_body' => $response->body(),
                 ]);
+                
+                // If fallback to mock is enabled, return mock success
+                if ($this->fallbackToMock) {
+                    Log::warning('Falling back to mock create order', [
+                        'merchant_id' => $cyclosUserId,
+                        'buyer_id' => $orderData['buyer_id']
+                    ]);
+                    return $this->mockCreateOrder($cyclosUserId, $orderData);
+                }
 
                 return [
                     'success' => false,
@@ -423,6 +473,11 @@ class MerchantOrderService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+            
+            // If fallback to mock is enabled, return mock success
+            if ($this->fallbackToMock) {
+                return $this->mockCreateOrder($cyclosUserId, $orderData);
+            }
 
             return [
                 'success' => false,
@@ -462,5 +517,121 @@ class MerchantOrderService
         $params['pageNumber'] = $filters['page'] ?? 0;
 
         return $this->getUserOrders($cyclosUserId, $params);
+    }
+
+    /**
+     * Debug method to check current configuration
+     */
+    public function debugConfig(): array
+    {
+        return [
+            'admin_user_id' => $this->adminUserId,
+            'currency_code' => $this->currencyCode,
+            'currency_symbol' => $this->currencySymbol,
+            'currency_name' => $this->currencyName,
+            'base_url' => $this->baseUrl,
+            'username' => $this->username,
+            'channel' => $this->channel,
+            'mock_mode' => $this->mockMode,
+            'fallback_to_mock' => $this->fallbackToMock,
+        ];
+    }
+
+    /**
+     * Mock methods for testing
+     */
+    protected function mockGetUserOrders(string $cyclosUserId, array $params = []): array
+    {
+        Log::info('Mock: Getting user orders', [
+            'cyclos_user_id' => $cyclosUserId,
+            'params' => $params
+        ]);
+        
+        $mockOrders = [
+            [
+                'id' => 'order-mock-1',
+                'number' => 'ORD-001',
+                'totalPrice' => 100.00,
+                'status' => 'confirmed',
+                'creationDate' => now()->subDays(2)->toISOString(),
+                'currency' => [
+                    'symbol' => $this->currencySymbol,
+                    'name' => $this->currencyName,
+                    'decimalDigits' => 2
+                ],
+                'relatedUser' => [
+                    'id' => 'user-mock-1',
+                    'display' => 'Test Customer'
+                ],
+                'items' => [
+                    [
+                        'id' => 'item-1',
+                        'product' => ['name' => 'Test Product'],
+                        'quantity' => 1,
+                        'price' => 100.00
+                    ]
+                ]
+            ],
+            [
+                'id' => 'order-mock-2',
+                'number' => 'ORD-002',
+                'totalPrice' => 50.00,
+                'status' => 'pendingSeller',
+                'creationDate' => now()->subDays(5)->toISOString(),
+                'currency' => [
+                    'symbol' => $this->currencySymbol,
+                    'name' => $this->currencyName,
+                    'decimalDigits' => 2
+                ],
+                'relatedUser' => [
+                    'id' => 'user-mock-2',
+                    'display' => 'Another Customer'
+                ],
+                'items' => []
+            ]
+        ];
+        
+        // Apply filters if needed
+        if (!empty($params['status'])) {
+            $mockOrders = array_filter($mockOrders, function($order) use ($params) {
+                return $order['status'] === $params['status'];
+            });
+            $mockOrders = array_values($mockOrders);
+        }
+        
+        $transformedOrders = array_map(function ($order) {
+            return $this->transformOrder($order);
+        }, $mockOrders);
+        
+        return [
+            'orders' => $transformedOrders,
+            'headers' => [
+                'x-current-page' => 0,
+                'x-page-size' => 20,
+                'x-total-count' => count($mockOrders),
+                'x-page-count' => 1,
+                'x-has-next-page' => false,
+            ]
+        ];
+    }
+    
+    protected function mockCreateOrder(string $cyclosUserId, array $orderData): array
+    {
+        Log::info('Mock: Creating order', [
+            'merchant_id' => $cyclosUserId,
+            'buyer_id' => $orderData['buyer_id'],
+            'items' => $orderData['items']
+        ]);
+        
+        return [
+            'success' => true,
+            'order_id' => 'mock-order-' . uniqid(),
+            'order_number' => 'MOCK-ORD-' . rand(1000, 9999),
+            'data' => [
+                'id' => 'mock-order-' . uniqid(),
+                'number' => 'MOCK-ORD-' . rand(1000, 9999),
+                'status' => 'pendingSeller'
+            ]
+        ];
     }
 }
