@@ -21,7 +21,7 @@
                                     </div>
                                     <h5 class="card-title">Cyclos logging</h5>
                                     <p class="card-text text-muted">View your performance metrics and insights</p>
-                                    <a href="https://square.communyti.org/ui/login" class="btn btn-outline-primary" target="_blank">
+                                    <a href="https://square.communyti.org/ui/login" class="btn btn-outline-primary">
                                         Visit Site &rarr;
                                     </a>
                                 </div>
@@ -36,7 +36,7 @@
                                     </div>
                                     <h5 class="card-title">HookMeUpTV</h5>
                                     <p class="card-text text-muted">Hook Me Up TV helps local businesses bring customers through the door.</p>
-                                    <a href="https://www.hookmeuptv.com/login" class="btn btn-outline-secondary" target="_blank">
+                                    <a href="https://www.hookmeuptv.com/login" class="btn btn-outline-secondary">
                                         Visit Site &rarr;
                                     </a>
                                 </div>
@@ -51,7 +51,7 @@
                                     </div>
                                     <h5 class="card-title">TheWhyKnot</h5>
                                     <p class="card-text text-muted">WhyKnot exists to prevent that outcome by ensuring that the Covenant Stack™ remains coherent.</p>
-                                    <a href="http://thewhyknot.org/" class="btn btn-outline-danger" target="_blank">
+                                    <a href="http://thewhyknot.org/" class="btn btn-outline-danger">
                                         Visit Site &rarr;
                                     </a>
                                 </div>
@@ -66,7 +66,7 @@
                                     </div>
                                     <h5 class="card-title">Communyti Org</h5>
                                     <p class="card-text text-muted">Communyti helps members and merchants issue and exchange vouchers.</p>
-                                    <a href="https://communyti.org/" class="btn btn-outline-success" target="_blank">
+                                    <a href="https://communyti.org/" class="btn btn-outline-success">
                                         Visit Site &rarr;
                                     </a>
                                 </div>
