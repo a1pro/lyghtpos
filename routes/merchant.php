@@ -23,12 +23,8 @@ use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
 use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
 use App\Http\Controllers\Merchant\MerchantProductController;
+use App\Http\Controllers\Merchant\MerchantProductImportController;
 use App\Http\Controllers\Merchant\WalletController;
-// use App\Http\Controllers\Merchant\TransactionController;
-
-
-
-// Add to routes/web.php
 
 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
@@ -52,7 +48,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('/{id}', 'show')->name('show');
     });
 
-    Route::prefix('products')->name('products.')->group(function(){
+    Route::prefix('products')->name('products.')->group(function () {
         Route::get('/', [MerchantProductController::class, 'index'])->name('index');
         Route::get('create', [MerchantProductController::class, 'create'])->name('create');
         Route::post('/', [MerchantProductController::class, 'store'])->name('store');
@@ -60,37 +56,42 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('{product}/edit', [MerchantProductController::class, 'edit'])->name('edit');
         Route::put('{product}', [MerchantProductController::class, 'update'])->name('update');
         Route::delete('{product}', [MerchantProductController::class, 'destroy'])->name('destroy');
-        
+
         // AJAX search route
         Route::get('search/ajax', [MerchantProductController::class, 'search'])->name('search');
+
+        // Import flow
+        Route::get('/import/history', [MerchantProductImportController::class, 'index'])->name('import.index');
+        Route::get('/import/form', [MerchantProductImportController::class, 'create'])->name('import.create');
+        Route::post('/import/form', [MerchantProductImportController::class, 'store'])->name('import.store');
+        Route::get('/import/search/{id}', [MerchantProductImportController::class, 'show'])->name('import.show');
     });
 
-    Route::prefix('wallet')->name('wallet.')->group(function(){
-        
+    Route::prefix('wallet')->name('wallet.')->group(function () {
+
         // Dashboard and overview
         Route::get('/', [WalletController::class, 'index'])->name('index');
         Route::get('/dashboard', [WalletController::class, 'dashboard'])->name('dashboard');
-        
+
         // Payout routes
         Route::get('/payout', [WalletController::class, 'showPayoutForm'])->name('payout');
         Route::post('/payout', [WalletController::class, 'requestPayout'])->name('request-payout');
         Route::get('/payout/{payout}', [WalletController::class, 'payoutDetails'])->name('payout.details');
         Route::delete('/payout/{payout}', [WalletController::class, 'cancelPayout'])->name('payout.cancel');  // ← This is the correct name
-        
+
         // History and transactions
         Route::get('/history', [WalletController::class, 'history'])->name('history');
         Route::get('/transactions', [WalletController::class, 'transactions'])->name('transactions');
-        
+
         // AJAX endpoints
         Route::get('/balance', [WalletController::class, 'getBalance'])->name('balance');
         Route::get('/transactions/ajax', [WalletController::class, 'getTransactions'])->name('transactions.ajax');
         Route::get('/payouts/ajax', [WalletController::class, 'getPayouts'])->name('payouts.ajax');
-        
+
         // Reports
         Route::get('/report', [WalletController::class, 'report'])->name('report');
         Route::get('/export', [WalletController::class, 'export'])->name('export');
     });
-
 
     Route::prefix('team-members')->name('team-members.')->group(function () {
         Route::get('/', [TeamMemberController::class, 'index'])->name('index');
@@ -142,24 +143,24 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
-  
+
     Route::resource('customers', CustomerController::class)->names('customers');
     Route::resource('suppliers', SupplierController::class)->names('suppliers');
 
     // =============================================
     // Cart Routes (Preserved and Extended)
     // =============================================
-   // In your merchant routes group
-Route::prefix('cart')->name('cart.')->group(function () {
-    Route::get('/', [MerchantCartController::class, 'index'])->name('index');
-    Route::post('/', [MerchantCartController::class, 'store'])->name('store');
-    Route::post('/change-qty', [MerchantCartController::class, 'changeQty']);
-    Route::delete('/delete', [MerchantCartController::class, 'delete']);
-    Route::delete('/empty', [MerchantCartController::class, 'empty']);
-    Route::get('/customers', [MerchantCartController::class, 'getCustomers']);
-    Route::get('/checkout', [MerchantCartController::class, 'checkout'])->name('checkout');
-    Route::post('/payment/process', [MerchantCartController::class, 'processPayment'])->name('payment.process');
-});
+    // In your merchant routes group
+    Route::prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', [MerchantCartController::class, 'index'])->name('index');
+        Route::post('/', [MerchantCartController::class, 'store'])->name('store');
+        Route::post('/change-qty', [MerchantCartController::class, 'changeQty']);
+        Route::delete('/delete', [MerchantCartController::class, 'delete']);
+        Route::delete('/empty', [MerchantCartController::class, 'empty']);
+        Route::get('/customers', [MerchantCartController::class, 'getCustomers']);
+        Route::get('/checkout', [MerchantCartController::class, 'checkout'])->name('checkout');
+        Route::post('/payment/process', [MerchantCartController::class, 'processPayment'])->name('payment.process');
+    });
 
     // =============================================
     // Transaction Routes (New)
@@ -167,13 +168,13 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // Route::prefix('transactions')->name('transactions.')->controller(TransactionController::class)->group(function () {
     //     // List all transactions
     //     Route::get('/', 'index')->name('index');
-        
+
     //     // Get transaction summary/stats
     //     Route::get('/summary', 'summary')->name('summary');
-        
+
     //     // View single transaction
     //     Route::get('/{transactionId}', 'show')->name('show');
-        
+
     //     // Download transaction receipt
     //     Route::get('/{transactionId}/receipt', 'receipt')->name('receipt');
     // });

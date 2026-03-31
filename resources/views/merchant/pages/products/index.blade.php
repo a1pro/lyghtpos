@@ -42,16 +42,12 @@
 @section('content')
 <div class="card product-list">
     <div class="card-body">
-        <!-- Search Form -->
-        <div class="row search-box">
+        <div class="row search-box align-items-center">
+            {{--  Search --}}
             <div class="col-md-6">
                 <form action="{{ route('merchant.products.index') }}" method="GET" class="form-inline">
                     <div class="input-group w-100">
-                        <input type="text" 
-                               name="search" 
-                               class="form-control" 
-                               placeholder="{{ __('product.Search_Products') }}" 
-                               value="{{ request('search') }}">
+                        <input type="text" name="search" class="form-control" placeholder="{{ __('product.Search_Products') }}" value="{{ request('search') }}">
                         <div class="input-group-append">
                             <button class="btn btn-outline-secondary" type="submit">
                                 <i class="fas fa-search"></i>
@@ -60,31 +56,20 @@
                     </div>
                 </form>
             </div>
+            {{-- Import Actions --}}
+            <div class="col-md-6 text-right">
+                <a href="{{ asset('samples/product-import-sample.csv') }}" class="btn btn-outline-info btn-sm" download>
+                    <i class="fas fa-download"></i> Download Sample CSV
+                </a>
+                <a href="{{ route('merchant.products.import.create') }}" class="btn btn-success btn-sm">
+                    <i class="fas fa-upload"></i> Upload Products
+                </a>
+                <a href="{{ route('merchant.products.import.index') }}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-history"></i> Import History
+                </a>
+            </div>
+
         </div>
-
-        @if(isset($error))
-            <div class="alert alert-danger">
-                {{ $error }}
-            </div>
-        @endif
-
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        @endif
 
         <table class="table table-bordered table-hover">
             <thead class="thead-light">
