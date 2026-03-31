@@ -29,7 +29,46 @@ use App\Http\Controllers\Merchant\WalletController;
 
 
 // Add to routes/web.php
-
+Route::get('/debug/test-pagination', function() {
+    $user = Auth::user();
+    $productService = app(App\Services\Merchant\MerchantProductService::class);
+    
+    $results = [];
+    
+    // Test page 1 (API page 0)
+    $page1 = $productService->getUserProducts($user->cyclos_user_id, [
+        'pageSize' => 10,
+        'pageNumber' => 0,
+    ]);
+    
+    // Test page 2 (API page 1)
+    $page2 = $productService->getUserProducts($user->cyclos_user_id, [
+        'pageSize' => 10,
+        'pageNumber' => 1,
+    ]);
+    
+    $results['page1'] = [
+        'count' => count($page1['products']),
+        'headers' => $page1['headers'],
+        'product_ids' => array_column($page1['products'], 'id')
+    ];
+    
+    $results['page2'] = [
+        'count' => count($page2['products']),
+        'headers' => $page2['headers'],
+        'product_ids' => array_column($page2['products'], 'id')
+    ];
+    
+    $results['duplicates'] = array_intersect(
+        $results['page1']['product_ids'],
+        $results['page2']['product_ids']
+    );
+    
+    $results['total_products'] = $page1['headers']['x-total-count'];
+    $results['total_pages'] = $page1['headers']['x-page-count'];
+    
+    return response()->json($results);
+})->middleware('auth');
 
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
 
