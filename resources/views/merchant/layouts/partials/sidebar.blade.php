@@ -33,7 +33,7 @@
                     </li>
 
 
-                    <li class="nav-item">
+                    {{-- <li class="nav-item">
                         <a href="{{ route('merchant.barter-assist-pos') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-pos') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-th-large"></i>
                             <p>{{ __('POS') }}</p>
@@ -47,7 +47,7 @@
                             <i class="fa-solid fa-circle-dollar-to-slot"></i>
                             <p>{{ __('Cash Price') }}</p>
                         </a>
-                    </li>
+                    </li> --}}
 
                     <!-- External links -->
                     <li class="nav-item">
