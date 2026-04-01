@@ -8,12 +8,16 @@ use App\Services\Cyclos\CyclosUserService;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Merchant;
+use App\Models\UserGovernanceLayer;
+use App\Models\Representation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Http\Requests\Api\WP\Auth\WpRegisterRequest;
 use App\Models\Role;
+use App\Http\Requests\Api\WP\Representation\WpRepresentationRequest;
+use App\Models\GovernanceLayer;
 
 class WpRegisterController extends Controller
 {
@@ -43,6 +47,20 @@ class WpRegisterController extends Controller
                 'account_type' => $user->account_type
             ]);
 
+            // Create representation layer for FAVOR_MEMBER and TRADE_MERCHANT
+            if (in_array($request->account_type, ['FAVOR_MEMBER', 'TRADE_MERCHANT'])) {
+                $representation = $this->createRepresentationLayer($user->id, $request);
+                
+                if (!$representation) {
+                    throw new \Exception('Failed to create representation layer');
+                }
+                
+                Log::info('Representation layer created successfully', [
+                    'user_id' => $user->id,
+                    'representation_id' => $representation->id
+                ]);
+            }
+
             // Create Cyclos account for both FAVOR_MEMBER and TRADE_MERCHANT
             if (in_array($request->account_type, ['FAVOR_MEMBER', 'TRADE_MERCHANT'])) {
                 $cyclosData = $this->createCyclosUser($user, $request);
@@ -70,7 +88,9 @@ class WpRegisterController extends Controller
                     
                     // For TRADE_MERCHANT, you might want to rollback if Cyclos creation fails
                     // Uncomment below if Cyclos creation is mandatory
-                    // throw new \Exception('Failed to create Cyclos account for trade merchant');
+                    if ($request->account_type === 'TRADE_MERCHANT') {
+                        throw new \Exception('Failed to create Cyclos account for trade merchant');
+                    }
                 }
             }
 
@@ -82,7 +102,8 @@ class WpRegisterController extends Controller
                 'status_code' => 201,
                 'message' => 'Registration successful! Please login with your credentials.',
                 'data' => [
-                    'user_id' => $user->id,
+
+                    'pos_user_id' => $user->id,
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
                     'email' => $user->email,
@@ -165,6 +186,60 @@ class WpRegisterController extends Controller
         } catch (\Exception $e) {
             Log::error('User creation failed', [
                 'email' => $request->email,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Create representation layer for user
+     */
+    protected function createRepresentationLayer(int $userId, WpRegisterRequest $request): ?Representation
+    {
+        try {
+            // Get values with defaults
+            $participateVouchers = $request->input('participate_vouchers', false);
+            $allowBarter = $request->input('allow_barter', false);
+            
+            // Create or update representation
+            $representation = Representation::updateOrCreate(
+                ['user_id' => $userId],
+                [
+                    'community' => $request->input('community', 'default_community'),
+                    'role' => $request->input('role', 'default_role'),
+                    'accepted_currencies' => json_encode($request->input('accepted_currencies', [])),
+                    'participate_vouchers' => $participateVouchers,
+                    'allow_barter' => $allowBarter,
+                    'pledge_description' => $request->input('pledge_description', ''),
+                    'pledge_value' => $request->input('pledge_value', 0),
+                    'status' => 'pending',
+                ]
+            );
+
+            // Get active governance layers
+            $governanceData = GovernanceLayer::where('status', 'active')->get();
+
+            // Create user governance layer records
+            foreach ($governanceData as $govData) {
+                UserGovernanceLayer::create([
+                    'user_id' => $userId,
+                    'governance_id' => $govData->id,
+                    'representation_id' => $representation->id
+                ]);
+            }
+
+            Log::info('Representation layer created', [
+                'user_id' => $userId,
+                'representation_id' => $representation->id,
+                'governance_layers_count' => $governanceData->count()
+            ]);
+
+            return $representation;
+
+        } catch (\Exception $e) {
+            Log::error('Representation layer creation failed', [
+                'user_id' => $userId,
                 'error' => $e->getMessage()
             ]);
             throw $e;
