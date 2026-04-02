@@ -2,20 +2,13 @@
 
 namespace App\Models;
 
-use Database\Factories\UserFactory;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Carbon;
-use Laravel\Sanctum\HasApiTokens;  
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
@@ -41,7 +34,9 @@ class User extends Authenticatable
         'merchant_id',
         'status',
         'cyclos_user_password',
-        'wallet_amount'
+        'wallet_amount',
+        'phone',
+        'location',
     ];
 
     /**
@@ -73,7 +68,6 @@ class User extends Authenticatable
         return $this->role_id === 2;
     }
 
-
     public function cart()
     {
         return $this->belongsToMany(related: Product::class, table: 'user_cart')->withPivot('quantity');
@@ -93,12 +87,12 @@ class User extends Authenticatable
 
     public function getFullname(): string
     {
-        return $this->first_name . ' ' . $this->last_name;
+        return $this->first_name.' '.$this->last_name;
     }
 
     public function getAvatar(): string
     {
-        return 'https://www.gravatar.com/avatar/' . md5($this->email);
+        return 'https://www.gravatar.com/avatar/'.md5($this->email);
     }
 
     public function role()
@@ -189,6 +183,6 @@ class User extends Authenticatable
     // Get full name
     public function getFullnameAttribute()
     {
-        return $this->first_name . ' ' . $this->last_name;
+        return $this->first_name.' '.$this->last_name;
     }
 }
