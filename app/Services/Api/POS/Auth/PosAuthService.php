@@ -2,6 +2,7 @@
 
 namespace App\Services\Api\POS\Auth;
 
+use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -35,6 +36,14 @@ class PosAuthService
             'password' => Hash::make($data['password']),
         ]);
 
+        $customer = Customer::create([
+            'user_id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'phone' => $user->phone,
+            'email' => $user->email,
+            'address' => $user->location,
+        ]);
         $token = $user->createToken('pos_auth_token')->plainTextToken;
 
         return [
