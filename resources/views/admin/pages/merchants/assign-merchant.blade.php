@@ -114,7 +114,7 @@
                 @endif
                 
                 <!-- Assignment Form -->
-                <form action="{{ route('admin.merchants.assign-merchant', $customer->id) }}" method="POST">
+                <form id="assignmentForm" action="{{ route('admin.merchants.assign-merchant', $customer->id) }}" method="POST">
                     @csrf
                     @method('PUT')
                     
@@ -143,7 +143,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="button" class="btn btn-primary" id="confirmAssignment">
                             <i class="fas fa-save"></i> Save Assignment
                         </button>
                         <a href="{{ route('admin.merchants.index') }}" class="btn btn-secondary">
@@ -210,4 +210,149 @@
         @endif
     </div>
 </div>
+@endsection
+
+@section('js')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    $(document).ready(function() {
+        // SweetAlert confirmation for merchant assignment
+        $('#confirmAssignment').click(function(e) {
+            e.preventDefault();
+            
+            const merchantSelect = $('#merchant_id');
+            const selectedMerchantId = merchantSelect.val();
+            const selectedMerchantText = merchantSelect.find('option:selected').text().trim();
+            const isRemovingAssignment = (selectedMerchantId === '');
+            
+            // Get current merchant info
+            const hasCurrentMerchant = {{ $assignedMerchant ? 'true' : 'false' }};
+            let currentMerchantName = '';
+            @if($assignedMerchant)
+                currentMerchantName = '{{ isset($assignedMerchant->business_name) && $assignedMerchant->business_name ? $assignedMerchant->business_name : $assignedMerchant->first_name . " " . $assignedMerchant->last_name }}';
+            @endif
+            
+            // Build confirmation message based on action type
+            let title = '';
+            let html = '';
+            let icon = 'question';
+            let confirmButtonText = '';
+            
+            if (isRemovingAssignment) {
+                title = 'Remove Merchant Assignment?';
+                html = `
+                    <div style="text-align: left;">
+                        <p><strong>Customer:</strong> {{ $customer->first_name }} {{ $customer->last_name }}</p>
+                        <p><strong>Email:</strong> {{ $customer->email }}</p>
+                        ${hasCurrentMerchant ? `<p><strong>Current Merchant:</strong> <span class="badge badge-info">${currentMerchantName}</span></p>` : ''}
+                        <hr>
+                        <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> 
+                            <strong>Warning:</strong> This will remove the merchant assignment from this customer.
+                        </p>
+                        <p class="text-muted">The customer will no longer be associated with any merchant.</p>
+                    </div>
+                `;
+                icon = 'warning';
+                confirmButtonText = 'Yes, remove assignment!';
+            } else if (!selectedMerchantId) {
+                // No merchant selected
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please select a merchant to assign or choose "No Merchant" to remove assignment.',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            } else {
+                // Assigning new merchant
+                const isChanging = (hasCurrentMerchant && currentMerchantName);
+                
+                if (isChanging) {
+                    title = 'Change Merchant Assignment?';
+                    html = `
+                        <div style="text-align: left;">
+                            <p><strong>Customer:</strong> {{ $customer->first_name }} {{ $customer->last_name }}</p>
+                            <p><strong>Email:</strong> {{ $customer->email }}</p>
+                            <p><strong>Current Merchant:</strong> <span class="badge badge-info">${currentMerchantName}</span></p>
+                            <p><strong>New Merchant:</strong> <span class="badge badge-warning">${selectedMerchantText}</span></p>
+                            <hr>
+                            <p class="text-warning"><i class="fas fa-exchange-alt"></i> 
+                                <strong>Note:</strong> This will replace the current merchant assignment.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    title = 'Assign Merchant to Customer?';
+                    html = `
+                        <div style="text-align: left;">
+                            <p><strong>Customer:</strong> {{ $customer->first_name }} {{ $customer->last_name }}</p>
+                            <p><strong>Email:</strong> {{ $customer->email }}</p>
+                            <p><strong>Merchant to Assign:</strong> <span class="badge badge-success">${selectedMerchantText}</span></p>
+                            <hr>
+                            <p class="text-info"><i class="fas fa-handshake"></i> 
+                                This will establish a relationship between the customer and merchant.
+                            </p>
+                        </div>
+                    `;
+                }
+                icon = 'question';
+                confirmButtonText = 'Yes, assign merchant!';
+            }
+            
+            // Show confirmation dialog
+            Swal.fire({
+                title: title,
+                html: html,
+                icon: icon,
+                showCancelButton: true,
+                confirmButtonColor: isRemovingAssignment ? '#d33' : '#3085d6',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: confirmButtonText,
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Processing...',
+                        text: isRemovingAssignment ? 'Removing merchant assignment...' : 'Assigning merchant to customer...',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Submit the form
+                    $('#assignmentForm').submit();
+                }
+            });
+        });
+        
+        // Optional: Add visual feedback when merchant selection changes
+        $('#merchant_id').change(function() {
+            const selectedValue = $(this).val();
+            const selectedText = $(this).find('option:selected').text();
+            
+            if (selectedValue === '') {
+                // Show subtle hint for removal
+                $(this).addClass('border-danger');
+                setTimeout(() => {
+                    $(this).removeClass('border-danger');
+                }, 2000);
+            } else if (selectedValue) {
+                $(this).addClass('border-success');
+                setTimeout(() => {
+                    $(this).removeClass('border-success');
+                }, 2000);
+            }
+        });
+        
+        // Auto-hide any flash messages after 5 seconds
+        setTimeout(function() {
+            $('.alert').fadeOut('slow');
+        }, 5000);
+    });
+</script>
 @endsection

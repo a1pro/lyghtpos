@@ -30,7 +30,7 @@ class PosLoginController extends Controller
             DB::rollback();
 
             return response()->json([
-                'status' => false,
+                'success' => false,
                 'status_code' => 500,
                 'message' => 'An error occurred while processing your request'.$e->getMessage(),
             ]);
@@ -42,9 +42,9 @@ class PosLoginController extends Controller
         try {
             $data = $this->posAuthService->userProfile(auth()->user());
 
-            return response()->json(['status' => true, 'status_code' => 200, 'message' => 'User profile retrieved successfully', 'data' => $data]);
+            return response()->json(['success' => true, 'status_code' => 200, 'message' => 'User profile retrieved successfully', 'data' => $data]);
         } catch (\Exception $e) {
-            return response()->json(['status' => false, 'status_code' => 500, 'message' => 'An error occurred while processing your request'.$e->getMessage()]);
+            return response()->json(['success' => false, 'status_code' => 500, 'message' => 'An error occurred while processing your request'.$e->getMessage()]);
         }
     }
 

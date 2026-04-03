@@ -125,7 +125,7 @@
                         No available groups found. Please check Cyclos configuration.
                     </div>
                 @else
-                    <form action="{{ route('admin.merchants.update-group', $user->id) }}" method="POST">
+                    <form id="changeGroupForm" action="{{ route('admin.merchants.update-group', $user->id) }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -168,7 +168,7 @@
                         </div>
                         
                         <div class="form-group">
-                            <button type="submit" class="btn btn-primary" onclick="return confirm('Are you sure you want to change this user\'s group? This will take effect immediately in Cyclos.')">
+                            <button type="button" class="btn btn-primary" id="confirmGroupChange">
                                 <i class="fas fa-save"></i> Change Group
                             </button>
                             <a href="{{ route('admin.merchants.index') }}" class="btn btn-secondary">
@@ -222,12 +222,92 @@
 @endsection
 
 @section('js')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function() {
         // Auto-hide alerts after 5 seconds
         setTimeout(function() {
             $('.alert').fadeOut('slow');
         }, 5000);
+        
+        // SweetAlert confirmation for group change
+        $('#confirmGroupChange').click(function(e) {
+            e.preventDefault();
+            
+            const groupSelect = $('#group_id');
+            const selectedGroup = groupSelect.find('option:selected');
+            const selectedGroupName = selectedGroup.text().trim();
+            const selectedGroupValue = groupSelect.val();
+            const comment = $('#comment').val();
+            
+            // Validation
+            if (!selectedGroupValue) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please select a group to change to.',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+            
+            // Show confirmation dialog
+            Swal.fire({
+                title: 'Change User Group?',
+                html: `
+                    <div style="text-align: left;">
+                        <p><strong>User:</strong> {{ $user->first_name }} {{ $user->last_name }}</p>
+                        <p><strong>Current Group:</strong> 
+                            <span class="badge badge-info">${'{{ $cyclosGroupInfo["current_group"]["name"] ?? "Unknown" }}'}</span>
+                        </p>
+                        <p><strong>New Group:</strong> 
+                            <span class="badge badge-warning">${selectedGroupName}</span>
+                        </p>
+                        ${comment ? `<p><strong>Comment:</strong> ${comment}</p>` : ''}
+                        <hr>
+                        <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> 
+                            <strong>Warning:</strong> This action will take effect immediately in Cyclos!
+                        </p>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, change group!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Changing Group...',
+                        text: 'Please wait while we update the user group in Cyclos.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Submit the form
+                    $('#changeGroupForm').submit();
+                }
+            });
+        });
+        
+        // Optional: Add warning if user tries to change group without comment
+        $('#group_id').change(function() {
+            const comment = $('#comment').val();
+            if (!comment) {
+                // Just a subtle hint, not blocking
+                $('#comment').addClass('border-warning');
+                setTimeout(() => {
+                    $('#comment').removeClass('border-warning');
+                }, 3000);
+            }
+        });
     });
 </script>
 @endsection
