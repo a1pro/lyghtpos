@@ -1,7 +1,9 @@
 <?php
 
-use App\Http\Controllers\Admin\GovernanceLayerController;
+use App\Http\Controllers\Admin\AdminMerchantController;
+use App\Http\Controllers\Admin\AdminPayoutController;
 use App\Http\Controllers\Admin\AppSettingController;
+use App\Http\Controllers\Admin\GovernanceLayerController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\PurchaseCartController;
@@ -11,13 +13,6 @@ use App\Http\Controllers\Management\SupplierController;
 use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
-use App\Http\Controllers\Admin\AdminMerchantController;
-use App\Http\Controllers\Admin\AdminPayoutController;
-
-
-
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +22,7 @@ Route::post('check-email', [App\Http\Controllers\Auth\RegisterController::class,
 // Translations
 Route::get('/locale/{type}', function ($type) {
     $translations = trans($type);
+
     return response()->json($translations);
 });
 
@@ -47,8 +43,6 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
     Route::resource('orders', OrderController::class);
     Route::resource('suppliers', SupplierController::class);
 
-
-
     Route::prefix('payouts')->name('admin.payouts.')->group(function () {
         Route::get('/', [AdminPayoutController::class, 'index'])->name('index');
         Route::get('/{payout}', [AdminPayoutController::class, 'show'])->name('show');
@@ -58,30 +52,29 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
         Route::get('/export', [AdminPayoutController::class, 'export'])->name('export');
         Route::get('/statistics', [AdminPayoutController::class, 'getStatistics'])->name('statistics');
     });
-    
 
     // ===================================Merchant List===========================================================
 
-Route::prefix('merchants')->name('admin.merchants.')->group(function(){
-    Route::get('/merchants/{id}/change-password', [AdminMerchantController::class, 'showChangePasswordForm'])->name('change-password');
-    Route::post('/merchants/{id}/update-password', [AdminMerchantController::class, 'updatePassword'])->name('update-password');
-    Route::get('/', [AdminMerchantController::class, 'renderMerchants'])->name('index');
-});
+    Route::prefix('merchants')->name('admin.merchants.')->group(function () {
+        Route::get('/', [AdminMerchantController::class, 'renderMerchants'])->name('index');
+        Route::get('/{id}/change-password', [AdminMerchantController::class, 'showChangePasswordForm'])->name('change-password');
+        Route::post('/{id}/update-password', [AdminMerchantController::class, 'updatePassword'])->name('update-password');
 
+        // CORRECTED: Remove the duplicate 'merchants' from URI
+        Route::get('/{id}/edit-group', [AdminMerchantController::class, 'editGroup'])->name('edit-group');
+        Route::put('/{id}/update-group', [AdminMerchantController::class, 'updateGroup'])->name('update-group');
+    });
 
+    Route::prefix('app-settings')->name('admin.app-settings.')->group(function () {
+        // Main settings page with left sidebar
+        Route::get('/', [AppSettingController::class, 'index'])->name('index');
 
+        // Update settings for a specific group
+        Route::put('/{group}', [AppSettingController::class, 'update'])->name('update');
 
-Route::prefix('app-settings')->name('admin.app-settings.')->group(function() {
-    // Main settings page with left sidebar
-    Route::get('/', [AppSettingController::class, 'index'])->name('index');
-    
-    // Update settings for a specific group
-    Route::put('/{group}', [AppSettingController::class, 'update'])->name('update');
-    
-    // API endpoint to get group settings (optional)
-    Route::get('/api/{group}', [AppSettingController::class, 'getGroupSettings'])->name('api.get');
-});
-
+        // API endpoint to get group settings (optional)
+        Route::get('/api/{group}', [AppSettingController::class, 'getGroupSettings'])->name('api.get');
+    });
 
     // =============================================End===========================================================
 
@@ -92,15 +85,15 @@ Route::prefix('app-settings')->name('admin.app-settings.')->group(function() {
         Route::get('/create', [App\Http\Controllers\Admin\AdminVoucherController::class, 'create'])->name('create');
         Route::post('/generate', [App\Http\Controllers\Admin\AdminVoucherController::class, 'generate'])->name('generate');
         Route::get('/{voucherId}', [App\Http\Controllers\Admin\AdminVoucherController::class, 'show'])->name('show');
-        
+
         // Expiration routes
         Route::get('/{voucherId}/edit-expiration', [App\Http\Controllers\Admin\AdminVoucherController::class, 'editExpiration'])->name('edit-expiration');
         Route::post('/{voucherId}/change-expiration', [App\Http\Controllers\Admin\AdminVoucherController::class, 'changeExpiration'])->name('change-expiration');
-        
+
         // Cancel route (AJAX)
         Route::post('/{voucherId}/cancel', [App\Http\Controllers\Admin\AdminVoucherController::class, 'cancel'])->name('cancel');
     });
-    
+
     // Governance Layers
     Route::get('/governance-layers', [GovernanceLayerController::class, 'index'])->name('admin.governance-layers');
     Route::get('/governance-layers/create', [GovernanceLayerController::class, 'create'])->name('admin.governance-layers.create');
@@ -136,6 +129,7 @@ Route::prefix('app-settings')->name('admin.app-settings.')->group(function() {
     // Translations
     Route::get('/locale/{type}', function ($type) {
         $translations = trans($type);
+
         return response()->json($translations);
     });
 
@@ -152,10 +146,8 @@ Route::prefix('app-settings')->name('admin.app-settings.')->group(function() {
     })->name('lang.switch');
 });
 
-
-require __DIR__ . '/merchant.php';
-require __DIR__ . '/subadmin.php';
-require __DIR__ . '/favor-member.php';
-require __DIR__ . '/team-member/merchant/manager.php';
-require __DIR__ . '/team-member/merchant/cashier.php';
-
+require __DIR__.'/merchant.php';
+require __DIR__.'/subadmin.php';
+require __DIR__.'/favor-member.php';
+require __DIR__.'/team-member/merchant/manager.php';
+require __DIR__.'/team-member/merchant/cashier.php';
