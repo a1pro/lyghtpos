@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { sum } from "lodash";
+import { debounce } from "lodash";
 
 class MerchantCart extends Component {
     constructor(props) {
@@ -20,8 +21,13 @@ class MerchantCart extends Component {
                 cart: false,
                 updateQty: false
             },
+            loadingMore: false,
             addingToCart: null, // Track which product is being added
-            updatingQty: null    // Track which product's quantity is being updated
+            updatingQty: null,  // Track which product's quantity is being updated
+            // Pagination metadata
+            productsPage: 1,
+            productsLastPage: 1,
+            hasMore: true,
         };
 
         this.loadCart = this.loadCart.bind(this);
@@ -36,6 +42,9 @@ class MerchantCart extends Component {
         this.handleClickSubmit = this.handleClickSubmit.bind(this);
         this.loadTranslations = this.loadTranslations.bind(this);
         this.addProductToCart = this.addProductToCart.bind(this);
+        this.handleScroll = this.handleScroll.bind(this);
+        this.debouncedScroll = debounce(this.handleScroll, 200);
+        this.productsGridRef = React.createRef();
     }
 
     componentDidMount() {
@@ -43,6 +52,17 @@ class MerchantCart extends Component {
         this.loadCustomers();
         this.loadProducts();
         this.loadCart();
+
+        if (this.productsGridRef.current) {
+            this.productsGridRef.current.addEventListener('scroll', this.debouncedScroll);
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.productsGridRef.current) {
+            this.productsGridRef.current.removeEventListener('scroll', this.debouncedScroll);
+        }
+        this.debouncedScroll.cancel();
     }
 
     loadTranslations() {
@@ -70,21 +90,82 @@ class MerchantCart extends Component {
         });
     }
 
-    loadProducts(search = "") {
-        this.setState(prev => ({ loading: { ...prev.loading, products: true } }));
-        const query = !!search ? `?search=${search}` : "";
+    componentWillUnmount() {
+        window.removeEventListener('scroll', this.handleScroll);
+    }
 
-        axios.get(`/merchant/products${query}`, {
+    handleScroll() {
+        const { loadingMore, hasMore, loading: { products: isLoading } } = this.state;
+        if (loadingMore || isLoading || !hasMore) return;
+
+        const grid = this.productsGridRef.current;
+        if (!grid) return;
+
+        // Check if scrolled near bottom (within 200px)
+        const scrollTop = grid.scrollTop;
+        const scrollHeight = grid.scrollHeight;
+        const clientHeight = grid.clientHeight;
+        const nearBottom = scrollTop + clientHeight >= scrollHeight - 200;
+
+        if (nearBottom) {
+            this.loadMoreProducts();
+        }
+    }
+
+    loadMoreProducts() {
+        const { productsPage, productsLastPage, loadingMore, loading: { products: isLoading } } = this.state;
+        if (loadingMore || isLoading) return;
+        const nextPage = productsPage + 1;
+        if (nextPage > productsLastPage) {
+            this.setState({ hasMore: false });
+            return;
+        }
+        this.loadProducts(nextPage, true);
+    }
+
+    loadProducts(page = 1, append = false) {
+        const { search } = this.state;
+        // Set loading states
+        if (append) {
+            this.setState({ loadingMore: true });
+        } else {
+            this.setState(prev => ({ loading: { ...prev.loading, products: true } }));
+        }
+
+        let url = `/merchant/products?page=${page}&per_page=10`;
+        if (search) {
+            url += `&search=${encodeURIComponent(search)}`;
+        }
+
+        axios.get(url, {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
         }).then((res) => {
-            const products = res.data.data || [];
-            this.setState({ products, loading: { ...this.state.loading, products: false } });
+            const responseData = res.data;
+            const newProducts = responseData.data || [];
+            const currentPage = responseData.current_page || page;
+            const lastPage = responseData.last_page || 1;
+            const hasMore = currentPage < lastPage;
+
+            this.setState(prev => ({
+                products: append ? [...prev.products, ...newProducts] : newProducts,
+                productsPage: currentPage,
+                productsLastPage: lastPage,
+                hasMore: hasMore,
+                loading: { ...prev.loading, products: false },
+                loadingMore: false
+            }));
         }).catch((error) => {
             console.error("Error loading products:", error);
-            this.setState({ products: [], loading: { ...this.state.loading, products: false } });
+            this.setState(prev => ({
+                loading: { ...prev.loading, products: false },
+                loadingMore: false
+            }));
+            if (!append) {
+                this.setState({ products: [] });
+            }
         });
     }
 
@@ -218,7 +299,15 @@ class MerchantCart extends Component {
 
     handleSeach(event) {
         if (event.keyCode === 13) {
-            this.loadProducts(event.target.value);
+            // Reset pagination and load first page with new search term
+            this.setState({
+                productsPage: 1,
+                productsLastPage: 1,
+                hasMore: true,
+                products: []
+            }, () => {
+                this.loadProducts(1, false);
+            });
         }
     }
 
@@ -291,13 +380,13 @@ class MerchantCart extends Component {
             Swal.fire("Error!", "Please select customer", "error");
             return;
         }
-        
+
         window.location.href = `/merchant/cart/checkout?cid=${customer_id}`;
         return;
     }
 
     render() {
-        const { cart = [], products = [], customers = [], barcode = "", translations = {}, loading, addingToCart, updatingQty } = this.state;
+        const { cart = [], products = [], customers = [], barcode = "", translations = {}, loading, loadingMore, addingToCart, updatingQty, hasMore } = this.state;
 
         return (
             <div className="row">
@@ -477,87 +566,108 @@ class MerchantCart extends Component {
                         </div>
                     </div>
 
-                    {/* Products Grid */}
-                    <div className="products-grid">
-                        {loading.products ? (
-                            <div className="loading-state">
-                                <div className="spinner-border text-primary" role="status" style={{ width: '40px', height: '40px' }}>
+                    {/* Scrollable products grid container */}
+                    <div
+                        ref={this.productsGridRef}
+                        className="products-grid-container"
+                        style={{
+                            maxHeight: '70vh',
+                            overflowY: 'auto',
+                            paddingRight: '8px'
+                        }}
+                    >
+                        <div className="products-grid">
+                            {loading.products && products.length === 0 ? (
+                                <div className="loading-state">
+                                    <div className="spinner-border text-primary" role="status"></div>
+                                    <p className="text-muted mt-3">Loading products...</p>
                                 </div>
-                                <p className="text-muted mt-3 mb-0">Loading products...</p>
-                            </div>
-                        ) : products.length === 0 ? (
-                            <div className="empty-state">
-                                <i className="fas fa-box-open fa-3x text-muted mb-3"></i>
-                                <p className="text-muted mb-0">No products found</p>
-                                <small className="text-muted">Try searching with different keywords</small>
-                            </div>
-                        ) : (
-                            products.map((p) => (
-                                <div
-                                    onClick={() => addingToCart === null && updatingQty === null && this.addProductToCart(p.id)}
-                                    key={p.id}
-                                    className="product-card"
-                                    style={{
-                                        cursor: addingToCart === null && updatingQty === null ? 'pointer' : 'not-allowed',
-                                        opacity: addingToCart !== null || updatingQty !== null ? 0.6 : 1,
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (addingToCart === null && updatingQty === null) {
-                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                            e.currentTarget.style.boxShadow = '0 8px 16px -8px rgba(0, 0, 0, 0.1)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)';
-                                    }}
-                                >
-                                    {/* Product Image */}
-                                    <div className="product-image-wrapper">
-                                        <img
-                                            src={p.image_url || `https://placehold.co/300x300?text=No+Image`}
-                                            alt={p.name}
-                                            className="product-image"
-                                        />
-                                        {addingToCart === p.id && (
-                                            <div className="product-overlay">
-                                                <div className="spinner-border spinner-border-sm text-white" role="status">
-                                                </div>
-                                            </div>
-                                        )}
-                                        {p.quantity <= 0 && (
-                                            <div className="out-of-stock-badge">
-                                                Out of Stock
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Product Info */}
-                                    <div className="product-info">
-                                        <h5 className="product-title" title={p.name}>
-                                            {p.name}
-                                        </h5>
-
-                                        <div className="product-details">
-                                            <div className="product-price-wrapper">
-                                                <span className="product-price">
-                                                    {window.APP.currency_symbol} {parseFloat(p.price || 0).toFixed(2)}
-                                                </span>
-                                                {p.quantity > 0 && p.quantity < 10 && (
-                                                    <span className="stock-badge low-stock">
-                                                        {p.quantity} left
-                                                    </span>
+                            ) : products.length === 0 ? (
+                                <div className="empty-state">
+                                    <i className="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                    <p className="text-muted">No products found</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {products.map((p) => (
+                                        <div
+                                            key={p.id}
+                                            onClick={() => addingToCart === null && updatingQty === null && this.addProductToCart(p.id)}
+                                            className="product-card"
+                                            style={{
+                                                cursor: addingToCart === null && updatingQty === null ? 'pointer' : 'not-allowed',
+                                                opacity: addingToCart !== null || updatingQty !== null ? 0.6 : 1
+                                            }}
+                                        >
+                                            {/* Product image and info - unchanged */}
+                                            <div className="product-image-wrapper">
+                                                <img
+                                                    src={p.image_url || `https://placehold.co/300x300?text=No+Image`}
+                                                    alt={p.name}
+                                                    className="product-image"
+                                                />
+                                                {addingToCart === p.id && (
+                                                    <div className="product-overlay">
+                                                        <div className="spinner-border spinner-border-sm text-white"></div>
+                                                    </div>
+                                                )}
+                                                {p.quantity <= 0 && (
+                                                    <div className="out-of-stock-badge">Out of Stock</div>
                                                 )}
                                             </div>
+                                            <div className="product-info">
+                                                <h5 className="product-title">{p.name}</h5>
+                                                <div className="product-price-wrapper">
+                                                    <span className="product-price">
+                                                        {window.APP.currency_symbol} {parseFloat(p.price || 0).toFixed(2)}
+                                                    </span>
+                                                    {p.quantity > 0 && p.quantity < 10 && (
+                                                        <span className="stock-badge low-stock">{p.quantity} left</span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
+                                    ))}
+                                    {loadingMore && (
+                                        <div className="loading-more">
+                                            <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                            <span className="ms-2">Loading more...</span>
+                                        </div>
+                                    )}
+                                    {!hasMore && products.length > 0 && (
+                                        <div className="end-of-list text-muted text-center small mt-3">
+                                            You've reached the end
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
-
                     <style jsx>{`
+                        .products-grid-container {
+                            scroll-behavior: smooth;
+                        }
+
+                        .products-grid {
+                            display: grid;
+                            grid-template-columns: repeat(4, 1fr);
+                            gap: 16px;
+                            padding: 8px 0 24px 0;
+                        }
+
+                        .loading-more {
+                            grid-column: 1 / -1;
+                            display: flex;
+                            justify-content: center;
+                            padding: 20px;
+                        }
+
+                        .end-of-list {
+                            grid-column: 1 / -1;
+                            text-align: center;
+                            padding: 20px;
+                        }
+                            
                         .search-container {
                             position: sticky;
                             top: 0;
