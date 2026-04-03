@@ -63,8 +63,11 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
         // CORRECTED: Remove the duplicate 'merchants' from URI
         Route::get('/{id}/edit-group', [AdminMerchantController::class, 'editGroup'])->name('edit-group');
         Route::put('/{id}/update-group', [AdminMerchantController::class, 'updateGroup'])->name('update-group');
-    });
 
+        // NEW ROUTES FOR MERCHANT ASSIGNMENT
+        Route::get('/{id}/assign-merchant', [AdminMerchantController::class, 'showAssignMerchantForm'])->name('assign-merchant-form');
+        Route::put('/{id}/assign-merchant', [AdminMerchantController::class, 'assignMerchant'])->name('assign-merchant');
+    });
     Route::prefix('app-settings')->name('admin.app-settings.')->group(function () {
         // Main settings page with left sidebar
         Route::get('/', [AppSettingController::class, 'index'])->name('index');
