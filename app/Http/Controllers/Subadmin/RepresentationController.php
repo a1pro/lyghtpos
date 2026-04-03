@@ -222,13 +222,11 @@ class RepresentationController extends Controller
                 'after_status' => $request->status,
                 'message' => $request->review_message,
             ]);
+
             User::where('id',$representation->merchant->id)->update([
                 'governance_check' => 1
             ]);
-            Notification::create([
-                'user_id' => $representation->merchant->id,
-                'message' => $request->review_message
-            ]);
+
             DB::commit();
 
             return response()->json([
