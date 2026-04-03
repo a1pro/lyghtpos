@@ -381,7 +381,7 @@ class MerchantOrderService
         
         try {
             // Use admin user ID for the URL to have proper permissions
-            $url = $this->baseUrl . "/api/{$this->adminUserId}/orders";
+            $url = $this->baseUrl . "/api/{$cyclosUserId}/orders";
 
             // Prepare the order data for Cyclos API
             $cyclosOrderData = [
@@ -407,7 +407,6 @@ class MerchantOrderService
                 'currency' => $orderData['currency'] ?? 'unit',
                 "buyer" => $orderData['buyer_id'],
                 "remarks" => $orderData['notes'] ?? null,
-                "merchant" => $cyclosUserId // Add merchant to the order
             ];
 
             Log::info('Creating order in Cyclos', [
@@ -459,13 +458,11 @@ class MerchantOrderService
 
             Log::info('Order created successfully in Cyclos', [
                 'order_id' => $data['id'] ?? null,
-                'order_number' => $data['number'] ?? null
             ]);
 
             return [
                 'success' => true,
-                'order_id' => $data['id'] ?? null,
-                'order_number' => $data['number'] ?? null,
+                'order_id' => $data ?? null,
                 'data' => $data,
             ];
         } catch (Exception $e) {
