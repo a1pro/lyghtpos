@@ -24,16 +24,27 @@ class PosLoginController extends Controller
             $result = $this->posAuthService->authenticate($request->validated());
             DB::commit();
 
-            return response()->json(['succss' => true, 'status_code' => 200, 'message' => 'Login successful', 'data' => $result]);
+            return response()->json(['success' => true, 'status_code' => 200, 'message' => 'Login successful', 'data' => $result]);
 
         } catch (\Exception $e) {
             DB::rollback();
 
             return response()->json([
-                'status' => false,
+                'success' => false,
                 'status_code' => 500,
                 'message' => 'An error occurred while processing your request'.$e->getMessage(),
             ]);
+        }
+    }
+
+    public function userProfile()
+    {
+        try {
+            $data = $this->posAuthService->userProfile(auth()->user());
+
+            return response()->json(['success' => true, 'status_code' => 200, 'message' => 'User profile retrieved successfully', 'data' => $data]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'status_code' => 500, 'message' => 'An error occurred while processing your request'.$e->getMessage()]);
         }
     }
 

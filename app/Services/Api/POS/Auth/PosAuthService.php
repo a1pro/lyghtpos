@@ -94,6 +94,17 @@ class PosAuthService
     /**
      * Logout POS user
      */
+    public function userProfile()
+    {
+        $user = auth()->user(0);
+
+        return [
+            'user' => collect($user->toArray())->only(['first_name', 'last_name', 'email', 'location', 'phone'])->map(function ($value, $key) {
+                return $value;
+            }),
+        ];
+    }
+
     public function logout(User $user): bool
     {
         // Delete current access token
