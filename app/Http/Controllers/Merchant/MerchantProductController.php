@@ -26,91 +26,85 @@ class MerchantProductController extends Controller
     /**
      * Display a listing of the products.
      */
-    public function index(Request $request): Factory|View|JsonResponse
-    {
-        $user = Auth::user();
-        $cyclosUserId = $user->cyclos_user_id;
-
-        if (!$cyclosUserId) {
-            return $request->wantsJson()
-                ? response()->json(['error' => 'Cyclos user ID not found'], 400)
-                : view('merchant.pages.products.index', ['products' => [], 'error' => 'Cyclos user ID not found']);
-        }
-
-        try {
-            $searchTerm = $request->input('search', '');
-
-            $laravelPage = (int) $request->input('page', 1);
-            $cyclosPage = max(0, $laravelPage - 1);
-            $perPage = (int) $request->input('per_page', 10);
-
-            $filters = [
-                'category'   => $request->input('category'),
-                'min_price'  => $request->input('min_price'),
-                'max_price'  => $request->input('max_price'),
-                'page'       => $cyclosPage,      // 0‑based for API
-                'per_page'   => $perPage,
-                'kind'       => 'webshop',
-            ];
-
-            $result = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
-            $rawProducts = $result['products'];
-            $headers = $result['headers'];
-
-            Log::info('Products fetched successfully', [
-                'total_products' => count($rawProducts),
-                'headers'        => $headers,
-                'sample_product' => count($rawProducts) > 0 ? $rawProducts[0] : null
-            ]);
-
-            $formattedProducts = $this->productService->formatProducts($rawProducts);
-
-            // Extract pagination data from API response headers (lowercase keys)
-            $totalCount = (int) ($headers['x-total-count'] ?? count($rawProducts));
-            $apiPageSize = (int) ($headers['x-page-size'] ?? $perPage);
-            $apiCurrentPage = (int) ($headers['x-current-page'] ?? $cyclosPage);
-
-            $currentLaravelPage = $apiCurrentPage + 1;
-
-            $products = new \Illuminate\Pagination\LengthAwarePaginator(
-                $formattedProducts,           // items for current page
-                $totalCount,                  // total items across all pages
-                $apiPageSize,                 // items per page
-                $currentLaravelPage,          // current page (1‑based)
-                [
-                    'path'  => $request->url(),
-                    'query' => $request->query(), // preserves search, filters, etc.
-                ]
-            );
-
-            $productsData = $products->toArray();
-            $productsData['pagination_headers'] = [
-                'x_current_page'   => $headers['x-current-page'] ?? null,
-                'x_page_size'      => $headers['x-page-size'] ?? null,
-                'x_total_count'    => $headers['x-total-count'] ?? null,
-                'x_page_count'     => $headers['x-page-count'] ?? null,
-                'x_has_next_page'  => $headers['x-has-next-page'] ?? null,
-            ];
-
-            return $request->wantsJson()
-                ? response()->json($productsData)
-                : view('merchant.pages.products.index', ['products' => $products]);
-        } catch (\Exception $e) {
-            Log::error('Error fetching products from Cyclos', [
-                'error'            => $e->getMessage(),
-                'user_id'          => $user->id,
-                'cyclos_user_id'   => $cyclosUserId,
-                'trace'            => $e->getTraceAsString()
-            ]);
-
-            return $request->wantsJson()
-                ? response()->json(['error' => 'Failed to fetch products: ' . $e->getMessage()], 500)
-                : view('merchant.pages.products.index', [
-                    'products' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1),
-                    'error'    => 'Failed to fetch products: ' . $e->getMessage()
-                ]);
-        }
+   /**
+ * Display a listing of the products.
+ */
+public function index(Request $request): Factory|View|JsonResponse
+{
+    $user = Auth::user();
+    $cyclosUserId = $user->cyclos_user_id;
+    
+    if (!$cyclosUserId) {
+        return $request->wantsJson()
+            ? response()->json(['error' => 'Cyclos user ID not found'], 400)
+            : view('merchant.pages.products.index', ['products' => [], 'error' => 'Cyclos user ID not found']);
     }
+
+    try {
+        $searchTerm = $request->input('search', '');
+        $filters = [
+            'category' => $request->input('category'),
+            'min_price' => $request->input('min_price'),
+            'max_price' => $request->input('max_price'),
+            'page' => $request->input('page', 0),
+            'per_page' => $request->input('per_page', 10),
+            'kind' => 'webshop',
+        ];
+
+        $result = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
+        $rawProducts = $result['products'];
+        $headers = $result['headers'];
+        
+        Log::info('Products fetched successfully', [
+            'total_products' => count($rawProducts),
+            'headers' => $headers,
+            'sample_product' => count($rawProducts) > 0 ? $rawProducts[0] : null
+        ]);
+        
+        $formattedProducts = $this->productService->formatProducts($rawProducts);
+        
+        // Get total count from headers or fallback to count
+        $totalCount = $headers['x-total-count'] ?? count($rawProducts);
+        $currentPage = $request->input('page', 1);
+        $perPage = $request->input('per_page', 10);
+        
+        $products = new \Illuminate\Pagination\LengthAwarePaginator(
+            $formattedProducts,
+            $totalCount,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $productsData = $products->toArray();
+        $productsData['pagination_headers'] = [
+            'x_current_page' => $headers['x-current-page'] ?? null,
+            'x_page_size' => $headers['x-page-size'] ?? null,
+            'x_total_count' => $headers['x-total-count'] ?? null,
+            'x_page_count' => $headers['x-page-count'] ?? null,
+            'x_has_next_page' => $headers['x-has-next-page'] ?? null,
+        ];
+
+        return $request->wantsJson()
+            ? response()->json($productsData)
+            : view('merchant.pages.products.index', ['products' => $products]);
+            
+    } catch (\Exception $e) {
+        Log::error('Error fetching products from Cyclos', [
+            'error' => $e->getMessage(),
+            'user_id' => $user->id,
+            'cyclos_user_id' => $cyclosUserId,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return $request->wantsJson()
+            ? response()->json(['error' => 'Failed to fetch products: ' . $e->getMessage()], 500)
+            : view('merchant.pages.products.index', [
+                'products' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1),
+                'error' => 'Failed to fetch products: ' . $e->getMessage()
+            ]);
+    }
+}
 
     /**
      * Show the form for creating a new product.
@@ -119,17 +113,17 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+        
         $flattenedCategories = [];
         $tradeTypes = [];
         $currencies = [];
-
+        
         try {
             $categoriesData = $this->productService->getMarketplaceCategories();
             $flattenedCategories = $this->productService->flattenCategories($categoriesData);
             $tradeTypes = $this->productService->getTradeTypes();
             $currencies = $this->productService->getCurrencies();
-
+            
             $sample = [];
             $i = 0;
             foreach ($flattenedCategories as $id => $name) {
@@ -140,7 +134,7 @@ class MerchantProductController extends Controller
                     break;
                 }
             }
-
+            
             Log::info('Flattened categories for dropdown', [
                 'count' => count($flattenedCategories),
                 'sample_with_ids' => $sample,
@@ -148,10 +142,11 @@ class MerchantProductController extends Controller
                 'first_key_type' => gettype(array_key_first($flattenedCategories)),
                 'first_key_length' => strlen(array_key_first($flattenedCategories) ?? '')
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Failed to fetch categories', ['error' => $e->getMessage()]);
         }
-
+        
         return view('merchant.pages.products.create', compact('flattenedCategories', 'tradeTypes', 'currencies'));
     }
 
@@ -162,7 +157,7 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+        
         if (!$cyclosUserId) {
             return redirect()->back()
                 ->withInput()
@@ -171,12 +166,12 @@ class MerchantProductController extends Controller
 
         try {
             $productData = $request->validated();
-
+            
             // Add trade_type if not present (default to offer)
             if (!isset($productData['trade_type'])) {
                 $productData['trade_type'] = 'tradeTypeOffer';
             }
-
+            
             $image = $request->hasFile('image') ? $request->file('image') : null;
 
             $result = $this->productService->createProduct(
@@ -192,14 +187,14 @@ class MerchantProductController extends Controller
                 if (isset($result['needs_category']) && $result['needs_category']) {
                     $categoriesData = $this->productService->getMarketplaceCategories();
                     $flattenedCategories = $this->productService->flattenCategories($categoriesData);
-
+                    
                     return redirect()->back()
                         ->withInput()
                         ->with('error', $result['message'])
                         ->with('show_category_warning', true)
                         ->with('flattened_categories', $flattenedCategories);
                 }
-
+                
                 return redirect()->back()
                     ->withInput()
                     ->with('error', $result['message'] ?? 'Error creating product');
@@ -223,22 +218,22 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+        
         if (!$cyclosUserId) {
             return $request->wantsJson()
                 ? response()->json(['error' => 'Cyclos user ID not found'], 400)
                 : redirect()->route('merchant.products.index')
-                ->with('error', 'Cyclos user ID not found');
+                    ->with('error', 'Cyclos user ID not found');
         }
 
         try {
             $product = $this->productService->getProduct($cyclosUserId, $productId);
-
+            
             if (!$product) {
                 return $request->wantsJson()
                     ? response()->json(['error' => 'Product not found'], 404)
                     : redirect()->route('merchant.products.index')
-                    ->with('error', 'Product not found');
+                        ->with('error', 'Product not found');
             }
 
             $formattedProduct = $this->productService->formatProduct($product);
@@ -246,6 +241,7 @@ class MerchantProductController extends Controller
             return $request->wantsJson()
                 ? response()->json($formattedProduct)
                 : view('merchant.pages.products.show', ['product' => $formattedProduct]);
+                
         } catch (\Exception $e) {
             Log::error('Error fetching product', [
                 'error' => $e->getMessage(),
@@ -255,7 +251,7 @@ class MerchantProductController extends Controller
             return $request->wantsJson()
                 ? response()->json(['error' => 'Failed to fetch product'], 500)
                 : redirect()->route('merchant.products.index')
-                ->with('error', 'Error fetching product');
+                    ->with('error', 'Error fetching product');
         }
     }
 
@@ -266,7 +262,7 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+        
         if (!$cyclosUserId) {
             return redirect()->route('merchant.products.index')
                 ->with('error', 'Cyclos user ID not found');
@@ -274,14 +270,14 @@ class MerchantProductController extends Controller
 
         try {
             $product = $this->productService->getProduct($cyclosUserId, $productId);
-
+            
             if (!$product) {
                 return redirect()->route('merchant.products.index')
                     ->with('error', 'Product not found');
             }
 
             $formattedProduct = $this->productService->formatProduct($product);
-
+            
             $categoriesData = $this->productService->getMarketplaceCategories();
             $flattenedCategories = $this->productService->flattenCategories($categoriesData);
             $tradeTypes = $this->productService->getTradeTypes();
@@ -294,6 +290,7 @@ class MerchantProductController extends Controller
                 'tradeTypes' => $tradeTypes,
                 'currencies' => $currencies
             ]);
+            
         } catch (\Exception $e) {
             Log::error('Error fetching product for edit', [
                 'error' => $e->getMessage(),
@@ -312,7 +309,7 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+        
         if (!$cyclosUserId) {
             return redirect()->back()
                 ->withInput()
@@ -321,12 +318,12 @@ class MerchantProductController extends Controller
 
         try {
             $productData = $request->validated();
-
+            
             // Add trade_type if not present
             if (!isset($productData['trade_type'])) {
                 $productData['trade_type'] = 'tradeTypeOffer';
             }
-
+            
             $existingProduct = $this->productService->getProduct($cyclosUserId, $productId);
             $existingImageKey = $existingProduct['images'][0] ?? null;
 
@@ -368,7 +365,7 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+        
         if (!$cyclosUserId) {
             return response()->json([
                 'success' => false,
@@ -407,7 +404,7 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+        
         if (!$cyclosUserId) {
             return response()->json([
                 'success' => false,
@@ -418,7 +415,7 @@ class MerchantProductController extends Controller
         try {
             $searchTerm = $request->input('q', '');
             $filters = $request->input('filters', []);
-
+            
             $rawProducts = $this->productService->searchProducts($cyclosUserId, $searchTerm, $filters);
             $formattedProducts = $this->productService->formatProducts($rawProducts);
 

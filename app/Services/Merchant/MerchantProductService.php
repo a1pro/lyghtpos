@@ -362,8 +362,8 @@ class MerchantProductService
                 $queryParams['pageSize'] = $params['pageSize'];
             }
             
-            if (isset($params['page'])) {
-                $queryParams['page'] = $params['page'];
+            if (isset($params['pageNumber'])) {
+                $queryParams['pageNumber'] = $params['pageNumber'];
             }
             
             // Add search/filter parameters
@@ -381,10 +381,6 @@ class MerchantProductService
             
             if (!empty($params['maxPrice'])) {
                 $queryParams['maxPrice'] = $params['maxPrice'];
-            }
-
-            if (!empty($params['kind'])) {
-                $queryParams['kind'] = $params['kind'];
             }
 
             Log::info('Fetching user products from Cyclos', [
@@ -803,7 +799,7 @@ class MerchantProductService
             'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
             'stockQuantity' => (int) ($productData['quantity'] ?? 1),
             'allowDecimalQuantity' => false,
-            'kind' => 'webshop',
+            'kind' => 'simple',
             'customValues' => $customValues,
         ];
 
@@ -993,7 +989,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
                 'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
                 'stockQuantity' => (int) ($productData['quantity'] ?? 1),
                 'allowDecimalQuantity' => false,
-                'kind' => 'webshop',
+                'kind' => 'simple',
                 'customValues' => [
                     'tradeType' => $productData['trade_type'] ?? 'tradeTypeOffer',
                 ],
@@ -1170,7 +1166,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
         }
 
         $params['pageSize'] = $filters['per_page'] ?? 20;
-        $params['page'] = $filters['page'] ?? 0;
+        $params['pageNumber'] = $filters['page'] ?? 0;
 
         return $this->getUserProducts($cyclosUserId, $params);
     }
