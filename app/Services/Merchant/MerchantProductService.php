@@ -46,27 +46,27 @@ class MerchantProductService
             // Helper function to safely get string value from config
             $getStringValue = function ($key, $default = '') {
                 $value = config($key, $default);
-                
+
                 // If it's an array, try to get the first value
                 if (is_array($value)) {
                     $value = reset($value);
                 }
-                
+
                 return $value !== null ? (string) $value : $default;
             };
-            
+
             // Helper function to safely get boolean value from config
             $getBooleanValue = function ($key, $default = false) {
                 $value = config($key, $default);
-                
+
                 // If it's an array, try to get the first value
                 if (is_array($value)) {
                     $value = reset($value);
                 }
-                
+
                 return filter_var($value, FILTER_VALIDATE_BOOLEAN);
             };
-            
+
             // Load all settings from config
             $this->baseUrl = rtrim($getStringValue('services.cyclos.base_url', ''), '/');
             $this->username = $getStringValue('services.cyclos.username', '');
@@ -76,11 +76,11 @@ class MerchantProductService
             $this->currencySymbol = $getStringValue('services.cyclos.currency_symbol', 'TT');
             $this->currencyName = $getStringValue('services.cyclos.currency_name', 'TradeTokens');
             $this->adminUserId = $getStringValue('services.cyclos.admin_user_id', '');
-            
+
             // Load boolean settings
             $this->mockMode = $getBooleanValue('services.cyclos.mock_mode', false);
             $this->fallbackToMock = $getBooleanValue('services.cyclos.fallback_to_mock', true);
-            
+
             Log::info('MerchantProductService settings loaded from config', [
                 'base_url' => $this->baseUrl,
                 'username' => $this->username,
@@ -89,7 +89,6 @@ class MerchantProductService
                 'currency' => $this->currencyName,
                 'mock_mode' => $this->mockMode
             ]);
-
         } catch (Exception $e) {
             Log::error('Failed to load MerchantProductService settings', [
                 'error' => $e->getMessage()
@@ -181,11 +180,11 @@ class MerchantProductService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                
+
                 if ($this->fallbackToMock) {
                     return $this->mockGetMarketplaceData();
                 }
-                
+
                 return [];
             }
 
@@ -198,17 +197,17 @@ class MerchantProductService
 
             Cache::put('cyclos_marketplace_data', $data, 3600);
             $this->marketplaceData = $data;
-            
+
             return $data;
         } catch (Exception $e) {
             Log::error('Exception in getMarketplaceData', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             if ($this->fallbackToMock) {
                 return $this->mockGetMarketplaceData();
             }
-            
+
             return [];
         }
     }
@@ -349,38 +348,42 @@ class MerchantProductService
         if ($this->mockMode) {
             return $this->mockGetUserProducts($cyclosUserId, $params);
         }
-        
+
         try {
             // Build URL with the correct endpoint
             $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
-            
+
             // Prepare query parameters
             $queryParams = [];
-            
+
             // Add pagination parameters if provided
             if (isset($params['pageSize'])) {
                 $queryParams['pageSize'] = $params['pageSize'];
             }
-            
-            if (isset($params['pageNumber'])) {
-                $queryParams['pageNumber'] = $params['pageNumber'];
+
+            if (isset($params['page'])) {
+                $queryParams['page'] = $params['page'];
             }
-            
+
             // Add search/filter parameters
             if (!empty($params['keywords'])) {
                 $queryParams['keywords'] = $params['keywords'];
             }
-            
+
             if (!empty($params['category'])) {
                 $queryParams['category'] = $params['category'];
             }
-            
+
             if (!empty($params['minPrice'])) {
                 $queryParams['minPrice'] = $params['minPrice'];
             }
-            
+
             if (!empty($params['maxPrice'])) {
                 $queryParams['maxPrice'] = $params['maxPrice'];
+            }
+
+            if (!empty($params['kind'])) {
+                $queryParams['kind'] = $params['kind'];
             }
 
             Log::info('Fetching user products from Cyclos', [
@@ -403,16 +406,16 @@ class MerchantProductService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                
+
                 if ($this->fallbackToMock) {
                     return $this->mockGetUserProducts($cyclosUserId, $params);
                 }
-                
+
                 return ['products' => [], 'headers' => []];
             }
 
             $responseData = $response->json();
-            
+
             // Extract pagination headers from response headers
             $headers = [
                 'x-current-page' => $response->header('X-Current-Page'),
@@ -421,7 +424,7 @@ class MerchantProductService
                 'x-page-count' => $response->header('X-Page-Count'),
                 'x-has-next-page' => $response->header('X-Has-Next-Page'),
             ];
-            
+
             Log::info('Cyclos API response received', [
                 'headers' => $headers,
                 'response_type' => gettype($responseData),
@@ -435,7 +438,7 @@ class MerchantProductService
                 if (!is_array($product)) {
                     return $product;
                 }
-                
+
                 // Add quantity field based on stock information
                 if (isset($product['unlimitedStock']) && $product['unlimitedStock'] === true) {
                     $product['quantity'] = 1000000;
@@ -444,17 +447,17 @@ class MerchantProductService
                 } else {
                     $product['quantity'] = 1000000;
                 }
-                
+
                 // Ensure we have an ID field
                 if (!isset($product['id']) && isset($product['_id'])) {
                     $product['id'] = $product['_id'];
                 }
-                
+
                 return $product;
             };
 
             $products = [];
-            
+
             // Handle different response formats based on actual API response
             if (is_array($responseData)) {
                 // Check if it's a paginated response with 'items' key
@@ -491,17 +494,16 @@ class MerchantProductService
                 'products' => $products,
                 'headers' => $headers
             ];
-            
         } catch (Exception $e) {
             Log::error('Exception in getUserProducts', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             if ($this->fallbackToMock) {
                 return $this->mockGetUserProducts($cyclosUserId, $params);
             }
-            
+
             return ['products' => [], 'headers' => []];
         }
     }
@@ -515,7 +517,7 @@ class MerchantProductService
         if ($this->mockMode) {
             return $this->mockGetProduct($cyclosUserId, $productId);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/marketplace/{$productId}";
 
@@ -540,11 +542,11 @@ class MerchantProductService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                
+
                 if ($this->fallbackToMock) {
                     return $this->mockGetProduct($cyclosUserId, $productId);
                 }
-                
+
                 return null;
             }
 
@@ -559,7 +561,7 @@ class MerchantProductService
                 } else {
                     $product['quantity'] = 1000000;
                 }
-                
+
                 if (!isset($product['id']) && isset($product['_id'])) {
                     $product['id'] = $product['_id'];
                 }
@@ -570,11 +572,11 @@ class MerchantProductService
             Log::error('Exception in getProduct', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             if ($this->fallbackToMock) {
                 return $this->mockGetProduct($cyclosUserId, $productId);
             }
-            
+
             return null;
         }
     }
@@ -588,7 +590,7 @@ class MerchantProductService
         if ($this->mockMode) {
             return $this->mockUploadImage($cyclosUserId, $image);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/images";
 
@@ -626,11 +628,11 @@ class MerchantProductService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                
+
                 if ($this->fallbackToMock) {
                     return $this->mockUploadImage($cyclosUserId, $image);
                 }
-                
+
                 return null;
             }
 
@@ -645,11 +647,11 @@ class MerchantProductService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             if ($this->fallbackToMock) {
                 return $this->mockUploadImage($cyclosUserId, $image);
             }
-            
+
             return null;
         }
     }
@@ -663,7 +665,7 @@ class MerchantProductService
         if ($this->mockMode) {
             return $this->mockDeleteImage($cyclosUserId, $imageKey);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/images/{$imageKey}";
 
@@ -702,231 +704,231 @@ class MerchantProductService
      * Create a product in Cyclos marketplace
      */
     public function createProduct(string $cyclosUserId, array $productData, ?UploadedFile $image = null): array
-{
-    // Check if mock mode is enabled
-    if ($this->mockMode) {
-        return $this->mockCreateProduct($cyclosUserId, $productData, $image);
-    }
-    
-    try {
-        $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
-
-        // Upload image if provided
-        $imageKey = null;
-        if ($image) {
-            $imageKey = $this->uploadImage($cyclosUserId, $image);
+    {
+        // Check if mock mode is enabled
+        if ($this->mockMode) {
+            return $this->mockCreateProduct($cyclosUserId, $productData, $image);
         }
 
-        // Get the category ID from the array (single category)
-        $categoryId = null;
-        if (isset($productData['categories']) && is_array($productData['categories']) && !empty($productData['categories'])) {
-            $categoryId = $productData['categories'][0];
+        try {
+            $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
 
-            // Get the internal name for this category
-            $categories = $this->getMarketplaceCategories();
-            $internalName = $this->findInternalNameById($categories, $categoryId);
+            // Upload image if provided
+            $imageKey = null;
+            if ($image) {
+                $imageKey = $this->uploadImage($cyclosUserId, $image);
+            }
 
-            Log::info('Found internal name for category', [
-                'category_id' => $categoryId,
-                'internal_name' => $internalName
-            ]);
+            // Get the category ID from the array (single category)
+            $categoryId = null;
+            if (isset($productData['categories']) && is_array($productData['categories']) && !empty($productData['categories'])) {
+                $categoryId = $productData['categories'][0];
 
-            if (!$internalName) {
+                // Get the internal name for this category
+                $categories = $this->getMarketplaceCategories();
+                $internalName = $this->findInternalNameById($categories, $categoryId);
+
+                Log::info('Found internal name for category', [
+                    'category_id' => $categoryId,
+                    'internal_name' => $internalName
+                ]);
+
+                if (!$internalName) {
+                    return [
+                        'success' => false,
+                        'message' => 'Could not find internal name for selected category',
+                        'needs_category' => true
+                    ];
+                }
+
+                // Use internal name for the category
+                $categoryId = $internalName;
+            }
+
+            // If no category provided, return error
+            if (empty($categoryId)) {
+                Log::error('No category ID provided or found');
                 return [
                     'success' => false,
-                    'message' => 'Could not find internal name for selected category',
+                    'message' => 'A category is required. Please select a category.',
                     'needs_category' => true
                 ];
             }
 
-            // Use internal name for the category
-            $categoryId = $internalName;
-        }
+            // Determine publication period based on status
+            $isActive = isset($productData['status']) ? (bool) $productData['status'] : true;
 
-        // If no category provided, return error
-        if (empty($categoryId)) {
-            Log::error('No category ID provided or found');
-            return [
-                'success' => false,
-                'message' => 'A category is required. Please select a category.',
-                'needs_category' => true
-            ];
-        }
+            $beginDate = now();
+            $endDate = null;
 
-        // Determine publication period based on status
-        $isActive = isset($productData['status']) ? (bool) $productData['status'] : true;
-
-        $beginDate = now();
-        $endDate = null;
-
-        if ($isActive) {
-            $endDate = now()->addYear();
-        } else {
-            $beginDate = now()->subDays(1);
-            $endDate = now()->subDays(1);
-        }
-
-        // Prepare custom values array
-        $customValues = [
-            'tradeType' => $productData['trade_type'] ?? 'tradeTypeOffer',
-        ];
-        
-        // Only add barcode if it's provided and we have the custom field configured
-        // Check if barcode custom field exists in marketplace data
-        $customFields = $this->getMarketplaceCustomFields();
-        $hasBarcodeField = $this->hasCustomField($customFields, 'barcode');
-        
-        if (!empty($productData['barcode']) && $hasBarcodeField) {
-            $customValues['barcode'] = $productData['barcode'];
-            Log::info('Adding barcode to product', ['barcode' => $productData['barcode']]);
-        } elseif (!empty($productData['barcode']) && !$hasBarcodeField) {
-            Log::warning('Barcode field not available in marketplace, skipping', [
-                'barcode' => $productData['barcode']
-            ]);
-        }
-
-        // Prepare the product data for Cyclos API
-        $cyclosProductData = [
-            'name' => $productData['name'],
-            'description' => $productData['description'] ?? '',
-            'publicationPeriod' => [
-                'begin' => $beginDate->toIso8601String(),
-                'end' => $endDate ? $endDate->toIso8601String() : null,
-            ],
-            'categories' => [$categoryId],
-            'currency' => 'unit',
-            'price' => (float) $productData['price'],
-            'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
-            'stockQuantity' => (int) ($productData['quantity'] ?? 1),
-            'allowDecimalQuantity' => false,
-            'kind' => 'simple',
-            'customValues' => $customValues,
-        ];
-
-        // Add barcode as a separate field if it's a standard field (not custom)
-        // Some Cyclos versions have barcode as a separate field
-        if (!empty($productData['barcode']) && !$hasBarcodeField) {
-            // Try to add barcode as a separate field if supported
-            $cyclosProductData['barcode'] = $productData['barcode'];
-        }
-
-        // Add images if uploaded
-        if ($imageKey) {
-            $cyclosProductData['images'] = [$imageKey];
-        }
-
-        // Remove end date if null
-        if ($cyclosProductData['publicationPeriod']['end'] === null) {
-            unset($cyclosProductData['publicationPeriod']['end']);
-        }
-
-        Log::info('Creating product in Cyclos', [
-            'cyclos_user_id' => $cyclosUserId,
-            'url' => $url,
-            'category_internal_name' => $categoryId,
-            'is_active' => $isActive,
-            'has_barcode' => !empty($productData['barcode']),
-            'has_barcode_field' => $hasBarcodeField,
-            'product_data' => $cyclosProductData,
-        ]);
-
-        $response = Http::withBasicAuth($this->username, $this->password)
-            ->withHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'Channel' => $this->channel,
-            ])
-            ->timeout(30)
-            ->post($url, $cyclosProductData);
-
-        if ($response->failed()) {
-            $errorData = $response->json();
-
-            $errorMessage = 'Failed to create product';
-            $needsCategory = false;
-
-            if (isset($errorData['propertyErrors']['categories'])) {
-                $errorMessage = 'Category error: ' . implode(', ', $errorData['propertyErrors']['categories']);
-                $needsCategory = true;
-            } elseif (isset($errorData['entityType']) && $errorData['entityType'] === 'AdCustomField') {
-                // Handle custom field errors
-                $errorMessage = 'Custom field error: ' . ($errorData['key'] ?? 'unknown field') . ' is not configured in the marketplace.';
-                Log::warning('Custom field error in product creation', [
-                    'field' => $errorData['key'] ?? 'unknown',
-                    'error' => $errorData
-                ]);
-            } elseif (isset($errorData['message'])) {
-                $errorMessage = $errorData['message'];
-            } elseif (isset($errorData['code'])) {
-                $errorMessage = $errorData['code'] . ': ' . json_encode($errorData);
+            if ($isActive) {
+                $endDate = now()->addYear();
+            } else {
+                $beginDate = now()->subDays(1);
+                $endDate = now()->subDays(1);
             }
 
-            Log::error('Failed to create product in Cyclos', [
-                'status' => $response->status(),
-                'error' => $errorData,
+            // Prepare custom values array
+            $customValues = [
+                'tradeType' => $productData['trade_type'] ?? 'tradeTypeOffer',
+            ];
+
+            // Only add barcode if it's provided and we have the custom field configured
+            // Check if barcode custom field exists in marketplace data
+            $customFields = $this->getMarketplaceCustomFields();
+            $hasBarcodeField = $this->hasCustomField($customFields, 'barcode');
+
+            if (!empty($productData['barcode']) && $hasBarcodeField) {
+                $customValues['barcode'] = $productData['barcode'];
+                Log::info('Adding barcode to product', ['barcode' => $productData['barcode']]);
+            } elseif (!empty($productData['barcode']) && !$hasBarcodeField) {
+                Log::warning('Barcode field not available in marketplace, skipping', [
+                    'barcode' => $productData['barcode']
+                ]);
+            }
+
+            // Prepare the product data for Cyclos API
+            $cyclosProductData = [
+                'name' => $productData['name'],
+                'description' => $productData['description'] ?? '',
+                'publicationPeriod' => [
+                    'begin' => $beginDate->toIso8601String(),
+                    'end' => $endDate ? $endDate->toIso8601String() : null,
+                ],
+                'categories' => [$categoryId],
+                'currency' => 'unit',
+                'price' => (float) $productData['price'],
+                'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
+                'stockQuantity' => (int) ($productData['quantity'] ?? 1),
+                'allowDecimalQuantity' => false,
+                'kind' => 'webshop',
+                'customValues' => $customValues,
+            ];
+
+            // Add barcode as a separate field if it's a standard field (not custom)
+            // Some Cyclos versions have barcode as a separate field
+            if (!empty($productData['barcode']) && !$hasBarcodeField) {
+                // Try to add barcode as a separate field if supported
+                $cyclosProductData['barcode'] = $productData['barcode'];
+            }
+
+            // Add images if uploaded
+            if ($imageKey) {
+                $cyclosProductData['images'] = [$imageKey];
+            }
+
+            // Remove end date if null
+            if ($cyclosProductData['publicationPeriod']['end'] === null) {
+                unset($cyclosProductData['publicationPeriod']['end']);
+            }
+
+            Log::info('Creating product in Cyclos', [
+                'cyclos_user_id' => $cyclosUserId,
+                'url' => $url,
                 'category_internal_name' => $categoryId,
-                'response_body' => $response->body(),
+                'is_active' => $isActive,
+                'has_barcode' => !empty($productData['barcode']),
+                'has_barcode_field' => $hasBarcodeField,
+                'product_data' => $cyclosProductData,
+            ]);
+
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($url, $cyclosProductData);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+
+                $errorMessage = 'Failed to create product';
+                $needsCategory = false;
+
+                if (isset($errorData['propertyErrors']['categories'])) {
+                    $errorMessage = 'Category error: ' . implode(', ', $errorData['propertyErrors']['categories']);
+                    $needsCategory = true;
+                } elseif (isset($errorData['entityType']) && $errorData['entityType'] === 'AdCustomField') {
+                    // Handle custom field errors
+                    $errorMessage = 'Custom field error: ' . ($errorData['key'] ?? 'unknown field') . ' is not configured in the marketplace.';
+                    Log::warning('Custom field error in product creation', [
+                        'field' => $errorData['key'] ?? 'unknown',
+                        'error' => $errorData
+                    ]);
+                } elseif (isset($errorData['message'])) {
+                    $errorMessage = $errorData['message'];
+                } elseif (isset($errorData['code'])) {
+                    $errorMessage = $errorData['code'] . ': ' . json_encode($errorData);
+                }
+
+                Log::error('Failed to create product in Cyclos', [
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                    'category_internal_name' => $categoryId,
+                    'response_body' => $response->body(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => $errorData,
+                    'needs_category' => $needsCategory
+                ];
+            }
+
+            $data = $response->json();
+
+            // Check if the response contains a valid product ID
+            $productId = null;
+            if (isset($data['id'])) {
+                $productId = $data['id'];
+            } elseif (isset($data['_id'])) {
+                $productId = $data['_id'];
+            } elseif (is_string($data) && strlen($data) > 10) {
+                $productId = $data;
+            }
+
+            Log::info('Product created successfully in Cyclos', [
+                'product_id' => $productId,
+                'category_internal_name' => $categoryId,
+                'full_response' => $data
+            ]);
+
+            return [
+                'success' => true,
+                'product_id' => $productId,
+                'data' => $data,
+            ];
+        } catch (Exception $e) {
+            Log::error('Exception in createProduct', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
-                'message' => $errorMessage,
-                'errors' => $errorData,
-                'needs_category' => $needsCategory
+                'message' => 'Exception: ' . $e->getMessage(),
             ];
         }
-
-        $data = $response->json();
-
-        // Check if the response contains a valid product ID
-        $productId = null;
-        if (isset($data['id'])) {
-            $productId = $data['id'];
-        } elseif (isset($data['_id'])) {
-            $productId = $data['_id'];
-        } elseif (is_string($data) && strlen($data) > 10) {
-            $productId = $data;
-        }
-
-        Log::info('Product created successfully in Cyclos', [
-            'product_id' => $productId,
-            'category_internal_name' => $categoryId,
-            'full_response' => $data
-        ]);
-
-        return [
-            'success' => true,
-            'product_id' => $productId,
-            'data' => $data,
-        ];
-    } catch (Exception $e) {
-        Log::error('Exception in createProduct', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-        ]);
-
-        return [
-            'success' => false,
-            'message' => 'Exception: ' . $e->getMessage(),
-        ];
     }
-}
 
-protected function getMarketplaceCustomFields(): array
-{
-    $data = $this->getMarketplaceData();
-    return $data['customFields'] ?? [];
-}
-
-protected function hasCustomField(array $customFields, string $fieldName): bool
-{
-    foreach ($customFields as $field) {
-        if (($field['internalName'] ?? '') === $fieldName) {
-            return true;
-        }
+    protected function getMarketplaceCustomFields(): array
+    {
+        $data = $this->getMarketplaceData();
+        return $data['customFields'] ?? [];
     }
-    return false;
-}
+
+    protected function hasCustomField(array $customFields, string $fieldName): bool
+    {
+        foreach ($customFields as $field) {
+            if (($field['internalName'] ?? '') === $fieldName) {
+                return true;
+            }
+        }
+        return false;
+    }
     /**
      * Update a product in Cyclos marketplace
      */
@@ -936,7 +938,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
         if ($this->mockMode) {
             return $this->mockUpdateProduct($cyclosUserId, $productId, $productData, $image, $existingImageKey);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace/{$productId}";
 
@@ -989,7 +991,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
                 'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
                 'stockQuantity' => (int) ($productData['quantity'] ?? 1),
                 'allowDecimalQuantity' => false,
-                'kind' => 'simple',
+                'kind' => 'webshop',
                 'customValues' => [
                     'tradeType' => $productData['trade_type'] ?? 'tradeTypeOffer',
                 ],
@@ -1081,7 +1083,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
         if ($this->mockMode) {
             return $this->mockDeleteProduct($cyclosUserId, $productId);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace/{$productId}";
 
@@ -1166,7 +1168,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
         }
 
         $params['pageSize'] = $filters['per_page'] ?? 20;
-        $params['pageNumber'] = $filters['page'] ?? 0;
+        $params['page'] = $filters['page'] ?? 0;
 
         return $this->getUserProducts($cyclosUserId, $params);
     }
@@ -1304,7 +1306,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
     protected function mockGetMarketplaceData(): array
     {
         Log::info('Mock: Getting marketplace data');
-        
+
         return [
             'categories' => [
                 [
@@ -1341,14 +1343,14 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             ]
         ];
     }
-    
+
     protected function mockGetUserProducts(string $cyclosUserId, array $params = []): array
     {
         Log::info('Mock: Getting user products', [
             'cyclos_user_id' => $cyclosUserId,
             'params' => $params
         ]);
-        
+
         $mockProducts = [
             [
                 'id' => 'prod-1',
@@ -1389,7 +1391,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
                 'creationDate' => now()->subDays(15)->toISOString()
             ]
         ];
-        
+
         $products = array_map(function ($product) {
             if (isset($product['unlimitedStock']) && $product['unlimitedStock'] === true) {
                 $product['quantity'] = 1000000;
@@ -1400,7 +1402,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             }
             return $product;
         }, $mockProducts);
-        
+
         return [
             'products' => $products,
             'headers' => [
@@ -1412,14 +1414,14 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             ]
         ];
     }
-    
+
     protected function mockGetProduct(string $cyclosUserId, string $productId): ?array
     {
         Log::info('Mock: Getting product', [
             'cyclos_user_id' => $cyclosUserId,
             'product_id' => $productId
         ]);
-        
+
         return [
             'id' => $productId,
             'name' => 'Mock Product',
@@ -1441,27 +1443,27 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             'quantity' => 100
         ];
     }
-    
+
     protected function mockUploadImage(string $cyclosUserId, UploadedFile $image): ?string
     {
         Log::info('Mock: Uploading image', [
             'cyclos_user_id' => $cyclosUserId,
             'file_name' => $image->getClientOriginalName()
         ]);
-        
+
         return 'mock-image-key-' . uniqid();
     }
-    
+
     protected function mockDeleteImage(string $cyclosUserId, string $imageKey): bool
     {
         Log::info('Mock: Deleting image', [
             'cyclos_user_id' => $cyclosUserId,
             'image_key' => $imageKey
         ]);
-        
+
         return true;
     }
-    
+
     protected function mockCreateProduct(string $cyclosUserId, array $productData, ?UploadedFile $image = null): array
     {
         Log::info('Mock: Creating product', [
@@ -1469,7 +1471,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             'product_data' => $productData,
             'has_image' => $image !== null
         ]);
-        
+
         return [
             'success' => true,
             'product_id' => 'mock-prod-' . uniqid(),
@@ -1479,7 +1481,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             ]
         ];
     }
-    
+
     protected function mockUpdateProduct(string $cyclosUserId, string $productId, array $productData, ?UploadedFile $image = null, ?string $existingImageKey = null): array
     {
         Log::info('Mock: Updating product', [
@@ -1487,7 +1489,7 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             'product_id' => $productId,
             'product_data' => $productData
         ]);
-        
+
         return [
             'success' => true,
             'product_id' => $productId,
@@ -1497,14 +1499,14 @@ protected function hasCustomField(array $customFields, string $fieldName): bool
             ]
         ];
     }
-    
+
     protected function mockDeleteProduct(string $cyclosUserId, string $productId): array
     {
         Log::info('Mock: Deleting product', [
             'cyclos_user_id' => $cyclosUserId,
             'product_id' => $productId
         ]);
-        
+
         return [
             'success' => true,
             'message' => 'Product deleted successfully'
