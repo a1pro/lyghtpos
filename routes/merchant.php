@@ -159,7 +159,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::delete('/empty', [MerchantCartController::class, 'empty']);
         Route::get('/customers', [MerchantCartController::class, 'getCustomers']);
         Route::get('/checkout', [MerchantCartController::class, 'checkout'])->name('checkout');
-        Route::post('/payment/process', [MerchantCartController::class, 'processPayment'])->name('payment.process');
+        // Route::post('/payment/process', [MerchantCartController::class, 'processPayment'])->name('payment.process');
     });
 
     // =============================================
@@ -205,6 +205,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     // Order routes
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/', [MerchantOrderController::class, 'index'])->name('index');
+        Route::get('/{order}', [MerchantOrderController::class, 'show'])->name('show');
     });
 });
 

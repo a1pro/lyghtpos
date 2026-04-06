@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\POS\Auth\PosLoginController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosRegisterController;
+use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerOrderController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use Illuminate\Support\Facades\Route;
 
@@ -17,8 +18,10 @@ Route::prefix('pos')->group(function () {
 
             Route::get('profile', [PosLoginController::class, 'userProfile']);
             Route::get('wallet/balance',[PosCustomerWallet::class,'getBalance']);
+
+            /** ******* ORDER related routes ********** */
+            Route::get('orders/pending', [PosCustomerOrderController::class, 'getPendingOrders']);
+            Route::get('orders/history', [PosCustomerOrderController::class, 'getOrdersHistory']);
         });
-
     });
-
 });
