@@ -408,6 +408,7 @@ class MerchantCyclosOrderService
                 'currency' => $orderData['currency'] ?? 'unit',
                 "buyer" => $orderData['buyer_id'],
                 "remarks" => $orderData['notes'] ?? null,
+                "merchant" => $cyclosUserId
             ];
 
             Log::info('Creating order in Cyclos', [
