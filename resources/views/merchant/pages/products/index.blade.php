@@ -18,29 +18,24 @@
         object-fit: cover;
         border-radius: 4px;
     }
-
     .badge-success {
         background-color: #28a745;
         color: white;
         padding: 5px 10px;
         border-radius: 4px;
     }
-
     .badge-danger {
         background-color: #dc3545;
         color: white;
         padding: 5px 10px;
         border-radius: 4px;
     }
-
     .search-box {
         margin-bottom: 20px;
     }
-
     .action-buttons .btn {
         margin: 0 2px;
     }
-
 </style>
 @endsection
 
@@ -48,7 +43,7 @@
 <div class="card product-list">
     <div class="card-body">
         <div class="row search-box align-items-center">
-            {{-- Search --}}
+            {{--  Search --}}
             <div class="col-md-6">
                 <form action="{{ route('merchant.products.index') }}" method="GET" class="form-inline">
                     <div class="input-group w-100">
@@ -84,11 +79,11 @@
                     <th width="80">{{ __('product.Image') }}</th>
                     <th>{{ __('product.Barcode') }}</th>
                     <th>{{ __('product.Price') }}</th>
-
-
+                  
+                    
                     <th>{{ __('product.Created_At') }}</th>
                     <th>{{ __('product.Updated_At') }}</th>
-
+                 
                 </tr>
             </thead>
             <tbody>
@@ -98,20 +93,20 @@
                     <td>{{ $product['name'] }}</td>
                     <td>
                         @if($product['image_url'])
-                        <img class="product-img" src="{{ $product['image_url'] }}" alt="{{ $product['name'] }}">
+                            <img class="product-img" src="{{ $product['image_url'] }}" alt="{{ $product['name'] }}">
                         @else
-                        <div class="product-img bg-secondary d-flex align-items-center justify-content-center">
-                            <i class="fas fa-image text-white"></i>
-                        </div>
+                            <div class="product-img bg-secondary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-image text-white"></i>
+                            </div>
                         @endif
                     </td>
                     <td>{{ $product['barcode'] }}</td>
                     <td>{{ $product['price'] }} {{ $product['currency_symbol'] ?? 'FT' }}</td>
-
-
+                    
+                    
                     <td>{{ $product['created_at'] ? date('Y-m-d H:i', strtotime($product['created_at'])) : 'N/A' }}</td>
                     <td>{{ $product['updated_at'] ? date('Y-m-d H:i', strtotime($product['updated_at'])) : 'N/A' }}</td>
-
+                    
                 </tr>
                 @empty
                 <tr>
@@ -123,14 +118,7 @@
             </tbody>
         </table>
 
-        {{-- Pagination Links --}}
-        @if($products->hasPages())
-        <div class="pagination-wrapper">
-            {{ $products->appends(request()->query())->links() }}
-        </div>
-        @endif
-
-
+        
     </div>
 </div>
 @endsection
@@ -138,65 +126,64 @@
 @section('js')
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 <script>
-    $(document).ready(function() {
-        // Delete product confirmation
-        $(document).on('click', '.btn-delete', function() {
-            var $this = $(this);
-            var url = $this.data('url');
-
-            Swal.fire({
-                title: '{{ __("product.sure") }}'
-                , text: '{{ __("product.really_delete") }}'
-                , icon: 'warning'
-                , showCancelButton: true
-                , confirmButtonColor: '#d33'
-                , cancelButtonColor: '#3085d6'
-                , confirmButtonText: '{{ __("product.yes_delete") }}'
-                , cancelButtonText: '{{ __("product.No") }}'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: url
-                        , type: 'DELETE'
-                        , data: {
-                            _token: '{{ csrf_token() }}'
-                        }
-                        , success: function(res) {
-                            if (res.success) {
-                                $this.closest('tr').fadeOut(500, function() {
-                                    $(this).remove();
-
-                                    // Check if table is empty
-                                    if ($('tbody tr').length === 0) {
-                                        location.reload();
-                                    }
-                                });
-
-                                Swal.fire(
-                                    '{{ __("common.Deleted") }}'
-                                    , '{{ __("product.deleted_success") }}'
-                                    , 'success'
-                                );
-                            } else {
-                                Swal.fire(
-                                    '{{ __("common.Error") }}'
-                                    , res.message || '{{ __("product.error_deleting") }}'
-                                    , 'error'
-                                );
-                            }
-                        }
-                        , error: function(xhr) {
+$(document).ready(function() {
+    // Delete product confirmation
+    $(document).on('click', '.btn-delete', function() {
+        var $this = $(this);
+        var url = $this.data('url');
+        
+        Swal.fire({
+            title: '{{ __("product.sure") }}',
+            text: '{{ __("product.really_delete") }}',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: '{{ __("product.yes_delete") }}',
+            cancelButtonText: '{{ __("product.No") }}'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: url,
+                    type: 'DELETE',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(res) {
+                        if (res.success) {
+                            $this.closest('tr').fadeOut(500, function() {
+                                $(this).remove();
+                                
+                                // Check if table is empty
+                                if ($('tbody tr').length === 0) {
+                                    location.reload();
+                                }
+                            });
+                            
                             Swal.fire(
-                                '{{ __("common.Error") }}'
-                                , xhr.responseJSON ? .message || '{{ __("product.error_deleting") }}'
-                                , 'error'
+                                '{{ __("common.Deleted") }}',
+                                '{{ __("product.deleted_success") }}',
+                                'success'
+                            );
+                        } else {
+                            Swal.fire(
+                                '{{ __("common.Error") }}',
+                                res.message || '{{ __("product.error_deleting") }}',
+                                'error'
                             );
                         }
-                    });
-                }
-            });
+                    },
+                    error: function(xhr) {
+                        Swal.fire(
+                            '{{ __("common.Error") }}',
+                            xhr.responseJSON?.message || '{{ __("product.error_deleting") }}',
+                            'error'
+                        );
+                    }
+                });
+            }
         });
     });
-
+});
 </script>
 @endsection
