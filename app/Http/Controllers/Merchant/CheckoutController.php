@@ -26,21 +26,13 @@ class CheckoutController extends Controller
     public function processCheckout(Request $request)
     {
         try {
-            $user = Auth::user();
-            $cyclosUserId = $user->cyclos_user_id;
+            $customerCyclosId = $request->customer_id;
 
-            if (!$cyclosUserId) {
-                throw new \Exception('User does not have a Cyclos ID');
-            }
-
-            $buyerCyclosUserId = $request->customer_id;
-
-            if (!$buyerCyclosUserId) {
-                throw new \Exception('Buyer User does not have a Cyclos ID');
+            if (!$customerCyclosId) {
+                throw new \Exception('Customer ID is missing');
             }
 
             $cart = $this->cartService->getCart();
-
             if (empty($cart)) {
                 return response()->json([
                     'success' => false,
@@ -48,137 +40,62 @@ class CheckoutController extends Controller
                 ], 400);
             }
 
-            $originalTotal = $this->calculateTotal($cart);
-            $total = $originalTotal;
+            $total = $this->calculateTotal($cart);
+            $paymentMethod = $request->payment_method;
 
-            if ($request->payment_method === 'card') {
-                $total = $total * 1.035; // 3.5% fee
-                $total = round($total, 2);
+            // Validate allowed payment methods
+            $allowedMethods = ['cash', 'pax', 'pos_mobile', 'unyti'];
+            if (!in_array($paymentMethod, $allowedMethods)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid payment method'
+                ], 400);
             }
 
-            // Prepare order items for Cyclos API
-            $orderItems = [];
-            foreach ($cart as $item) {
-                $orderItems[] = [
-                    'quantity' => $item['pivot']['quantity'] ?? 1,
-                    'price' => floatval($item['price'] ?? 0),
-                    'product' => $item['cyclos_product_id'] ?? $item['id'], // Use Cyclos product ID
-                ];
+            // Prepare notes based on payment method
+            $notes = null;
+            if ($paymentMethod === 'unyti') {
+                $notes = "Unyti User ID: {$request->unyti_user_id}\nStatus: Pending payment via Unyti credits";
+            } elseif ($paymentMethod === 'pax') {
+                $notes = "Sent to PAX device – pending approval";
+            } elseif ($paymentMethod === 'pos_mobile') {
+                $notes = "Sent to POS mobile app – pending approval";
             }
 
-            // Prepare delivery address from request or use default
-            $deliveryAddress = [
-                'addressLine1' => $request->address_line1 ?? '',
-                'street' => $request->street ?? '',
-                'buildingNumber' => $request->building_number ?? '',
-                'zip' => $request->zip ?? '',
-                'city' => $request->city ?? '',
-                'region' => $request->region ?? '',
-                'country' => $request->country ?? 'US'
+            // Create local order
+            $order = $this->orderService->createOrder(
+                $customerCyclosId,
+                $cart,
+                $paymentMethod,
+                $total,
+                $notes
+            );
+
+            // Clear cart after successful order creation
+            $this->cartService->emptyCart();
+
+            // Build response
+            $responseData = [
+                'success' => true,
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'payment_method' => $paymentMethod,
+                'status' => $order->status,
             ];
 
-            // Prepare order data for createOrder method
-            $orderData = [
-                'delivery_method' => $request->delivery_method ?? 'pickup',
-                'delivery_price' => $request->delivery_price ?? 0,
-                'delivery_address' => $deliveryAddress,
-                'items' => $orderItems,
-                'currency' => 'unit',
-                'buyer_id' => $buyerCyclosUserId,
-            ];
-
-            // Process payment based on method
-            if ($request->payment_method === 'cash') {
-                $orderResult = $this->orderService->createOrder($cyclosUserId, $orderData);
-
-                if (!$orderResult['success']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Failed to create order: ' . ($orderResult['message'] ?? 'Unknown error')
-                    ], 400);
-                }
-
-                // Clear cart
-                $this->cartService->emptyCart();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Order completed successfully',
-                    'order_id' => $orderResult['order_id'],
-                    'order_data' => $orderResult['data'],
-                    'payment_method' => 'cash',
-                    'received_amount' => $request->received_amount ?? $total
-                ]);
-            } elseif ($request->payment_method === 'card') {
-                $paymentResult = $this->paymentService->processCardPayment(
-                    $request->card_data,
-                    $total
-                );
-
-                if ($paymentResult['success']) {
-                    $orderData['notes'] = "Payment ID: {$paymentResult['payment']->id}\nTransaction ID: {$paymentResult['transaction_id']}\nCard Fee: " . round($total - $originalTotal, 2);
-
-                    $orderResult = $this->orderService->createOrder($cyclosUserId, $orderData);
-
-                    if (!$orderResult['success']) {
-                        Log::critical('Payment processed but order creation failed', [
-                            'user_id' => $user->id,
-                            'payment_id' => $paymentResult['payment']->id,
-                            'transaction_id' => $paymentResult['transaction_id'],
-                            'error' => $orderResult['message']
-                        ]);
-
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Payment was processed but order creation failed. Please contact support.',
-                            'payment_id' => $paymentResult['payment']->id,
-                            'transaction_id' => $paymentResult['transaction_id']
-                        ], 500);
-                    }
-
-                    $this->cartService->emptyCart();
-
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Payment processed successfully',
-                        'order_id' => $orderResult['order_id'],
-                        'order_data' => $orderResult['data'],
-                        'payment_id' => $paymentResult['payment']->id,
-                        'transaction_id' => $paymentResult['transaction_id']
-                    ]);
-                } else {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $paymentResult['message']
-                    ], 400);
-                }
-            } elseif ($request->payment_method === 'unyti') {
-                $orderData['notes'] = "Unyti User ID: {$request->unyti_user_id}\nStatus: Pending Payment";
-                $orderResult = $this->orderService->createOrder($cyclosUserId, $orderData);
-
-                if (!$orderResult['success']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Failed to create order: ' . ($orderResult['message'] ?? 'Unknown error')
-                    ], 400);
-                }
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Unyti payment initiated',
-                    'order_id' => $orderResult['order_id'],
-                    'order_data' => $orderResult['data'],
-                    'payment_method' => 'unyti'
-                ]);
+            if ($paymentMethod === 'cash') {
+                $responseData['message'] = 'Order completed with cash payment';
+                $responseData['received_amount'] = $request->received_amount ?? $total;
+            } elseif ($paymentMethod === 'unyti') {
+                $responseData['message'] = 'Unyti payment initiated. Order is pending.';
+            } else {
+                $responseData['message'] = 'Order created successfully. Waiting for payment/approval.';
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid payment method'
-            ], 400);
+            return response()->json($responseData);
         } catch (\Exception $e) {
             Log::error('Checkout processing error', [
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
