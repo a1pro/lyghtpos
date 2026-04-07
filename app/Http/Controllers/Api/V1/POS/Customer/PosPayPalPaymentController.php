@@ -17,7 +17,7 @@ class PosPayPalPaymentController extends Controller
     }
 
     /**
-     * Create PayPal order for joining fees
+     * Step 1: Create PayPal order and return approval URL
      */
     public function createOrder(Request $request)
     {
@@ -51,18 +51,11 @@ class PosPayPalPaymentController extends Controller
                 'message' => 'PayPal order created successfully',
                 'data' => [
                     'order_id' => $result['order_id'],
-                    'approval_url' => $result['approval_url'],
+                    'approval_url' => $result['approval_url'],  // Send this to React Native
                     'user_joining_fee_id' => $result['user_joining_fee_id']
                 ]
             ]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'status_code' => 422,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -73,57 +66,9 @@ class PosPayPalPaymentController extends Controller
     }
 
     /**
-     * Capture PayPal payment after approval
+     * Step 2: Check if order is approved (call this after user returns from PayPal)
      */
-    public function capturePayment(Request $request)
-    {
-        try {
-            $request->validate([
-                'order_id' => 'required|string'
-            ]);
-
-            $result = $this->paypalService->capturePayment($request->order_id);
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'status_code' => 400,
-                    'message' => $result['message']
-                ], 400);
-            }
-
-            return response()->json([
-                'success' => true,
-                'status_code' => 200,
-                'message' => 'Payment captured successfully',
-                'data' => [
-                    'capture_id' => $result['capture_data']['id'] ?? null,
-                    'status' => $result['capture_data']['status'] ?? 'COMPLETED',
-                    'amount' => $result['capture_data']['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null,
-                    'user_joining_fee' => $result['user_joining_fee']
-                ]
-            ]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'status_code' => 422,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'status_code' => 500,
-                'message' => 'Something went wrong: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Check payment status
-     */
-    public function checkPaymentStatus(Request $request)
+    public function checkOrderStatus(Request $request)
     {
         try {
             $request->validate([
@@ -143,21 +88,14 @@ class PosPayPalPaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'status_code' => 200,
-                'message' => 'Payment status retrieved successfully',
+                'message' => 'Order status retrieved',
                 'data' => [
-                    'paypal_status' => $result['status'],
-                    'local_status' => $result['payment_status'],
-                    'user_joining_fee' => $result['user_joining_fee']
+                    'order_status' => $result['status'],
+                    'is_approved' => $result['status'] === 'APPROVED',
+                    'can_capture' => $result['status'] === 'APPROVED'
                 ]
             ]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'status_code' => 422,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -168,34 +106,56 @@ class PosPayPalPaymentController extends Controller
     }
 
     /**
-     * Get user's payment history
+     * Step 3: Capture payment (only after approval)
      */
-    public function getPaymentHistory()
+    public function capturePayment(Request $request)
     {
         try {
-            $userId = Auth::id();
+            $request->validate([
+                'order_id' => 'required|string'
+            ]);
+
+            // First check if order is approved
+            $statusResult = $this->paypalService->getPaymentStatus($request->order_id);
             
-            $payments = UserJoiningFees::where('user_id', $userId)
-                ->orderBy('created_at', 'desc')
-                ->get();
+            if (!$statusResult['success']) {
+                return response()->json([
+                    'success' => false,
+                    'status_code' => 400,
+                    'message' => 'Failed to check order status'
+                ], 400);
+            }
+
+            if ($statusResult['status'] !== 'APPROVED') {
+                return response()->json([
+                    'success' => false,
+                    'status_code' => 400,
+                    'message' => 'Order not approved yet. Please complete payment in PayPal first. Current status: ' . $statusResult['status'],
+                    'data' => [
+                        'approval_required' => true,
+                        'current_status' => $statusResult['status']
+                    ]
+                ], 400);
+            }
+
+            // Order is approved, now capture
+            $result = $this->paypalService->capturePayment($request->order_id);
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'status_code' => 400,
+                    'message' => $result['message']
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
                 'status_code' => 200,
-                'message' => 'Payment history retrieved successfully',
+                'message' => 'Payment captured successfully',
                 'data' => [
-                    'payments' => $payments->map(function($payment) {
-                        return [
-                            'id' => $payment->id,
-                            'amount' => $payment->amount,
-                            'transaction_id' => $payment->transaction_id,
-                            'status' => $payment->status,
-                            'created_at' => $payment->created_at,
-                            'updated_at' => $payment->updated_at
-                        ];
-                    }),
-                    'total_count' => $payments->count(),
-                    'total_amount' => $payments->where('status', 'completed')->sum('amount')
+                    'capture_id' => $result['capture_data']['id'] ?? null,
+                    'status' => 'COMPLETED'
                 ]
             ]);
 

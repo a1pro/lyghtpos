@@ -345,4 +345,28 @@ public function capturePayment($orderId)
         }
         return null;
     }
+
+
+    /**
+ * Check if order is approved and ready for capture
+ */
+public function isOrderApproved($orderId)
+{
+    try {
+        $accessToken = $this->getAccessToken();
+        
+        $response = Http::withToken($accessToken)
+            ->get($this->baseUrl . '/v2/checkout/orders/' . $orderId);
+            
+        if ($response->successful()) {
+            $orderData = $response->json();
+            return $orderData['status'] === 'APPROVED';
+        }
+        
+        return false;
+    } catch (\Exception $e) {
+        Log::error('Check order approval error: ' . $e->getMessage());
+        return false;
+    }
+}
 }
