@@ -20,6 +20,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 Route::post('check-email', [App\Http\Controllers\Auth\RegisterController::class, 'checkEmail'])->name('check.email');
 
+
+Route::get('paypal/success', function () {
+    return response()->json(['message' => 'Payment successful!']);
+})->name('paypal.success');
+
+Route::get('paypal/cancel', function () {
+    return response()->json(['message' => 'Payment cancelled!']);
+})->name('paypal.cancel');
+
+
 // Translations
 Route::get('/locale/{type}', function ($type) {
     $translations = trans($type);

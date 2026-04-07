@@ -5,14 +5,23 @@ use App\Http\Controllers\Api\V1\POS\Auth\PosRegisterController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerOrderController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use App\Http\Controllers\Api\V1\POS\Customer\PosJoiningFeesController;
+use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
+
+
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('pos')->group(function () {
     Route::post('login', [PosLoginController::class, 'login'])->name('pos.login');
     Route::post('register', [PosRegisterController::class, 'register'])->name('pos.register');
     Route::get('joining-plans',[PosJoiningFeesController::class,'getPlans']);
+    
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [PosLoginController::class, 'logout']);
+        Route::post('paypal/create-order', [PosPayPalPaymentController::class, 'createOrder']);
+        Route::post('paypal/capture-payment', [PosPayPalPaymentController::class, 'capturePayment']);
+        Route::get('paypal/payment-status', [PosPayPalPaymentController::class, 'checkPaymentStatus']);
+        Route::get('payments/history', [PosPayPalPaymentController::class, 'getPaymentHistory']);
+
 
         // ====================User Routes===============================
         Route::prefix('user')->group(function () {
@@ -23,6 +32,7 @@ Route::prefix('pos')->group(function () {
             /** ******* ORDER related routes ********** */
             Route::get('orders/pending', [PosCustomerOrderController::class, 'getPendingOrders']);
             Route::get('orders/history', [PosCustomerOrderController::class, 'getOrdersHistory']);
+            Route::get('joining/fees/status',[PosJoiningFeesController::class,'getPaymentStatus']);
         });
     });
 });
