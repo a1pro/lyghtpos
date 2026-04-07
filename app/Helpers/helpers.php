@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\Notification;
 use App\Models\GovernanceLayer;
 use App\Models\UserGovernanceLayer;
-
+use App\Models\Role;
 
 if (!function_exists('activeSegment')) {
     function activeSegment($name, $segment = 2, $class = 'active')
@@ -155,5 +155,16 @@ if (!function_exists('formatMoney')) {
         $currency = config('app.currency_symbol', '$');
         return $currency . ' ' . number_format($amount, 2);
     }
+
+// =======================Fetch All Roles====================
+
+if(!function_exists('userRoles')){
+    function userRoles()
+    {
+        return $role = Role::select('id','name')->get();
+
+    }
+}
+
 
 }
