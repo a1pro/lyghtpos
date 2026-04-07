@@ -13,6 +13,7 @@ use App\Http\Controllers\Management\SupplierController;
 use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
+use App\Http\Controllers\Admin\JoiningFeesController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -52,6 +53,17 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
         Route::get('/export', [AdminPayoutController::class, 'export'])->name('export');
         Route::get('/statistics', [AdminPayoutController::class, 'getStatistics'])->name('statistics');
     });
+
+
+   // routes/web.php
+Route::prefix('joining-fees-plans')->name('admin.joining-fees.')->group(function(){
+    Route::get('/', [JoiningFeesController::class, 'index'])->name('index');
+    Route::get('/create', [JoiningFeesController::class, 'create'])->name('create');
+    Route::post('/store', [JoiningFeesController::class, 'store'])->name('store');
+    Route::get('/{id}/edit', [JoiningFeesController::class, 'edit'])->name('edit'); // Added {id}
+    Route::put('/{id}', [JoiningFeesController::class, 'update'])->name('update'); // Added update
+    Route::delete('/{id}', [JoiningFeesController::class, 'destroy'])->name('destroy'); // Changed to DELETE method
+});
 
     // ===================================Merchant List===========================================================
 
