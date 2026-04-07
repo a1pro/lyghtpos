@@ -46,4 +46,25 @@ class PosJoiningFeesController extends Controller
             ], 500);
         }
     }
+
+
+    public function getPaymentStatus()
+    {
+        try {
+            $result = $this->joiningFees->getJoiningStatus();
+            
+            return response()->json([
+                'success' => true,
+                'status_code' => 200,
+                'message' => 'Status fetched successfully',
+                'has_paid' => $result['has_paid']  // Returns true if data exists, false if not
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'Something went wrong: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
