@@ -16,19 +16,12 @@ use App\Http\Controllers\Settings\SettingController;
 use App\Http\Controllers\Admin\JoiningFeesController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 Route::post('check-email', [App\Http\Controllers\Auth\RegisterController::class, 'checkEmail'])->name('check.email');
-
-
-Route::get('paypal/success', function () {
-    return response()->json(['message' => 'Payment successful!']);
-})->name('paypal.success');
-
-Route::get('paypal/cancel', function () {
-    return response()->json(['message' => 'Payment cancelled!']);
-})->name('paypal.cancel');
-
+Route::get('/paypal/success', [PosPayPalPaymentController::class, 'paypalSuccess'])->name('paypal.success');
+Route::get('/paypal/cancel', [PosPayPalPaymentController::class, 'paypalCancel'])->name('paypal.cancel');
+Route::get('/test', [PosPayPalPaymentController::class, 'test']);
 
 // Translations
 Route::get('/locale/{type}', function ($type) {

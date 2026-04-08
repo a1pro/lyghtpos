@@ -17,10 +17,12 @@ Route::prefix('pos')->group(function () {
     
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [PosLoginController::class, 'logout']);
-        Route::post('paypal/create-order', [PosPayPalPaymentController::class, 'createOrder']);
-        Route::post('paypal/capture-payment', [PosPayPalPaymentController::class, 'capturePayment']);
-        Route::get('paypal/payment-status', [PosPayPalPaymentController::class, 'checkPaymentStatus']);
-        Route::get('payments/history', [PosPayPalPaymentController::class, 'getPaymentHistory']);
+        Route::prefix('paypal')->group(function () {
+            Route::post('create-order', [PosPayPalPaymentController::class, 'createOrder']);
+            Route::post('capture-payment', [PosPayPalPaymentController::class, 'capturePayment']);
+            Route::get('payment-status', [PosPayPalPaymentController::class, 'checkPaymentStatus']);
+            Route::get('payment-history', [PosPayPalPaymentController::class, 'getPaymentHistory']);
+        });
 
 
         // ====================User Routes===============================
