@@ -4,6 +4,7 @@ namespace App\Services\Api\POS\Auth;
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Models\Merchant;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -25,6 +26,19 @@ class PosAuthService
         if (User::where('phone', $data['phone'])->exists()) {
             throw ValidationException::withMessages(['phone' => 'Phone number is already taken']);
         }
+        $referalCode = $data['referal_code'];
+        
+        if(!empty($referalCode)){
+            $merchantReferal = Merchant::where('merchant_id',$referalCode)->exists();
+
+            if(!$merchantReferal){
+                throw new \Exception('Invalid referral code');
+            }
+            $merchantCode = Merchant::where('merchant_id',$referalCode)->value('user_id');
+
+        }
+        
+      
 
         $user = User::create([
             'first_name' => $data['first_name'],
@@ -34,6 +48,7 @@ class PosAuthService
             'location' => $data['location'],
             'role_id' => 11,
             'password' => Hash::make($data['password']),
+            'merchant_id' => $merchantCode ?? NULL
         ]);
 
         $customer = Customer::create([

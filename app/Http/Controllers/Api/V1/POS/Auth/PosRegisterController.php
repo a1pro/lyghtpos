@@ -16,12 +16,12 @@ class PosRegisterController extends Controller
 {
     protected $posAuthService;
 
-    protected $cyclosUserService;
+ 
 
-    public function __construct(PosAuthService $posAuthService, CyclosUserService $cyclosUserService)
+    public function __construct(PosAuthService $posAuthService)
     {
         $this->posAuthService = $posAuthService;
-        $this->cyclosUserService = $cyclosUserService;
+        
     }
 
     public function register(PosRegisterRequest $request)
@@ -40,18 +40,7 @@ class PosRegisterController extends Controller
             }
 
             // Create user in Cyclos
-            $cyclosResponse = $this->createCyclosUser($user, $request);
-
-            if (! $cyclosResponse || ! isset($cyclosResponse['user_id'])) {
-                throw new \Exception('Failed to create user in Cyclos system');
-            }
-
-            // Update user with Cyclos ID (if you have a column for it)
-            $user->cyclos_user_id = $cyclosResponse['user_id'];
-            $user->cyclos_username = $cyclosResponse['username'] ?? null;
-            $user->cyclos_group = $cyclosResponse['group'] ?? null;
-            $user->cyclos_user_password = $cyclosResponse['password'] ?? null; // Optional: store the generated password
-            $user->save();
+         
 
             DB::commit();
 
@@ -84,7 +73,7 @@ class PosRegisterController extends Controller
                 'data' => [
                     'user' => $user,
                     'token' => $result['token'],
-                    'cyclos_user_id' => $cyclosResponse['user_id'],
+                   
                 ],
             ], 201);
 
@@ -108,49 +97,5 @@ class PosRegisterController extends Controller
     /**
      * Create user in Cyclos system
      */
-    protected function createCyclosUser(User $user, PosRegisterRequest $request): ?array
-    {
-        try {
-            // Prepare additional data for Cyclos based on POS user
-            $additionalData = [
-                'business_name' => $request->business_name ?? ($user->first_name.' '.$user->last_name),
-                'phone' => $request->phone,
-                'location' => $request->location,
-                'website' => $request->website ?? '',
-                'pos_user_id' => $user->id,
-                'role' => 'POS_USER', // Specify POS role in Cyclos
-                'user_type' => 'POS', // Mark as POS user
-            ];
-
-            // Call Cyclos service to create user
-            $response = $this->cyclosUserService->createUser($user, $additionalData);
-
-            if ($response && isset($response['user_id'])) {
-                Log::info('Cyclos user created successfully for POS user', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'cyclos_user_id' => $response['user_id'],
-                ]);
-
-                return $response;
-            } else {
-                Log::error('Failed to create Cyclos user for POS user', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'response' => $response,
-                ]);
-
-                return null;
-            }
-        } catch (\Exception $e) {
-            Log::error('Exception while creating Cyclos user for POS user', [
-                'user_id' => $user->id ?? null,
-                'email' => $user->email ?? null,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return null;
-        }
-    }
+   
 }

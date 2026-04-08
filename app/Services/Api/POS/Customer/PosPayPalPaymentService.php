@@ -19,7 +19,6 @@ class PosPayPalPaymentService
         $this->mode = config('services.paypal.mode', 'sandbox');
         $this->currency = config('services.paypal.currency', 'USD');
         
-        // Set credentials based on mode
         if ($this->mode === 'live') {
             $this->clientId = config('services.paypal.live.client_id');
             $this->clientSecret = config('services.paypal.live.client_secret');
@@ -30,7 +29,6 @@ class PosPayPalPaymentService
             $this->baseUrl = 'https://api.sandbox.paypal.com';
         }
 
-        // Validate credentials
         if (!$this->clientId || !$this->clientSecret) {
             Log::error('PayPal credentials not configured properly');
         }
@@ -65,12 +63,11 @@ class PosPayPalPaymentService
     }
 
     /**
-     * Create a PayPal order for Mobile App
+     * Create PayPal order
      */
-    public function createOrder($amount, $userId)
+    public function createOrder($amount, $userId, $successUrl, $cancelUrl, $referralCode = null)
     {
         try {
-            // Validate amount
             if (!is_numeric($amount) || $amount <= 0) {
                 return [
                     'success' => false,
@@ -79,8 +76,6 @@ class PosPayPalPaymentService
             }
 
             $accessToken = $this->getAccessToken();
-            
-            // Format amount to 2 decimal places
             $formattedAmount = number_format($amount, 2, '.', '');
 
             $orderData = [
@@ -91,42 +86,31 @@ class PosPayPalPaymentService
                         'description' => 'Joining Fees Payment',
                         'amount' => [
                             'currency_code' => $this->currency,
-                            'value' => $formattedAmount,
-                            'breakdown' => [
-                                'item_total' => [
-                                    'currency_code' => $this->currency,
-                                    'value' => $formattedAmount
-                                ]
-                            ]
-                        ],
-                        'items' => [
-                            [
-                                'name' => 'Joining Fees',
-                                'description' => 'Payment for joining fees',
-                                'unit_amount' => [
-                                    'currency_code' => $this->currency,
-                                    'value' => $formattedAmount
-                                ],
-                                'quantity' => '1',
-                                'category' => 'DIGITAL_GOODS'
-                            ]
+                            'value' => $formattedAmount
                         ],
                         'custom_id' => json_encode([
                             'user_id' => $userId,
-                            'amount' => $amount
+                            'amount' => $amount,
+                            'referral_code' => $referralCode
                         ])
                     ]
                 ],
                 'application_context' => [
                     'brand_name' => config('app.name', 'My App'),
-                    'locale' => 'en-US',  // FIXED: Changed from 'en_US' to 'en-US'
+                    'locale' => 'en-US',
                     'user_action' => 'PAY_NOW',
-                    'shipping_preference' => 'NO_SHIPPING'
+                    'shipping_preference' => 'NO_SHIPPING',
+                    'return_url' => $successUrl,
+                    'cancel_url' => $cancelUrl
                 ]
             ];
 
-            Log::info('Creating PayPal order for user: ' . $userId . ', amount: ' . $amount);
-            Log::debug('PayPal order data: ' . json_encode($orderData));
+            Log::info('Creating PayPal order', [
+                'user_id' => $userId,
+                'amount' => $amount,
+                'success_url' => $successUrl,
+                'cancel_url' => $cancelUrl
+            ]);
 
             $response = Http::withToken($accessToken)
                 ->withHeaders([
@@ -138,21 +122,21 @@ class PosPayPalPaymentService
             if ($response->successful()) {
                 $orderData = $response->json();
                 
-                // Create a pending record in user_joining_fees table
-                $userJoiningFee = UserJoiningFees::create([
+                // Create pending record
+                UserJoiningFees::create([
                     'user_id' => $userId,
                     'amount' => $amount,
                     'transaction_id' => $orderData['id'],
-                    'status' => 'pending'
+                    'status' => 'pending',
+                    'referral_code' => $referralCode
                 ]);
 
-                Log::info('PayPal order created successfully. Order ID: ' . $orderData['id']);
+                Log::info('PayPal order created successfully', ['order_id' => $orderData['id']]);
 
                 return [
                     'success' => true,
                     'order_id' => $orderData['id'],
-                    'approval_url' => $this->getApprovalUrl($orderData),
-                    'user_joining_fee_id' => $userJoiningFee->id
+                    'approval_url' => $this->getApprovalUrl($orderData)
                 ];
             }
 
@@ -174,78 +158,87 @@ class PosPayPalPaymentService
     }
 
     /**
-     * Capture PayPal payment
+     * Capture PayPal payment using cURL
      */
-   /**
- * Capture PayPal payment - cURL alternative
- */
-public function capturePayment($orderId)
-{
-    try {
-        $accessToken = $this->getAccessToken();
-        
-        $url = $this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture';
-        
-        Log::info('Capturing payment via cURL. URL: ' . $url);
-        
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, '{}');  // Empty JSON body
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $accessToken,
-            'Content-Length: ' . strlen('{}')
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        Log::debug('cURL Response Code: ' . $httpCode);
-        Log::debug('cURL Response Body: ' . $response);
-        
-        if ($httpCode === 200 || $httpCode === 201) {
-            $captureData = json_decode($response, true);
+    public function capturePayment($orderId)
+    {
+        try {
+            $accessToken = $this->getAccessToken();
+            $url = $this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture';
             
-            // Update the user_joining_fees record
-            $userJoiningFee = UserJoiningFees::where('transaction_id', $orderId)->first();
+            Log::info('Capturing payment', ['order_id' => $orderId, 'url' => $url]);
             
-            if ($userJoiningFee) {
-                $userJoiningFee->update([
-                    'status' => 'completed',
-                    'transaction_id' => $captureData['id']
-                ]);
+            // Use cURL for empty POST request
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $accessToken,
+                'Accept: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, '{}'); // Empty JSON object
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For sandbox only
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            Log::debug('Capture response', [
+                'http_code' => $httpCode,
+                'response' => substr($response, 0, 500) // Log first 500 chars
+            ]);
+            
+            if ($httpCode === 200 || $httpCode === 201) {
+                $captureData = json_decode($response, true);
+                
+                $userJoiningFee = UserJoiningFees::where('transaction_id', $orderId)->first();
+                
+                if ($userJoiningFee) {
+                    $captureId = $captureData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
+                    $userJoiningFee->update([
+                        'status' => 'completed',
+                        'capture_id' => $captureId,
+                        'paypal_response' => $response
+                    ]);
+                }
+                
+                Log::info('Payment captured successfully', ['order_id' => $orderId]);
+                
+                return [
+                    'success' => true,
+                    'capture_data' => $captureData,
+                    'user_joining_fee' => $userJoiningFee
+                ];
             }
             
+            $errorData = json_decode($response, true);
+            $errorMessage = $errorData['message'] ?? 'Unknown error';
+            
+            UserJoiningFees::where('transaction_id', $orderId)->update(['status' => 'failed']);
+            
+            Log::error('Payment capture failed', [
+                'order_id' => $orderId,
+                'http_code' => $httpCode,
+                'error' => $errorMessage
+            ]);
+            
             return [
-                'success' => true,
-                'capture_data' => $captureData,
-                'user_joining_fee' => $userJoiningFee
+                'success' => false,
+                'message' => $errorMessage
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('PayPal capture payment error: ' . $e->getMessage());
+            
+            UserJoiningFees::where('transaction_id', $orderId)->update(['status' => 'failed']);
+            
+            return [
+                'success' => false,
+                'message' => 'Payment capture error: ' . $e->getMessage()
             ];
         }
-        
-        // Update status to failed
-        UserJoiningFees::where('transaction_id', $orderId)
-            ->update(['status' => 'failed']);
-            
-        return [
-            'success' => false,
-            'message' => 'Payment capture failed. HTTP Code: ' . $httpCode . ', Response: ' . $response
-        ];
-        
-    } catch (\Exception $e) {
-        Log::error('PayPal capture payment error: ' . $e->getMessage());
-        
-        UserJoiningFees::where('transaction_id', $orderId)
-            ->update(['status' => 'failed']);
-            
-        return [
-            'success' => false,
-            'message' => 'Payment capture error: ' . $e->getMessage()
-        ];
     }
-}
 
     /**
      * Get payment status
@@ -260,9 +253,12 @@ public function capturePayment($orderId)
 
             if ($response->successful()) {
                 $orderData = $response->json();
-                
-                // Get local record
                 $userJoiningFee = UserJoiningFees::where('transaction_id', $orderId)->first();
+                
+                // Sync status with local database
+                if ($orderData['status'] === 'COMPLETED' && $userJoiningFee && $userJoiningFee->status === 'pending') {
+                    $userJoiningFee->update(['status' => 'completed']);
+                }
                 
                 return [
                     'success' => true,
@@ -288,52 +284,6 @@ public function capturePayment($orderId)
     }
 
     /**
-     * Refund payment
-     */
-    public function refundPayment($captureId, $amount = null)
-    {
-        try {
-            $accessToken = $this->getAccessToken();
-            
-            $refundData = [];
-            if ($amount !== null) {
-                $refundData = [
-                    'amount' => [
-                        'currency_code' => $this->currency,
-                        'value' => number_format($amount, 2, '.', '')
-                    ]
-                ];
-            }
-            
-            $response = Http::withToken($accessToken)
-                ->post($this->baseUrl . '/v2/payments/captures/' . $captureId . '/refund', $refundData);
-                
-            if ($response->successful()) {
-                // Update local record
-                UserJoiningFees::where('transaction_id', $captureId)
-                    ->update(['status' => 'refunded']);
-                    
-                return [
-                    'success' => true,
-                    'refund_data' => $response->json()
-                ];
-            }
-            
-            return [
-                'success' => false,
-                'message' => 'Refund failed: ' . $response->body()
-            ];
-            
-        } catch (\Exception $e) {
-            Log::error('PayPal refund error: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => 'Refund error: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
      * Extract approval URL from order response
      */
     private function getApprovalUrl($orderData)
@@ -345,28 +295,4 @@ public function capturePayment($orderId)
         }
         return null;
     }
-
-
-    /**
- * Check if order is approved and ready for capture
- */
-public function isOrderApproved($orderId)
-{
-    try {
-        $accessToken = $this->getAccessToken();
-        
-        $response = Http::withToken($accessToken)
-            ->get($this->baseUrl . '/v2/checkout/orders/' . $orderId);
-            
-        if ($response->successful()) {
-            $orderData = $response->json();
-            return $orderData['status'] === 'APPROVED';
-        }
-        
-        return false;
-    } catch (\Exception $e) {
-        Log::error('Check order approval error: ' . $e->getMessage());
-        return false;
-    }
-}
 }
