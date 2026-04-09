@@ -32,9 +32,19 @@ Route::prefix('pos')->group(function () {
             Route::get('wallet/balance',[PosCustomerWallet::class,'getBalance']);
 
             /** ******* ORDER related routes ********** */
-            Route::get('orders/pending', [PosCustomerOrderController::class, 'getPendingOrders']);
-            Route::get('orders/history', [PosCustomerOrderController::class, 'getOrdersHistory']);
+            Route::prefix('order')->group(function(){
+            Route::get('pending', [PosCustomerOrderController::class, 'getPendingOrders']);
+            Route::get('history', [PosCustomerOrderController::class, 'getOrdersHistory']);
+            Route::post('purchase', [PosCustomerOrderController::class, 'purchaseOrder']);
+        });
+
+
+
+            /**  ************Joining Fees Related Routes****************** */
             Route::get('joining/fees/status',[PosJoiningFeesController::class,'getPaymentStatus']);
+
+
+            
         });
     });
 });

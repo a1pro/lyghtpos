@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\POS\Customer;
 use App\Http\Controllers\Controller;
 use App\Services\Api\POS\Auth\PosAuthService;
 use App\Services\Api\POS\Customer\PosCustomerOrderService;
+use App\Http\Requests\Api\POS\Customer\PosPurchaseOrderRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -69,4 +70,40 @@ class PosCustomerOrderController extends Controller
             ]);
         }
     }
+
+
+    public function purchaseOrder(PosPurchaseOrderRequest $request)
+    {
+        try{
+            DB::beginTransaction();
+    
+            $data = $this->customerOrderService->purchaseOrder($request->validated());
+    
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'status_code'  => 200,
+                'message' => 'Order Purchase Successfully'
+            ]);
+        }
+        catch(\Exception $e){
+            DB::rollback();
+            
+            // Check if it's the insufficient balance error
+            if ($e->getMessage() == "You don't have sufficient wallet balance to complete the payment") {
+                return response()->json([
+                    'success' => false,
+                    'status_code' => 400,
+                    'message' => $e->getMessage()
+                ]);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'Something went wrong: ' . $e->getMessage()
+            ]);
+        }
+    }
+
 }
