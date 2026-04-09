@@ -13,12 +13,18 @@ class CustomerRegisterMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public User $user;
+    public string $otp;
+    public string $validity;
+
     /**
      * Create a new message instance.
      */
-    public function __construct(User $user)
+    public function __construct(User $user, string $otp, string $validity)
     {
         $this->user = $user;
+        $this->otp = $otp;
+        $this->validity = $validity;
     }
 
     /**
@@ -27,7 +33,7 @@ class CustomerRegisterMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Welcome to Lyght POS',
+            subject: 'Welcome to Lyght POS - Your OTP Code',
         );
     }
 
@@ -40,6 +46,8 @@ class CustomerRegisterMail extends Mailable
             view: 'emails.pos.customer.customer-register-mail',
             with: [
                 'user' => $this->user,
+                'otp' => $this->otp,
+                'validity' => $this->validity,
                 'appName' => 'Lyght POS',
                 'appUrl' => config('app.url'),
                 'currentYear' => now()->year,
