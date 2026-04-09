@@ -90,7 +90,7 @@ class PosRegisterController extends Controller
         }
     }
     // ======================Register OTP Verification==========================
-    public function optVerification(PosOtpVerificationRequest $request)
+    public function otpVerification(PosOtpVerificationRequest $request)
     {
         try {
             DB::beginTransaction();
