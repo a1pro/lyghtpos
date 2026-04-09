@@ -16,6 +16,7 @@ Route::prefix('pos')->group(function () {
     Route::get('joining-plans',[PosJoiningFeesController::class,'getPlans']);
     
     Route::middleware('auth:sanctum')->group(function () {
+
         Route::post('logout', [PosLoginController::class, 'logout']);
         Route::prefix('paypal')->group(function () {
             Route::post('create-order', [PosPayPalPaymentController::class, 'createOrder']);
@@ -27,7 +28,8 @@ Route::prefix('pos')->group(function () {
 
         // ====================User Routes===============================
         Route::prefix('user')->group(function () {
-
+            Route::post('opt/verification', [PosRegisterController::class, 'optVerification']);
+            Route::post('opt/resend', [PosRegisterController::class, 'resendOtp']);
             Route::get('profile', [PosLoginController::class, 'userProfile']);
             Route::get('wallet/balance',[PosCustomerWallet::class,'getBalance']);
 

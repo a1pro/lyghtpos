@@ -37,6 +37,10 @@ class User extends Authenticatable
         'wallet_amount',
         'phone',
         'location',
+        'otp',
+        'time_validity',
+        'email_verified',
+        'email_verified_at'
     ];
 
     /**
