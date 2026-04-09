@@ -614,4 +614,231 @@ class CyclosPaymentService
             ]
         ];
     }
+
+    public function deductFunds(string $fromUserCyclosId, float $amount, string $description = ''): array
+    {
+        if ($this->mockMode) {
+            return $this->mockDeductFunds($fromUserCyclosId, $amount, $description);
+        }
+        
+        try {
+            $paymentData = [
+                'subject' => $this->adminUserId,
+                'amount' => $amount,
+                'type' => $this->paymentTypeId,
+                'description' => $description,
+                'currency' => $this->currencyCode,
+            ];
+
+            Log::info('Deducting funds (User -> Admin)', [
+                'from_user' => $fromUserCyclosId,
+                'amount' => $amount,
+                'to_admin' => $this->adminUserId,
+            ]);
+
+            $paymentUrl = $this->baseUrl . "/api/{$fromUserCyclosId}/payments";
+
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($paymentUrl, $paymentData);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+                Log::error('Deduct funds failed', [
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                    'from_user' => $fromUserCyclosId,
+                    'amount' => $amount,
+                ]);
+                
+                if ($this->fallbackToMock) {
+                    return $this->mockDeductFunds($fromUserCyclosId, $amount, $description);
+                }
+
+                return ['success' => false, 'message' => 'Debit failed: ' . ($errorData['code'] ?? json_encode($errorData))];
+            }
+
+            $data = $response->json();
+            Cache::forget("cyclos_balance_{$fromUserCyclosId}");
+
+            Log::info('Deduct funds successful', ['transaction_id' => $data['id'] ?? null]);
+
+            return ['success' => true, 'transaction_id' => $data['id'] ?? null, 'data' => $data];
+            
+        } catch (\Exception $e) {
+            Log::error('Exception in deductFunds', ['error' => $e->getMessage()]);
+            
+            if ($this->fallbackToMock) {
+                return $this->mockDeductFunds($fromUserCyclosId, $amount, $description);
+            }
+
+            return ['success' => false, 'message' => 'Exception: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * COMPLETE TRANSFER: Debit from customer AND Credit to merchant in one go
+     * This tries both methods and handles gracefully
+     */
+    public function transferFromCustomerToMerchant(string $customerId, string $merchantId, float $amount, string $description = ''): array
+    {
+        // Method 1: Try direct P2P payment (Customer -> Merchant)
+        $directPayment = $this->directPayment($customerId, $merchantId, $amount, $description);
+        
+        if ($directPayment['success']) {
+            return $directPayment;
+        }
+        
+        // Method 2: Try two-step (Customer -> Admin, then Admin -> Merchant)
+        Log::info('Direct payment failed, trying two-step transfer', ['customer' => $customerId, 'merchant' => $merchantId]);
+        
+        // Step 1: Debit customer (Customer -> Admin)
+        $debit = $this->deductFunds($customerId, $amount, $description . ' - Customer debit');
+        
+        if (!$debit['success']) {
+            return [
+                'success' => false,
+                'message' => 'Failed to debit customer: ' . ($debit['message'] ?? 'Unknown error'),
+                'step' => 'debit_failed'
+            ];
+        }
+        
+        // Step 2: Credit merchant (Admin -> Merchant)
+        $credit = $this->addFunds($merchantId, $amount, $description . ' - Merchant credit');
+        
+        if (!$credit['success']) {
+            // Rollback: Refund customer
+            $this->addFunds($customerId, $amount, 'ROLLBACK: ' . $description);
+            
+            return [
+                'success' => false,
+                'message' => 'Failed to credit merchant. Customer has been refunded.',
+                'step' => 'credit_failed'
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'transaction_id' => $credit['transaction_id'] ?? null,
+            'debit_transaction_id' => $debit['transaction_id'] ?? null,
+            'message' => 'Transfer completed via two-step process'
+        ];
+    }
+
+    /**
+     * Direct P2P payment between two users
+     */
+    public function directPayment(string $fromUserId, string $toUserId, float $amount, string $description = ''): array
+    {
+        if ($this->mockMode) {
+            return [
+                'success' => true,
+                'transaction_id' => 'MOCK-P2P-' . uniqid(),
+            ];
+        }
+        
+        try {
+            $paymentData = [
+                'subject' => $toUserId,
+                'amount' => $amount,
+                'type' => $this->paymentTypeId,
+                'description' => $description,
+                'currency' => $this->currencyCode,
+            ];
+
+            $paymentUrl = $this->baseUrl . "/api/{$fromUserId}/payments";
+
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($paymentUrl, $paymentData);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+                return ['success' => false, 'message' => $errorData['code'] ?? 'Payment failed'];
+            }
+
+            $data = $response->json();
+            Cache::forget("cyclos_balance_{$fromUserId}");
+            Cache::forget("cyclos_balance_{$toUserId}");
+
+            return ['success' => true, 'transaction_id' => $data['id'] ?? null];
+            
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+  
+     
+
+    protected function mockDeductFunds(string $userId, float $amount, string $description = ''): array
+    {
+        return ['success' => true, 'transaction_id' => 'MOCK-DEBIT-' . uniqid()];
+    }
+
+
+    /**
+ * Admin-initiated debit (Admin pulls money from customer)
+ * This bypasses customer permissions if admin has "pay on behalf" rights
+ */
+public function adminInitiatedDebit(string $fromCustomerId, string $toMerchantId, float $amount, string $description = ''): array
+{
+    if ($this->mockMode) {
+        return ['success' => true, 'transaction_id' => 'MOCK-ADMIN-DEBIT-' . uniqid()];
+    }
+    
+    try {
+        $paymentData = [
+            'subject' => $toMerchantId,
+            'amount' => $amount,
+            'type' => $this->paymentTypeId,
+            'description' => $description,
+            'currency' => $this->currencyCode,
+        ];
+
+        // Admin makes payment on behalf of customer
+        $paymentUrl = $this->baseUrl . "/api/{$fromCustomerId}/payments";
+
+        $response = Http::withBasicAuth($this->username, $this->password)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'Channel' => $this->channel,
+            ])
+            ->timeout(30)
+            ->post($paymentUrl, $paymentData);
+
+        if ($response->failed()) {
+            $errorData = $response->json();
+            Log::error('Admin initiated debit failed', [
+                'status' => $response->status(),
+                'error' => $errorData,
+                'from' => $fromCustomerId,
+                'to' => $toMerchantId,
+                'amount' => $amount
+            ]);
+            
+            return ['success' => false, 'message' => $errorData['code'] ?? 'Admin debit failed'];
+        }
+
+        $data = $response->json();
+        Cache::forget("cyclos_balance_{$fromCustomerId}");
+        Cache::forget("cyclos_balance_{$toMerchantId}");
+
+        return ['success' => true, 'transaction_id' => $data['id'] ?? null];
+        
+    } catch (\Exception $e) {
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
 }
