@@ -33,7 +33,7 @@ class PosCustomerOrderController extends Controller
             return response()->json([
                 'success' => true,
                 'status_code' => 200,
-                'message' => 'Peding orders retrieved successfully',
+                'message' => 'Pending orders retrieved successfully',
                 'data' => $data
             ]);
         } catch (\Exception $e) {
@@ -59,7 +59,7 @@ class PosCustomerOrderController extends Controller
             return response()->json([
                 'success' => true,
                 'status_code' => 200,
-                'message' => 'Peding orders retrieved successfully',
+                'message' => 'Order history retrieved successfully',
                 'data' => $data
             ]);
         } catch (\Exception $e) {

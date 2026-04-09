@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminMerchantController;
 use App\Http\Controllers\Admin\AdminPayoutController;
+use App\Http\Controllers\Admin\AdminTokenBundleController;
 use App\Http\Controllers\Admin\AppSettingController;
 use App\Http\Controllers\Admin\GovernanceLayerController;
 use App\Http\Controllers\Admin\HomeController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Admin\JoiningFeesController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
+
 Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 Route::post('check-email', [App\Http\Controllers\Auth\RegisterController::class, 'checkEmail'])->name('check.email');
 Route::get('/paypal/success', [PosPayPalPaymentController::class, 'paypalSuccess'])->name('paypal.success');
@@ -58,15 +60,25 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
     });
 
 
-   // routes/web.php
-Route::prefix('joining-fees-plans')->name('admin.joining-fees.')->group(function(){
-    Route::get('/', [JoiningFeesController::class, 'index'])->name('index');
-    Route::get('/create', [JoiningFeesController::class, 'create'])->name('create');
-    Route::post('/store', [JoiningFeesController::class, 'store'])->name('store');
-    Route::get('/{id}/edit', [JoiningFeesController::class, 'edit'])->name('edit'); // Added {id}
-    Route::put('/{id}', [JoiningFeesController::class, 'update'])->name('update'); // Added update
-    Route::delete('/{id}', [JoiningFeesController::class, 'destroy'])->name('destroy'); // Changed to DELETE method
-});
+    // routes/web.php
+    Route::prefix('joining-fees-plans')->name('admin.joining-fees.')->group(function () {
+        Route::get('/', [JoiningFeesController::class, 'index'])->name('index');
+        Route::get('/create', [JoiningFeesController::class, 'create'])->name('create');
+        Route::post('/store', [JoiningFeesController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [JoiningFeesController::class, 'edit'])->name('edit'); // Added {id}
+        Route::put('/{id}', [JoiningFeesController::class, 'update'])->name('update'); // Added update
+        Route::delete('/{id}', [JoiningFeesController::class, 'destroy'])->name('destroy'); // Changed to DELETE method
+    });
+
+    /** ********************************* Token Bundles ***************************************** */
+    Route::prefix('token-bundles')->name('admin.token-bundles.')->group(function () {
+        Route::get('/', [AdminTokenBundleController::class, 'index'])->name('index');
+        Route::get('/create', [AdminTokenBundleController::class, 'create'])->name('create');
+        Route::post('/store', [AdminTokenBundleController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [AdminTokenBundleController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [AdminTokenBundleController::class, 'update'])->name('update');
+        Route::delete('/{id}', [AdminTokenBundleController::class, 'destroy'])->name('destroy');
+    });
 
     // ===================================Merchant List===========================================================
 
@@ -164,8 +176,8 @@ Route::prefix('joining-fees-plans')->name('admin.joining-fees.')->group(function
     })->name('lang.switch');
 });
 
-require __DIR__.'/merchant.php';
-require __DIR__.'/subadmin.php';
-require __DIR__.'/favor-member.php';
-require __DIR__.'/team-member/merchant/manager.php';
-require __DIR__.'/team-member/merchant/cashier.php';
+require __DIR__ . '/merchant.php';
+require __DIR__ . '/subadmin.php';
+require __DIR__ . '/favor-member.php';
+require __DIR__ . '/team-member/merchant/manager.php';
+require __DIR__ . '/team-member/merchant/cashier.php';

@@ -121,6 +121,7 @@
                     </a>
                 </li>
 
+                <!-- Plans -->
                 <li class="nav-header">Plans</li>
                 <li class="nav-item">
                     <a href="{{ route('admin.joining-fees.index') }}" class="nav-link {{ request()->routeIs('admin.joining-fees.index') ? 'active' : '' }}">
@@ -128,6 +129,13 @@
                         <p>Joining Fees</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.token-bundles.index') }}" class="nav-link {{ request()->routeIs('admin.token-bundles.index') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-truck"></i>
+                        <p>Token Bundles</p>
+                    </a>
+                </li>
+
                 <!-- Admin Extra Section -->
                 <li class="nav-header">{{ __('Extra') }}</li>
 
