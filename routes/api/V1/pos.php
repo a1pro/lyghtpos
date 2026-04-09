@@ -6,15 +6,19 @@ use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerOrderController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use App\Http\Controllers\Api\V1\POS\Customer\PosJoiningFeesController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
-
-
+use App\Http\Controllers\Api\V1\POS\Customer\PosTokenBundleController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('pos')->group(function () {
+    /** ******************* Auth Routes ******************** */
     Route::post('login', [PosLoginController::class, 'login'])->name('pos.login');
     Route::post('register', [PosRegisterController::class, 'register'])->name('pos.register');
-    Route::get('joining-plans',[PosJoiningFeesController::class,'getPlans']);
-    
+
+    Route::get('joining-plans', [PosJoiningFeesController::class, 'getPlans']);
+
+    /**  *************** Token Bundle Routes ********************* */
+    Route::get('bundle/active', [PosTokenBundleController::class, 'getActiveTokenBundles']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [PosLoginController::class, 'logout']);
         Route::prefix('paypal')->group(function () {
@@ -24,27 +28,21 @@ Route::prefix('pos')->group(function () {
             Route::get('payment-history', [PosPayPalPaymentController::class, 'getPaymentHistory']);
         });
 
-
-        // ====================User Routes===============================
+        /** ************** User Routes ************************ */
         Route::prefix('user')->group(function () {
 
             Route::get('profile', [PosLoginController::class, 'userProfile']);
-            Route::get('wallet/balance',[PosCustomerWallet::class,'getBalance']);
+            Route::get('wallet/balance', [PosCustomerWallet::class, 'getBalance']);
 
             /** ******* ORDER related routes ********** */
-            Route::prefix('order')->group(function(){
-            Route::get('pending', [PosCustomerOrderController::class, 'getPendingOrders']);
-            Route::get('history', [PosCustomerOrderController::class, 'getOrdersHistory']);
-            Route::post('purchase', [PosCustomerOrderController::class, 'purchaseOrder']);
-        });
+            Route::prefix('order')->group(function () {
+                Route::get('pending', [PosCustomerOrderController::class, 'getPendingOrders']);
+                Route::get('history', [PosCustomerOrderController::class, 'getOrdersHistory']);
+                Route::post('purchase', [PosCustomerOrderController::class, 'purchaseOrder']);
+            });
 
-
-
-            /**  ************Joining Fees Related Routes****************** */
-            Route::get('joining/fees/status',[PosJoiningFeesController::class,'getPaymentStatus']);
-
-
-            
+            /**  ************ Joining Fees Related Routes ***************** */
+            Route::get('joining/fees/status', [PosJoiningFeesController::class, 'getPaymentStatus']);
         });
     });
 });
