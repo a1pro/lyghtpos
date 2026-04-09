@@ -28,8 +28,8 @@ Route::prefix('pos')->group(function () {
 
         // ====================User Routes===============================
         Route::prefix('user')->group(function () {
-            Route::post('opt/verification', [PosRegisterController::class, 'optVerification']);
-            Route::post('opt/resend', [PosRegisterController::class, 'resendOtp']);
+            Route::post('otp/verification', [PosRegisterController::class, 'otpVerification']);
+            Route::post('otp/resend', [PosRegisterController::class, 'resendOtp']);
             Route::get('profile', [PosLoginController::class, 'userProfile']);
             Route::get('wallet/balance',[PosCustomerWallet::class,'getBalance']);
 
