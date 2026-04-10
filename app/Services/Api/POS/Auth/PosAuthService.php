@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use Auth;
+use Illuminate\Support\Facades\Log;
+
 class PosAuthService
 {
     /**
@@ -23,27 +25,27 @@ class PosAuthService
         if (User::where('email', $data['email'])->exists()) {
             throw ValidationException::withMessages(['email' => 'Email is already taken']);
         }
-    
+
         if (User::where('phone', $data['phone'])->exists()) {
             throw ValidationException::withMessages(['phone' => 'Phone number is already taken']);
         }
-        
+
         $referalCode = $data['referal_code'] ?? null;
         $merchantCode = null;
-        
-        if(!empty($referalCode)){
+
+        if (!empty($referalCode)) {
             $merchantReferal = Merchant::where('merchant_id', $referalCode)->exists();
-    
-            if(!$merchantReferal){
+
+            if (!$merchantReferal) {
                 throw new \Exception('Invalid referral code');
             }
             $merchantCode = Merchant::where('merchant_id', $referalCode)->value('user_id');
         }
-        
+
         $otp = random_int(100000, 999999);
         $validity = Carbon::now()->addMinutes(15);
         $validityString = $validity->toDateTimeString();
-    
+
         $user = User::create([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
@@ -56,7 +58,7 @@ class PosAuthService
             'otp' => $otp,
             'time_validity' => $validity
         ]);
-    
+
         $customer = Customer::create([
             'user_id' => $user->id,
             'first_name' => $user->first_name,
@@ -65,9 +67,9 @@ class PosAuthService
             'email' => $user->email,
             'address' => $user->location,
         ]);
-        
+
         $token = $user->createToken('pos_auth_token')->plainTextToken;
-    
+
         return [
             'user' => $user,
             'token' => $token,
@@ -82,24 +84,32 @@ class PosAuthService
     {
         try {
             $userId = Auth::id();
-            
+
             // ==================Api Request Data=====================
-            $enteredOtp = $data['otp']; 
+            $enteredOtp = $data['otp'];
             $currentTime = Carbon::now();
-            
+
             // =================DB Storage Data=======================
-            $userOtp = User::where('id', $userId)->select('otp', 'time_validity')->first();
-            
+            $userOtp = User::where('id', $userId)->select('otp', 'time_validity', 'email_verified_at')->first();
+
             if (!$userOtp) {
                 return [
                     'success' => false,
                     'message' => 'User not found'
                 ];
             }
-            
+
+            $emailVerifiedAt = $userOtp->email_verified_at;
+            if ($emailVerifiedAt) {
+                return [
+                    'success' => false,
+                    'message' => 'OTP has already been verified'
+                ];
+            }
+
             $storedOtp = $userOtp->otp;
             $timeValidity = $userOtp->time_validity;
-            
+
             // Check if OTP is expired
             if ($currentTime->gt($timeValidity)) {
                 return [
@@ -107,7 +117,7 @@ class PosAuthService
                     'message' => 'OTP has expired'
                 ];
             }
-            
+
             // Check if OTP matches
             if ($storedOtp != $enteredOtp) {
                 return [
@@ -115,7 +125,7 @@ class PosAuthService
                     'message' => 'Invalid OTP'
                 ];
             }
-            
+
             // OTP is valid - Update user
             User::where('id', $userId)->update([
                 'email_verified' => 'yes',
@@ -123,12 +133,11 @@ class PosAuthService
                 'otp' => NULL,
                 'time_validity' => NULL
             ]);
-            
+
             return [
                 'success' => true,
                 'message' => 'OTP Verified Successfully'
             ];
-            
         } catch (\Exception $e) {
             Log::error('OTP verification failed: ' . $e->getMessage());
             return [
@@ -142,23 +151,26 @@ class PosAuthService
 
     public function resendOtp()
     {
-        try{
+        try {
             $userId = Auth::id();
             $otp = random_int(100000, 999999);
+
             $validity = Carbon::now()->addMinutes(15);
-            $resendotp = User::where('id',$userId)->update([
+
+            $resendotp = User::where('id', $userId)->update([
                 'otp' => $otp,
                 'time_validity' => $validity
             ]);
+
             return [
                 'success' => true,
                 'message' => 'OTP resend Successfully',
+                'validity' => $validity,
                 'otp' => $otp
             ];
-        }
-        catch(\Exception $e){
+        } catch (\Exception $e) {
             Log::error('OTP send fail:' . $e->getMessage());
-            return[
+            return [
                 'succss' => false,
                 'message' => 'Otp resend failed:'  . $e->getMessage(),
             ];
@@ -227,7 +239,4 @@ class PosAuthService
 
         return true;
     }
-
-    
-
 }

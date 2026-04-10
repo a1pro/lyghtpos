@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Http\Requests\Api\POS\Auth\PosRegisterRequest;
 use App\Http\Requests\Api\POS\Auth\PosOtpVerificationRequest;
 use App\Mail\POS\Customer\CustomerRegisterMail;
+use App\Mail\POS\Customer\CustomerResendOtpMail;
+use App\Mail\POS\Customer\CustomerVerificationSuccessMail;
 use App\Models\User;
 use App\Services\Api\POS\Auth\PosAuthService;
 use App\Services\Cyclos\CyclosUserService;
@@ -94,6 +96,7 @@ class PosRegisterController extends Controller
     {
         try {
             DB::beginTransaction();
+            $user = Auth::user();
             
             $verification = $this->posAuthService->otpVerify($request->validated());
             
@@ -106,6 +109,8 @@ class PosRegisterController extends Controller
                     'message' => $verification['message']
                 ]);
             }
+
+            Mail::to($user->email)->send(new CustomerVerificationSuccessMail($user, now()));
             
             DB::commit();
             return response()->json([
@@ -129,10 +134,13 @@ class PosRegisterController extends Controller
     {
         try{
             DB::beginTransaction();
-            $userId = Auth::id();
+            
+            $user = Auth::user();
+            $userId = $user->id;
 
             $newOtp = $this->posAuthService->resendOtp($userId);
 
+            Mail::to($user->email)->send(new CustomerResendOtpMail($user, $newOtp['otp'], $newOtp['validity']));
             
             DB::commit();
             return response()->json([
