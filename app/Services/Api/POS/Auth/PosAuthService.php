@@ -232,6 +232,12 @@ class PosAuthService
         ];
     }
 
+    public function emailStatus()
+    {
+            $userId = Auth::id();
+            return User::where('id',$userId)->value('email_verified');
+    }
+
     public function logout(User $user): bool
     {
         // Delete current access token

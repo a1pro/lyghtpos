@@ -34,6 +34,9 @@ Route::prefix('pos')->group(function () {
             Route::post('otp/verification', [PosRegisterController::class, 'otpVerification']);
             Route::post('otp/resend', [PosRegisterController::class, 'resendOtp']);
             Route::get('profile', [PosLoginController::class, 'userProfile']);
+            Route::get('email/status', [PosRegisterController::class, 'checEmailVerification']);
+
+            
 
             /** ******* Wallet related routes ********** */
             Route::prefix('wallet')->group(function () {
