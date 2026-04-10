@@ -161,8 +161,28 @@ class PosRegisterController extends Controller
         }
     }
 
-    /**
-     * Create user in Cyclos system
-     */
+
+    public function checEmailVerification()
+    {
+        try{
+            $userId = Auth::id();
+            $status = $this->posAuthService->emailStatus();
+
+            return response()->json([
+                'status' => true,
+                'status_code' => 200,
+                'message' => 'Email verification status retrieved successfully',
+                'email_status' => $status
+            ]);
+        }
+        catch(\Exception $e){
+            return response()->json([
+                'status' => 200,
+                'status_code' => 500,
+                'message' => 'Something went wrong'  .$e->getMessage()
+            ]);
+        }
+    }
+    
    
 }
