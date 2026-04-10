@@ -34,6 +34,52 @@ class SubscriptionPlan extends Model
         'yearly_total' => 'decimal:2'
     ];
 
+    public function getFeaturesAttribute($value)
+    {
+        if (is_null($value)) {
+            return [];
+        }
+
+        if (is_array($value)) {
+            if (count($value) === 1 && is_string($value[0]) && (strpos($value[0], "\n") !== false || strpos($value[0], "\r") !== false)) {
+                $split = preg_split('/\r\n|\r|\n/', $value[0]);
+                return array_filter(array_map('trim', $split));
+            }
+            return $value;
+        }
+
+        $decoded = json_decode($value, true);
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        if (count($decoded) === 1 && is_string($decoded[0]) && (strpos($decoded[0], "\n") !== false || strpos($decoded[0], "\r") !== false)) {
+            $split = preg_split('/\r\n|\r|\n/', $decoded[0]);
+            return array_filter(array_map('trim', $split));
+        }
+
+        return $decoded;
+    }
+
+    public function setFeaturesAttribute($value)
+    {
+        if (is_string($value)) {
+            $split = preg_split('/\r\n|\r|\n/', $value);
+            $value = array_filter(array_map('trim', $split));
+        }
+
+        if (is_array($value)) {
+            if (count($value) === 1 && is_string($value[0]) && (strpos($value[0], "\n") !== false || strpos($value[0], "\r") !== false)) {
+                $split = preg_split('/\r\n|\r|\n/', $value[0]);
+                $value = array_filter(array_map('trim', $split));
+            }
+            $this->attributes['features'] = json_encode(array_values($value));
+        } else {
+            $this->attributes['features'] = $value;
+        }
+    }
+
     /**
      * Get formatted monthly price with currency
      */
