@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class WpRegisterController extends Controller
 {
@@ -155,6 +156,8 @@ class WpRegisterController extends Controller
                 'password' => Hash::make($request->password),
                 'role_id' => $role->id ?? 2,
                 'account_type' => $request->account_type,
+                'email_verified' => 'yes',
+                'email_verified_at' => Carbon::now()
             ];
 
             $user = User::create($userData);
