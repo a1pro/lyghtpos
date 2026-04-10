@@ -5,15 +5,20 @@ namespace App\Http\Controllers\Api\V1\POS\Customer;
 use App\Http\Controllers\Controller;
 use App\Services\Api\POS\Customer\PosCustomerWalletService;
 use App\Services\FavorMember\CyclosPayment\CyclosPaymentService;
+use App\Http\Requests\Api\POS\Customer\POSCustomerWalletRequest;
 use Illuminate\Http\Request;
-
+use DB;
+use Auth;
 class PosCustomerWallet extends Controller
 {
     protected $posWalletService;
+    protected  $cyclosPayment;
 
-    public function __construct(PosCustomerWalletService $posWalletService)
+    public function __construct(PosCustomerWalletService $posWalletService , CyclosPaymentService $cyclosPayment)
     {
         $this->posWalletService = $posWalletService;
+        $this->cyclosPayment = $cyclosPayment;
+
     }
 
     /**
@@ -69,5 +74,61 @@ class PosCustomerWallet extends Controller
         $result = $this->posWalletService->getCustomerWalletDetails($cyclosUserId);
         
         return response()->json($result);
+    }
+
+
+
+    public function customerWalletRecharge(POSCustomerWalletRequest $request)
+    {
+        try{
+            DB::beginTransaction();
+            $userId = Auth::id();
+            $data = $request->validated();
+            $amount = $data['amount'];
+            $description = 'Amount added';
+            $cyclosUserId = Auth::user()->cyclos_user_id;
+                         
+            $recharge = $this->cyclosPayment->addFunds($cyclosUserId,$amount,$description);
+
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'status_code' => 200,
+                'message' => $amount . ' token added in the wallet successfully'
+            ]);
+        }
+        catch(\Exception $e)
+        {
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'status_code'=> 500,
+                'message' => 'Something went wrong' .$e->getMessage()
+            ]);
+        }
+    }
+
+
+    public function showTransaction()
+    {
+        try{
+            $cyclosUserId = Auth::user()->cyclos_user_id;
+            $transaction = $this->cyclosPayment->getUserTransactions($cyclosUserId); 
+            
+            return response()->json([
+                'success' => true,
+                'status_code' => 200,
+                'message' => 'Transaction History Fetch Successfully',
+                'history' => $transaction
+            ]);
+        }catch(\Exception $e)
+        {
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'Something went wrong' .$e->getMessage()
+            ]);
+        }
     }
 }

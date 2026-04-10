@@ -34,8 +34,14 @@ Route::prefix('pos')->group(function () {
             Route::post('otp/verification', [PosRegisterController::class, 'otpVerification']);
             Route::post('otp/resend', [PosRegisterController::class, 'resendOtp']);
             Route::get('profile', [PosLoginController::class, 'userProfile']);
-            Route::get('wallet/balance', [PosCustomerWallet::class, 'getBalance']);
 
+            /** ******* Wallet related routes ********** */
+            Route::prefix('wallet')->group(function () {
+                Route::get('balance', [PosCustomerWallet::class, 'getBalance']);
+                Route::post('add/balance', [PosCustomerWallet::class, 'customerWalletRecharge']);
+                Route::get('transaction', [PosCustomerWallet::class, 'showTransaction']);
+            });
+            
             /** ******* ORDER related routes ********** */
             Route::prefix('order')->group(function () {
                 Route::get('pending', [PosCustomerOrderController::class, 'getPendingOrders']);
