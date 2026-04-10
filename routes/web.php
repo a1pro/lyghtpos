@@ -15,6 +15,7 @@ use App\Http\Controllers\Pos\CartController;
 use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use App\Http\Controllers\Admin\JoiningFeesController;
+use App\Http\Controllers\Admin\SubscriptionPlanController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
@@ -70,7 +71,7 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
         Route::delete('/{id}', [JoiningFeesController::class, 'destroy'])->name('destroy'); // Changed to DELETE method
     });
 
-    /** ********************************* Token Bundles ***************************************** */
+    /** ********************************* Token Bundles Routes ***************************************** */
     Route::prefix('token-bundles')->name('admin.token-bundles.')->group(function () {
         Route::get('/', [AdminTokenBundleController::class, 'index'])->name('index');
         Route::get('/create', [AdminTokenBundleController::class, 'create'])->name('create');
@@ -79,6 +80,9 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
         Route::put('/{id}', [AdminTokenBundleController::class, 'update'])->name('update');
         Route::delete('/{id}', [AdminTokenBundleController::class, 'destroy'])->name('destroy');
     });
+
+    /** ********************************* Subscription Plan Routes ***************************************** */
+    Route::resource('subscription-plans', SubscriptionPlanController::class)->except(['show'])->names('admin.subscription-plans');
 
     // ===================================Merchant List===========================================================
 
