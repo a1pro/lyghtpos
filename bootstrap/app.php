@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'locale' => \App\Http\Middleware\SetLocale::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'email.verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
 
             'representation' => \App\Http\Middleware\Merchant\MerchantRepresentationMiddleware::class,
             'subscription' => \App\Http\Middleware\Merchant\MerchantSubscribedMiddleware::class,
