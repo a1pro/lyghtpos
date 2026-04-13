@@ -20,7 +20,7 @@
                     <th>S.No</th>
                     <th>CC Tokens</th>
                     <th>Base Amount</th>
-                    <th>System Fees</th>
+                    <th>System Fees (%)</th>
                     <th>Discounted</th>
                     <th>Status</th>
                     <th>Actions</th>

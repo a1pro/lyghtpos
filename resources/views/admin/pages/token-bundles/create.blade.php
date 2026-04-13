@@ -32,7 +32,7 @@
             </div>
 
             <div class="form-group">
-                <label for="system_fee">System Fee</label>
+                <label for="system_fee">System Fee (%)</label>
                 <input type="number" name="system_fee" class="form-control @error('system_fee') is-invalid @enderror" id="system_fee" placeholder="Add System Fee" value="{{ old('system_fee') }}">
 
                 @error('system_fee')

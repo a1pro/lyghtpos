@@ -38,6 +38,7 @@
                 </span>
                 @enderror
             </div>
+
             <div class="form-group">
                 <label for="warning_quantity">{{ __('settings.warning_quantity') }}</label>
                 <input type="text" name="warning_quantity" class="form-control @error('warning_quantity') is-invalid @enderror" id="warning_quantity" placeholder="{{ __('settings.warning_quantity') }}" value="{{ old('warning_quantity', config('settings.warning_quantity')) }}">
@@ -47,6 +48,18 @@
                 </span>
                 @enderror
             </div>
+
+            <div class="form-group">
+                <label for="custom_token_charge">{{ __('settings.custom_token_charge') }} (%)</label>
+
+                <input type="text" name="custom_token_charge" class="form-control @error('custom_token_charge') is-invalid @enderror" id="custom_token_charge" placeholder="{{ __('settings.custom_token_charge') }}" value="{{ old('custom_token_charge', config('settings.custom_token_charge')) }}">
+                @error('custom_token_charge')
+                <span class="invalid-feedback" role="alert">
+                    <strong>{{ $message }}</strong>
+                </span>
+                @enderror
+            </div>
+
             <button type="submit" class="btn btn-primary">{{ __('settings.Change_Setting') }}</button>
         </form>
     </div>

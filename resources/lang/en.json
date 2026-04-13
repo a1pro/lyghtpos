@@ -39,6 +39,7 @@
     "settings.app_description": "Application Description",
     "settings.Currency_symbol": "Currency Symbol",
     "settings.warning_quantity": "Warning Quantity",
+    "settings.custom_token_charge": "Custom Token Charge",
     "settings.Change_Setting": "Change Settings",
     "product.Product_List": "Product List",
     "product.Create_Product": "Create Product",
