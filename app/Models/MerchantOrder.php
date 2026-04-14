@@ -20,7 +20,8 @@ class MerchantOrder extends Model
         'payment_status',
         'notes',
         'transaction_id',
-        'paid_at'
+        'paid_at',
+        'cyclos_order_id'
     ];
 
     protected $casts = [

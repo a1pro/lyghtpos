@@ -10,17 +10,23 @@ use Illuminate\Support\Facades\Log;
 use Auth;
 use Illuminate\Validation\ValidationException;
 use App\Services\Api\POS\Customer\PosCustomerWalletService;
+use App\Services\Cyclos\MerchantCyclosOrderService;
 use App\Services\FavorMember\CyclosPayment\CyclosPaymentService;
 
 class PosCustomerOrderService
 {
     protected $customerWallet;
     protected $cyclosPayment;
+    protected $merchantCyclosOrderService;
 
-    public function __construct(PosCustomerWalletService $customerWallet, CyclosPaymentService $cyclosPayment)
-    {
+    public function __construct(
+        PosCustomerWalletService $customerWallet,
+        CyclosPaymentService $cyclosPayment,
+        MerchantCyclosOrderService $merchantCyclosOrderService
+    ) {
         $this->customerWallet = $customerWallet;
         $this->cyclosPayment =  $cyclosPayment;
+        $this->merchantCyclosOrderService =  $merchantCyclosOrderService;
     }
 
     /**
@@ -29,7 +35,9 @@ class PosCustomerOrderService
     public function fetchPendingOrders(string $cyclosUserId)
     {
         try {
-            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'status' => 'pending'])->get()->toArray();
+            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'status' => 'pending'])
+                ->get()->toArray();
+
             return $orders ?? [];
         } catch (\Exception $e) {
             Log::error('Error fetching pending orders', [
@@ -59,7 +67,6 @@ class PosCustomerOrderService
     public function purchaseOrder(array $data)
     {
         try {
-            $userId = Auth::id();
             $cyclosUserId = Auth::user()->cyclos_user_id;
             $balance = $this->customerWallet->getCustomerWalletBalance($cyclosUserId);
 
@@ -97,13 +104,41 @@ class PosCustomerOrderService
             }
 
             $merchantId = $orderDetail['merchant_id'];
-            $merchantCyclosID = User::where('id', $merchantId)->value('cyclos_user_id');
 
-            // Credit merchant from admin (THIS ALWAYS WORKS)
+            $merchant = $orderDetail->merchant;
+            $merchantCyclosID = $merchant->cyclos_user_id;
+
+            if (!$merchantCyclosID) {
+                throw new \Exception("Merchant configuration error");
+            }
+
+            $items = $orderDetail->items->map(function ($item) {
+                return [
+                    'product' => $item->product_cyclos_id,
+                    'quantity' => (int) $item->quantity,
+                    'price' => (float) $item->price,
+                ];
+            })->toArray();
+
+            $orderData = [
+                'items' => $items,
+            ];
+
+            $cyclosOrder = $this->merchantCyclosOrderService->createOrder($merchant, $customer->cyclos_user_id, $orderData);
+
+            if (!$cyclosOrder['success']) {
+                MerchantOrder::where('id', $orderId)->update([
+                    'payment_status' => 'failed',
+                    'status' => 'pending'
+                ]);
+                throw new \Exception("Cyclos Order Creation failed: " . ($merchantCredit['message'] ?? 'Unknown error'));
+            }
+
+            // Credit merchant from customer
             $merchantCredit = $this->cyclosPayment->addFunds(
                 $merchantCyclosID,
                 $orderAmount,
-                'Order #' . $orderId . ' - Payment to merchant',
+                'Order #' . $orderId . ' Cyclos Order ID:' . $cyclosOrder['order_id'] ?? null . ' - Payment to merchant',
                 $customer
             );
 
@@ -117,6 +152,7 @@ class PosCustomerOrderService
 
             // Update order status
             MerchantOrder::where('id', $orderId)->update([
+                'cyclos_order_id' => $cyclosOrder['order_id'] ?? null,
                 'payment_status' => 'paid',
                 'status' => 'completed',
                 'transaction_id' => $merchantCredit['transaction_id'] ?? null,
@@ -138,6 +174,7 @@ class PosCustomerOrderService
                 'message' => 'Payment processed successfully. Merchant has been credited.',
                 'status' => 'paid',
                 'order_id' => $orderId,
+                'cyclos_order_id' => $cyclosOrder['order_id'] ?? null,
                 'amount' => $orderAmount,
                 'transaction_id' => $merchantCredit['transaction_id'] ?? null
             ];
@@ -164,7 +201,7 @@ class PosCustomerOrderService
     protected function orderDetail($orderId)
     {
         try {
-            $order = MerchantOrder::with('items', 'merchant')->find($orderId); // Simpler way to find by ID
+            $order = MerchantOrder::with('items', 'merchant')->find($orderId);
 
             if (!$order) {
                 Log::error('Order not found', ['order_id' => $orderId]);
