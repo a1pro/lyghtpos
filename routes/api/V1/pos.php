@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use App\Http\Controllers\Api\V1\POS\Customer\PosJoiningFeesController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosTokenBundleController;
+use App\Http\Controllers\Api\V1\POS\Settings\PosSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('pos')->group(function () {
@@ -18,6 +19,9 @@ Route::prefix('pos')->group(function () {
 
     /**  *************** Token Bundle Routes ********************* */
     Route::get('bundle/active', [PosTokenBundleController::class, 'getActiveTokenBundles']);
+
+    /**  *************** Settings Routes ********************* */
+    Route::get('custom-token-charge', [PosSettingsController::class, 'getCustomTokenCharge']);
 
     Route::middleware('auth:sanctum')->group(function () {
 
