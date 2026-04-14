@@ -42,4 +42,19 @@ class MerchantOrder extends Model
     {
         return $this->belongsTo(User::class, 'merchant_id');
     }
+
+    /**
+     * Get the customer (user) for this order using cyclos_id.
+     * This relates customer_cyclos_id in merchant_orders to cyclos_user_id in users table.
+     */
+    public function customer()
+    {
+        $customer = User::where('cyclos_user_id', $this->customer_cyclos_id)->first();
+
+        if (!$customer && $this->customer_id) {
+            $customer = User::find($this->customer_id);
+        }
+
+        return $customer;
+    }
 }
