@@ -68,10 +68,18 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('search/ajax', [MerchantProductController::class, 'search'])->name('search');
 
         // Import flow
-        Route::get('/import/history', [MerchantProductImportController::class, 'index'])->name('import.index');
-        Route::get('/import/form', [MerchantProductImportController::class, 'create'])->name('import.create');
-        Route::post('/import/form', [MerchantProductImportController::class, 'store'])->name('import.store');
-        Route::get('/import/search/{id}', [MerchantProductImportController::class, 'show'])->name('import.show');
+        Route::prefix('import')->name('import.')->group(function () {
+            Route::get('/history', [MerchantProductImportController::class, 'index'])->name('index');
+            Route::get('/form', [MerchantProductImportController::class, 'create'])->name('create');
+            Route::post('/form', [MerchantProductImportController::class, 'store'])->name('store');
+            Route::get('/search/{id}', [MerchantProductImportController::class, 'show'])->name('show');
+            
+            // Additional API routes for real-time features
+            Route::get('/progress/{cyclosImportId}', [MerchantProductImportController::class, 'progress'])->name('progress');
+            Route::delete('/cancel/{cyclosImportId}', [MerchantProductImportController::class, 'cancel'])->name('cancel');
+            Route::post('/retry/{cyclosImportId}', [MerchantProductImportController::class, 'retryFailed'])->name('retry');
+            Route::get('/download-errors/{cyclosImportId}', [MerchantProductImportController::class, 'downloadErrors'])->name('download-errors');
+        });
     });
 
     Route::prefix('wallet')->name('wallet.')->group(function () {
