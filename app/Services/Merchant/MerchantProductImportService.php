@@ -25,11 +25,16 @@ class MerchantProductImportService
     protected string $defaultCategoryId;
     protected int $delayBetweenProducts = 2;
     protected int $maxProductsPerImport = 5000;
+    
+    // Category mapping cache
+    protected array $categoryNameToIdMap = [];
+    protected array $categoryInternalToIdMap = [];
 
     public function __construct()
     {
         $this->loadSettings();
         $this->validateRequiredConfig();
+        $this->loadCategoryMappings();
 
         Log::info('MerchantProductService initialized', [
             'currency_code' => $this->currencyCode,
@@ -74,6 +79,119 @@ class MerchantProductImportService
         }
     }
 
+    /**
+     * Load category mappings from Cyclos (name -> ID)
+     */
+    protected function loadCategoryMappings(): void
+    {
+        try {
+            $categories = $this->getCategories();
+            
+            $this->categoryNameToIdMap = [];
+            $this->categoryInternalToIdMap = [];
+            
+            foreach ($categories as $category) {
+                // Map by display name (case-insensitive)
+                $nameKey = strtolower(trim($category['name']));
+                $this->categoryNameToIdMap[$nameKey] = $category['id'];
+                
+                // Map by internal name if available
+                if (!empty($category['internalName'])) {
+                    $internalKey = strtolower(trim($category['internalName']));
+                    $this->categoryInternalToIdMap[$internalKey] = $category['id'];
+                }
+            }
+            
+            Log::info('Category mappings loaded', [
+                'name_mappings' => count($this->categoryNameToIdMap),
+                'internal_mappings' => count($this->categoryInternalToIdMap)
+            ]);
+            
+        } catch (Exception $e) {
+            Log::warning('Failed to load category mappings', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get category ID from name, internal name, or ID
+     */
+    protected function resolveCategoryId($categoryIdentifier): string
+    {
+        if (empty($categoryIdentifier)) {
+            return $this->defaultCategoryId;
+        }
+        
+        $identifier = trim((string) $categoryIdentifier);
+        
+        // Check if it's already a valid category ID (numeric string)
+        if (preg_match('/^\d{15,20}$/', $identifier)) {
+            return $identifier;
+        }
+        
+        // Try to find by display name (case-insensitive)
+        $nameKey = strtolower($identifier);
+        if (isset($this->categoryNameToIdMap[$nameKey])) {
+            Log::debug('Category resolved by name', [
+                'name' => $identifier,
+                'id' => $this->categoryNameToIdMap[$nameKey]
+            ]);
+            return $this->categoryNameToIdMap[$nameKey];
+        }
+        
+        // Try to find by internal name
+        if (isset($this->categoryInternalToIdMap[$nameKey])) {
+            Log::debug('Category resolved by internal name', [
+                'internal_name' => $identifier,
+                'id' => $this->categoryInternalToIdMap[$nameKey]
+            ]);
+            return $this->categoryInternalToIdMap[$nameKey];
+        }
+        
+        // Try partial match (for "Vehicles" or "Goods > Vehicles" format)
+        $partialMatch = $this->findPartialCategoryMatch($identifier);
+        if ($partialMatch) {
+            return $partialMatch;
+        }
+        
+        // Log warning and return default
+        Log::warning('Category not found, using default', [
+            'searched' => $identifier,
+            'default' => $this->defaultCategoryId
+        ]);
+        
+        return $this->defaultCategoryId;
+    }
+
+    /**
+     * Find category by partial match
+     */
+    protected function findPartialCategoryMatch(string $identifier): ?string
+    {
+        $identifier = strtolower(trim($identifier));
+        
+        // Check for hierarchical format (e.g., "Goods > Vehicles")
+        $separators = [' > ', ' / ', '|', '->', '>>'];
+        foreach ($separators as $separator) {
+            if (strpos($identifier, $separator) !== false) {
+                $parts = explode($separator, $identifier);
+                $lastPart = strtolower(trim(end($parts)));
+                
+                if (isset($this->categoryNameToIdMap[$lastPart])) {
+                    return $this->categoryNameToIdMap[$lastPart];
+                }
+            }
+        }
+        
+        // Try to find any category containing the search term
+        foreach ($this->categoryNameToIdMap as $name => $id) {
+            if (strpos($name, $identifier) !== false) {
+                return $id;
+            }
+        }
+        
+        return null;
+    }
+
     protected function validateRequiredConfig(): void
     {
         $missing = [];
@@ -89,9 +207,6 @@ class MerchantProductImportService
         }
         if (empty($this->adminUserId)) {
             $missing[] = 'services.cyclos.admin_user_id';
-        }
-        if (empty($this->defaultCategoryId)) {
-            $missing[] = 'services.cyclos.default_category_id';
         }
 
         if (!empty($missing)) {
@@ -323,7 +438,7 @@ class MerchantProductImportService
     
     /**
      * Create a single product in Cyclos via API
-     * Fixed: Category ID as string to prevent scientific notation
+     * Now supports category names, internal names, or IDs
      */
     public function createProduct($cyclosUsername, array $productData): array
     {
@@ -331,22 +446,12 @@ class MerchantProductImportService
             return ['success' => false, 'error' => 'Cyclos username is required'];
         }
         
-        // Get category ID - ensure it's treated as a string
-        $categoryId = $this->defaultCategoryId;
+        // Get category ID - now supports name, internal name, or ID
+        $categoryIdentifier = $productData['category_id'] ?? $productData['category_name'] ?? $productData['category'] ?? null;
+        $categoryId = $this->resolveCategoryId($categoryIdentifier);
         
-        // Check if category_id is provided in CSV (exact match to header)
-        if (!empty($productData['category_id'])) {
-            // Convert to string to prevent scientific notation
-            $categoryId = (string) $productData['category_id'];
-        }
-        
-        // Clean the category ID - remove any quotes or extra spaces
-        $categoryId = trim($categoryId, '"\'');
-        
-        // Build URL with the username
         $url = $this->baseUrl . '/api/' . urlencode($cyclosUsername) . '/marketplace';
         
-        // Build payload with category as string array
         $payload = [
             'name' => (string) $productData['name'],
             'description' => (string) ($productData['description'] ?? $productData['name']),
@@ -354,7 +459,7 @@ class MerchantProductImportService
                 'begin' => now()->toIso8601String(),
                 'end' => now()->addYear()->toIso8601String()
             ],
-            'categories' => [(string) $categoryId],  // Force string
+            'categories' => [$categoryId],
             'customValues' => [
                 'tradeType' => 'tradeTypeDemand'
             ],
@@ -367,17 +472,15 @@ class MerchantProductImportService
             'kind' => 'webshop'
         ];
         
-        // Add product number if barcode provided
         if (!empty($productData['barcode'])) {
             $payload['productNumber'] = (string) $productData['barcode'];
         }
         
-        // Log the request for debugging
         Log::info('Creating product via Cyclos API', [
             'url' => $url,
             'product' => $productData['name'],
-            'category_id' => $categoryId,
-            'category_id_type' => gettype($categoryId),
+            'category_identifier' => $categoryIdentifier,
+            'resolved_category_id' => $categoryId,
             'price' => $productData['price']
         ]);
         
@@ -413,7 +516,8 @@ class MerchantProductImportService
                 'error' => $errorMessage,
                 'url' => $url,
                 'product' => $productData['name'],
-                'category_id_sent' => $categoryId
+                'category_identifier' => $categoryIdentifier,
+                'resolved_category_id' => $categoryId
             ]);
             
             return [
@@ -445,71 +549,91 @@ class MerchantProductImportService
         }
     }
     
+     
     public function getCategories(): array
     {
-        $url = $this->baseUrl . '/api/marketplace/data-for-search?kind=webshop';
+        $cacheKey = 'cyclos_categories_list';
         
-        try {
-            $response = Http::withBasicAuth($this->username, $this->password)
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'Channel' => $this->channel,
-                ])
-                ->timeout(30)
-                ->get($url);
+        return Cache::remember($cacheKey, 3600, function () {
+            $url = $this->baseUrl . '/api/marketplace/data-for-search?kind=webshop';
             
-            if ($response->successful()) {
-                $data = $response->json();
-                $categories = [];
+            try {
+                $response = Http::withBasicAuth($this->username, $this->password)
+                    ->withHeaders([
+                        'Accept' => 'application/json',
+                        'Channel' => $this->channel,
+                    ])
+                    ->timeout(30)
+                    ->get($url);
                 
-                if (isset($data['categories']) && is_array($data['categories'])) {
-                    foreach ($data['categories'] as $category) {
-                        $categories[] = [
-                            'id' => (string) $category['id'],  // Force string
-                            'name' => $category['name'],
-                            'internalName' => $category['internalName'] ?? ''
-                        ];
-                        
-                        if (isset($category['children']) && is_array($category['children'])) {
-                            foreach ($category['children'] as $child) {
-                                $categories[] = [
-                                    'id' => (string) $child['id'],  // Force string
-                                    'name' => $child['name'],
-                                    'parent' => $category['name'],
-                                    'internalName' => $child['internalName'] ?? ''
-                                ];
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $categories = [];
+                    
+                    if (isset($data['categories']) && is_array($data['categories'])) {
+                        foreach ($data['categories'] as $category) {
+                            // Convert ID to string explicitly
+                            $categories[] = [
+                                'id' => (string) $category['id'],  // Force string
+                                'name' => $category['name'],
+                                'internalName' => $category['internalName'] ?? ''
+                            ];
+                            
+                            if (isset($category['children']) && is_array($category['children'])) {
+                                foreach ($category['children'] as $child) {
+                                    $categories[] = [
+                                        'id' => (string) $child['id'],  // Force string
+                                        'name' => $child['name'],
+                                        'parent' => $category['name'],
+                                        'internalName' => $child['internalName'] ?? ''
+                                    ];
+                                }
                             }
                         }
                     }
+                    
+                    return $categories;
                 }
                 
-                Log::info('Categories fetched successfully', ['count' => count($categories)]);
-                return $categories;
+                return [];
+                
+            } catch (\Exception $e) {
+                Log::error('Error fetching categories', ['error' => $e->getMessage()]);
+                return [];
             }
-            
-            Log::warning('Failed to fetch categories', [
-                'status' => $response->status()
-            ]);
-            
-            return [];
-            
-        } catch (\Exception $e) {
-            Log::error('Error fetching categories', ['error' => $e->getMessage()]);
-            return [];
-        }
+        });
     }
-
-    public function getCategoryIdByName(string $categoryName): ?string
+    
+    /**
+     * Refresh category mappings manually
+     */
+    public function refreshCategoryMappings(): void
+    {
+        Cache::forget('cyclos_categories_list');
+        $this->loadCategoryMappings();
+        Log::info('Category mappings refreshed manually');
+    }
+    
+    /**
+     * Get all categories for dropdown (name only)
+     */
+    public function getCategoryNamesForDropdown(): array
     {
         $categories = $this->getCategories();
+        $dropdown = [];
         
         foreach ($categories as $category) {
-            if (strtolower($category['name']) === strtolower($categoryName)) {
-                return $category['id'];
+            if (empty($category['parent'])) {
+                $dropdown[] = $category['name'];
+                foreach ($categories as $child) {
+                    if (!empty($child['parent']) && $child['parent'] === $category['name']) {
+                        $dropdown[] = '  └─ ' . $child['name'];
+                    }
+                }
             }
         }
         
-        return null;
+        return $dropdown;
     }
 
     public function getDefaultCategoryId(): string
