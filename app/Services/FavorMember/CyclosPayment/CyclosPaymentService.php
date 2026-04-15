@@ -48,27 +48,27 @@ class CyclosPaymentService
             // Helper function to safely get string value from config
             $getStringValue = function ($key, $default = '') {
                 $value = config($key, $default);
-                
+
                 // If it's an array, try to get the first value
                 if (is_array($value)) {
                     $value = reset($value);
                 }
-                
+
                 return $value !== null ? (string) $value : $default;
             };
-            
+
             // Helper function to safely get boolean value from config
             $getBooleanValue = function ($key, $default = false) {
                 $value = config($key, $default);
-                
+
                 // If it's an array, try to get the first value
                 if (is_array($value)) {
                     $value = reset($value);
                 }
-                
+
                 return filter_var($value, FILTER_VALIDATE_BOOLEAN);
             };
-            
+
             // Load all settings from config
             $this->baseUrl = rtrim($getStringValue('services.cyclos.base_url', ''), '/');
             $this->username = $getStringValue('services.cyclos.username', '');
@@ -79,12 +79,12 @@ class CyclosPaymentService
             $this->currencyName = $getStringValue('services.cyclos.currency_name', 'TradeTokens');
             $this->paymentTypeId = $getStringValue('services.cyclos.payment_type_id', '');
             $this->adminUserId = $getStringValue('services.cyclos.admin_user_id', '');
-            
+
             // Load boolean settings
             $this->mockMode = $getBooleanValue('services.cyclos.mock_mode', false);
             $this->fallbackToMock = $getBooleanValue('services.cyclos.fallback_to_mock', true);
             $this->useApiPassword = $getBooleanValue('services.cyclos.use_api_password', true);
-            
+
             Log::info('Cyclos settings loaded from config', [
                 'base_url' => $this->baseUrl,
                 'has_username' => !empty($this->username),
@@ -95,7 +95,6 @@ class CyclosPaymentService
                 'currency_symbol' => $this->currencySymbol,
                 'mock_mode' => $this->mockMode
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to load Cyclos settings', [
                 'error' => $e->getMessage()
@@ -177,7 +176,7 @@ class CyclosPaymentService
         if ($this->mockMode) {
             return $this->mockGetUserBalance($cyclosUserId);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/accounts";
 
@@ -187,6 +186,7 @@ class CyclosPaymentService
                 'currency' => $this->currencyCode,
             ]);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -201,7 +201,7 @@ class CyclosPaymentService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                
+
                 // If fallback to mock is enabled, return mock data
                 if ($this->fallbackToMock) {
                     Log::warning('Falling back to mock balance data', [
@@ -209,7 +209,7 @@ class CyclosPaymentService
                     ]);
                     return $this->mockGetUserBalance($cyclosUserId);
                 }
-                
+
                 return 0.00;
             }
 
@@ -229,12 +229,12 @@ class CyclosPaymentService
                 'error' => $e->getMessage(),
                 'cyclos_user_id' => $cyclosUserId
             ]);
-            
+
             // If fallback to mock is enabled, return mock data
             if ($this->fallbackToMock) {
                 return $this->mockGetUserBalance($cyclosUserId);
             }
-            
+
             return 0.00;
         }
     }
@@ -248,7 +248,7 @@ class CyclosPaymentService
         if ($this->mockMode) {
             return $this->mockGetUserTransactions($cyclosUserId, $pageSize, $pageNumber);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/transactions";
 
@@ -259,6 +259,7 @@ class CyclosPaymentService
                 'currency' => $this->currencyCode,
             ]);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -284,12 +285,12 @@ class CyclosPaymentService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                
+
                 // If fallback to mock is enabled, return mock data
                 if ($this->fallbackToMock) {
                     return $this->mockGetUserTransactions($cyclosUserId, $pageSize, $pageNumber);
                 }
-                
+
                 return [];
             }
 
@@ -307,12 +308,12 @@ class CyclosPaymentService
                 'error' => $e->getMessage(),
                 'cyclos_user_id' => $cyclosUserId
             ]);
-            
+
             // If fallback to mock is enabled, return mock data
             if ($this->fallbackToMock) {
                 return $this->mockGetUserTransactions($cyclosUserId, $pageSize, $pageNumber);
             }
-            
+
             return [];
         }
     }
@@ -372,13 +373,13 @@ class CyclosPaymentService
     /**
      * Add funds to a user's Cyclos wallet
      */
-    public function addFunds(string $userCyclosId, float $amount, string $description = ''): array
+    public function addFunds(string $userCyclosId, float $amount, string $description = '', $customer): array
     {
         // Check if mock mode is enabled
         if ($this->mockMode) {
             return $this->mockAddFunds($userCyclosId, $amount, $description);
         }
-        
+
         try {
             $paymentData = [
                 'subject' => $userCyclosId,
@@ -396,9 +397,10 @@ class CyclosPaymentService
                 'currency' => $this->currencyCode,
             ]);
 
-            $paymentUrl = $this->baseUrl . "/api/{$this->adminUserId}/payments";
+            $paymentUrl = $this->baseUrl . "/api/self/payments";
 
-            $response = Http::withBasicAuth($this->username, $this->password)
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($customer->cyclos_username, $customer->cyclos_user_password)
                 ->withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
@@ -416,7 +418,7 @@ class CyclosPaymentService
                     'payment_type_used' => $this->paymentTypeId,
                     'admin_user_id_used' => $this->adminUserId,
                 ]);
-                
+
                 // If fallback to mock is enabled, return mock success
                 if ($this->fallbackToMock) {
                     Log::warning('Falling back to mock add funds', [
@@ -451,7 +453,7 @@ class CyclosPaymentService
                 'user_id' => $userCyclosId,
                 'amount' => $amount
             ]);
-            
+
             // If fallback to mock is enabled, return mock success
             if ($this->fallbackToMock) {
                 return $this->mockAddFunds($userCyclosId, $amount, $description);
@@ -473,10 +475,11 @@ class CyclosPaymentService
         if ($this->mockMode) {
             return $this->mockGetUserAccounts($cyclosUserId);
         }
-        
+
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/accounts";
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -491,11 +494,11 @@ class CyclosPaymentService
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                
+
                 if ($this->fallbackToMock) {
                     return $this->mockGetUserAccounts($cyclosUserId);
                 }
-                
+
                 return [];
             }
 
@@ -507,11 +510,11 @@ class CyclosPaymentService
                 'error' => $e->getMessage(),
                 'cyclos_user_id' => $cyclosUserId
             ]);
-            
+
             if ($this->fallbackToMock) {
                 return $this->mockGetUserAccounts($cyclosUserId);
             }
-            
+
             return [];
         }
     }
@@ -552,7 +555,7 @@ class CyclosPaymentService
             'pageSize' => $pageSize,
             'pageNumber' => $pageNumber
         ]);
-        
+
         return [
             [
                 'id' => 'mock-1',
@@ -586,7 +589,7 @@ class CyclosPaymentService
             'amount' => $amount,
             'description' => $description
         ]);
-        
+
         return [
             'success' => true,
             'transaction_id' => 'MOCK-TXN-' . uniqid(),
@@ -601,7 +604,7 @@ class CyclosPaymentService
     protected function mockGetUserAccounts(string $cyclosUserId): array
     {
         Log::info('Mock: Getting user accounts', ['cyclos_user_id' => $cyclosUserId]);
-        
+
         return [
             [
                 'id' => 'mock-account-1',

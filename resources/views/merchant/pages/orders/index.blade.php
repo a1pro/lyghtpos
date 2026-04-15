@@ -5,115 +5,77 @@
 @section('content-actions')
 <a href="{{ route('merchant.cart.index') }}" class="btn btn-primary">{{ __('cart.title') }}</a>
 @endsection
-@section('content')
 
+@section('content')
 <div class="card">
     <div class="card-body">
-        <div class="row mb-3">
-            <div class="col-md-7">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshOrders">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead class="thead-light">
                     <tr>
-                        <th>{{ __('Serial No.') }}</th>
-                        <th>{{ __('Order ID') }}</th>
-                        <th>{{ __('Customer_Name') }}</th>
+                        <th>#</th>
+                        <th>{{ __('Order Number') }}</th>
+                        <th>{{ __('Customer ID') }}</th>
                         <th>{{ __('Total') }}</th>
                         <th>{{ __('Status') }}</th>
-                        <th>{{ __('Created_At') }}</th>
+                        <th>{{ __('Payment Method') }}</th>
+                        <th>{{ __('Created At') }}</th>
+                        <th>{{ __('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($orders as $order)
                     <tr>
-                        <td>{{ $loop->iteration }}</td>
+                        <td>{{ $orders->firstItem() + $loop->index }}</td>
+                        <td><code>{{ $order->order_number }}</code></td>
+                        <td>{{ $order->customer_cyclos_id ?? 'N/A' }}</td>
+                        <td><strong>{{ config('settings.currency_symbol', '$') }} {{ number_format($order->total_amount, 2) }}</strong></td>
                         <td>
-                            <code>{{ $order['number'] ?? 'N/A' }}</code>
+                            @php
+                            $statusClass = match($order->status) {
+                            'completed' => 'badge-success',
+                            'pending' => 'badge-warning',
+                            'cancelled' => 'badge-danger',
+                            default => 'badge-secondary'
+                            };
+                            @endphp
+                            <span class="badge {{ $statusClass }}">{{ ucfirst($order->status) }}</span>
                         </td>
-                        <td>{{ $order['customer']['name'] ?? 'N/A' }}</td>
                         <td>
-                            <strong>{{ $order['total_price_formatted'] ?? '0.00' }}</strong>
+                            @php
+                            $methodLabels = [
+                            'cash' => 'Cash',
+                            'unyti' => 'Unyti Credits',
+                            'pax' => 'PAX',
+                            'pos_mobile' => 'POS Mobile'
+                            ];
+                            @endphp
+                            {{ $methodLabels[$order->payment_method] ?? ucfirst($order->payment_method) }}
                         </td>
+                        <td>{{ $order->created_at->format('Y-m-d H:i') }}</td>
                         <td>
-                            <span class="badge {{ $order['status_badge_class'] ?? 'badge-secondary' }}">
-                                {{ $order['status_label'] ?? ucfirst($order['status'] ?? 'Unknown') }}
-                            </span>
+                            <a href="{{ route('merchant.orders.show', $order) }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> View
+                            </a>
                         </td>
-                        <td>{{ $order['creation_date_formatted'] ?? 'N/A' }}</td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted">
-                            No orders found
-                        </td>
+                        <td colspan="8" class="text-center text-muted">No orders found</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
 
-        @if(isset($headers['x-total-count']) && $headers['x-total-count'] > 0)
         <div class="row mt-3">
             <div class="col-md-6">
-                <p class="text-muted">
-                    Showing {{ count($orders) }} of {{ $headers['x-total-count'] }} orders
-                </p>
+                <p class="text-muted">Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }} of {{ $orders->total() }} orders</p>
             </div>
             <div class="col-md-6">
-                <!-- Pagination can be added here if needed -->
-            </div>
-        </div>
-        @endif
-    </div>
-</div>
-
-<!-- Order Details Modal -->
-<div class="modal fade" id="orderDetailsModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Order Details</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="orderDetailsContent">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="sr-only">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading order details...</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                {{ $orders->links() }}
             </div>
         </div>
     </div>
 </div>
-@endsection
-
-@section('js')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        const currencySymbol = '{{ config("settings.currency_symbol", "TT") }}';
-
-        // Refresh orders list
-        $('#refreshOrders').on('click', function() {
-            location.reload();
-        });
-    });
-
-</script>
 @endsection

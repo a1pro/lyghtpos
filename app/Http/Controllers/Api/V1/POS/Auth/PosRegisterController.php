@@ -3,73 +3,87 @@
 namespace App\Http\Controllers\Api\V1\POS\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Http\Requests\Api\POS\Auth\PosRegisterRequest;
+use App\Http\Requests\Api\POS\Auth\PosOtpVerificationRequest;
+use App\Mail\POS\Customer\CustomerRegisterMail;
+use App\Mail\POS\Customer\CustomerResendOtpMail;
+use App\Mail\POS\Customer\CustomerVerificationSuccessMail;
 use App\Models\User;
 use App\Services\Api\POS\Auth\PosAuthService;
 use App\Services\Cyclos\CyclosUserService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Auth;
+
 
 class PosRegisterController extends Controller
 {
     protected $posAuthService;
 
-    protected $cyclosUserService;
+ 
 
-    public function __construct(PosAuthService $posAuthService, CyclosUserService $cyclosUserService)
+    public function __construct(PosAuthService $posAuthService)
     {
         $this->posAuthService = $posAuthService;
-        $this->cyclosUserService = $cyclosUserService;
+        
     }
 
     public function register(PosRegisterRequest $request)
     {
         try {
             DB::beginTransaction();
-
+    
             // Register user locally
             $result = $this->posAuthService->register($request->validated());
-
+    
             // Get the created user from result
             $user = $result['user'] ?? null;
-
+    
             if (! $user) {
                 throw new \Exception('User creation failed');
             }
-
-            // Create user in Cyclos
-            $cyclosResponse = $this->createCyclosUser($user, $request);
-
-            if (! $cyclosResponse || ! isset($cyclosResponse['user_id'])) {
-                throw new \Exception('Failed to create user in Cyclos system');
-            }
-
-            // Update user with Cyclos ID (if you have a column for it)
-            $user->cyclos_user_id = $cyclosResponse['user_id'];
-            $user->save();
-
+    
             DB::commit();
-
+    
+            // Send Mail with OTP
+            try {
+                Mail::to($user->email)->send(new CustomerRegisterMail($user, $result['otp'], $result['validity']));
+                Log::info('Welcome email with OTP sent to POS Customer', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'otp' => $result['otp'] // Remove this in production, only for debugging
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to send welcome email to POS customer', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+    
             return response()->json([
                 'success' => true,
                 'status_code' => 201,
-                'message' => 'Registration successful',
+                'message' => 'Registration successful. Please check your email for OTP verification.',
                 'data' => [
                     'user' => $user,
                     'token' => $result['token'],
-                    'cyclos_user_id' => $cyclosResponse['user_id'],
+                    // Don't send OTP in response in production
+                    // 'otp' => $result['otp'] // Only for testing
                 ],
             ], 201);
-
+    
         } catch (\Exception $e) {
             DB::rollback();
-
+    
             Log::error('POS Registration failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->except('password'),
             ]);
-
+    
             return response()->json([
                 'success' => false,
                 'status_code' => 500,
@@ -77,53 +91,98 @@ class PosRegisterController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Create user in Cyclos system
-     */
-    protected function createCyclosUser(User $user, PosRegisterRequest $request): ?array
+    // ======================Register OTP Verification==========================
+    public function otpVerification(PosOtpVerificationRequest $request)
     {
         try {
-            // Prepare additional data for Cyclos based on POS user
-            $additionalData = [
-                'business_name' => $request->business_name ?? ($user->first_name.' '.$user->last_name),
-                'phone' => $request->phone,
-                'location' => $request->location,
-                'website' => $request->website ?? '',
-                'pos_user_id' => $user->id,
-                'role' => 'POS_USER', // Specify POS role in Cyclos
-                'user_type' => 'POS', // Mark as POS user
-            ];
-
-            // Call Cyclos service to create user
-            $response = $this->cyclosUserService->createUser($user, $additionalData);
-
-            if ($response && isset($response['user_id'])) {
-                Log::info('Cyclos user created successfully for POS user', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'cyclos_user_id' => $response['user_id'],
+            DB::beginTransaction();
+            $user = Auth::user();
+            
+            $verification = $this->posAuthService->otpVerify($request->validated());
+            
+            // Check if verification was successful
+            if (!$verification['success']) {
+                DB::rollback();
+                return response()->json([
+                    'success' => false,
+                    'status_code' => 400,
+                    'message' => $verification['message']
                 ]);
-
-                return $response;
-            } else {
-                Log::error('Failed to create Cyclos user for POS user', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'response' => $response,
-                ]);
-
-                return null;
             }
-        } catch (\Exception $e) {
-            Log::error('Exception while creating Cyclos user for POS user', [
-                'user_id' => $user->id ?? null,
-                'email' => $user->email ?? null,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
 
-            return null;
+            Mail::to($user->email)->send(new CustomerVerificationSuccessMail($user, now()));
+            
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'status_code' => 200,
+                'message' => 'OTP Verified Successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ]);
         }
     }
+
+
+    public function resendOtp(Request $request)
+    {
+        try{
+            DB::beginTransaction();
+            
+            $user = Auth::user();
+            $userId = $user->id;
+
+            $newOtp = $this->posAuthService->resendOtp($userId);
+
+            Mail::to($user->email)->send(new CustomerResendOtpMail($user, $newOtp['otp'], $newOtp['validity']));
+            
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'status_code'=>200,
+                'message' => 'Otp resend Successfully',
+                'otp' => $newOtp['otp']
+               
+            ]);
+        }
+        catch(\Exception $e){
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'Something went wrong' .$e->getMessage(),
+            ]);
+        }
+    }
+
+
+    public function checEmailVerification()
+    {
+        try{
+            $userId = Auth::id();
+            $status = $this->posAuthService->emailStatus();
+
+            return response()->json([
+                'status' => true,
+                'status_code' => 200,
+                'message' => 'Email verification status retrieved successfully',
+                'email_status' => $status
+            ]);
+        }
+        catch(\Exception $e){
+            return response()->json([
+                'status' => 200,
+                'status_code' => 500,
+                'message' => 'Something went wrong'  .$e->getMessage()
+            ]);
+        }
+    }
+    
+   
 }

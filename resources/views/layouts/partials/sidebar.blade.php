@@ -30,7 +30,7 @@
 
                 <li class="nav-item">
                     <a href="{{ route('admin.payouts.index') }}" class="nav-link {{ request()->routeIs('admin.payouts.index') ? 'active' : '' }}">
-                        <i class="fa-solid fa-cash-register"></i>
+                        <i class="nav-icon fas fa-hand-holding-dollar"></i>
                         <p>Payout</p>
                     </a>
                 </li>
@@ -73,7 +73,7 @@
                 <!-- Orders -->
                 <li class="nav-item">
                     <a href="{{ route('orders.index') }}" class="nav-link {{ activeSegment('orders') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <i class="nav-icon fas fa-list"></i>
                         <p>{{ __('Order List') }}</p>
                     </a>
                 </li>
@@ -121,13 +121,34 @@
                     </a>
                 </li>
 
+                <!-- Plans -->
+                <li class="nav-header">Plans</li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.subscription-plans.index') }}" class="nav-link {{ request()->routeIs('admin.subscription-plans.index') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-table"></i>
+                        <p>Subscription Plans</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.joining-fees.index') }}" class="nav-link {{ request()->routeIs('admin.joining-fees.index') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-percent"></i>
+                        <p>Joining Fees</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.token-bundles.index') }}" class="nav-link {{ request()->routeIs('admin.token-bundles.index') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-cubes"></i>
+                        <p>Token Bundles</p>
+                    </a>
+                </li>
+
                 <!-- Admin Extra Section -->
                 <li class="nav-header">{{ __('Extra') }}</li>
 
                 <!-- Settings -->
                 <li class="nav-item">
                     <a href="{{ route('settings.index') }}" class="nav-link {{ activeSegment('settings') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-cogs"></i>
+                        <i class="nav-icon fas fa-gear"></i>
                         <p>{{ __('settings.title') }}</p>
                     </a>
                 </li>

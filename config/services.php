@@ -53,7 +53,7 @@ return [
         'admin_user_id' => env('CYCLOS_ADMIN_USER_ID'),
 
         // Currency configuration
-        'currency_code' => env('CYCLOS_CURRENCY_CODE', 'TT'),
+        'currency_code' => env('CYCLOS_CURRENCY_CODE', 'unit'),
         'currency_symbol' => env('CYCLOS_CURRENCY_SYMBOL', 'TT'),
         'currency_name' => env('CYCLOS_CURRENCY_NAME', 'TradeTokens'),
     ],

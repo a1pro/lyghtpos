@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Controllers\Auth\EmailVerificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Merchant\MerchantDashboardController;
 use App\Http\Controllers\Merchant\MerchantRepresentationController;
 use App\Http\Controllers\Merchant\PlanController;
-use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Merchant\TeamMemberController;
 use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\PurchaseCartController;
@@ -16,18 +16,26 @@ use App\Http\Controllers\Merchant\MerchantCartController;
 use App\Http\Controllers\Merchant\MerchantOrderController;
 use App\Http\Controllers\OrganizationAdmin\OrganizationAdminDashboardController;
 use App\Http\Controllers\Settings\SettingController;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\ProchargePaymentController;
 use App\Http\Controllers\Merchant\PaymentController;
 use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
-use net\authorize\api\contract\v1 as AnetAPI;
-use net\authorize\api\controller as AnetController;
 use App\Http\Controllers\Merchant\MerchantProductController;
 use App\Http\Controllers\Merchant\MerchantProductImportController;
 use App\Http\Controllers\Merchant\WalletController;
+use App\Http\Controllers\Merchant\CategoryController;
 
 
+// Merchant Email Verification
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
+    Route::prefix('verify')->name('verify.')->controller(EmailVerificationController::class)->group(function () {
+        Route::get('/email', 'showVerificationForm')->name('email');
+        Route::post('/send-otp', 'sendOtp')->name('send-otp');
+        Route::post('/resend-otp', 'resendOtp')->name('resend-otp');
+        Route::post('/verify-otp', 'verifyOtp')->name('verify-otp');
+        Route::get('/status', 'checkStatus')->name('status');
+    });
+});
+
+Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'email.verified'])->group(function (): void {
 
     // Subscription 
     Route::prefix('payments')->name('payments.')->controller(PaymentController::class)->group(function () {
@@ -61,12 +69,34 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('search/ajax', [MerchantProductController::class, 'search'])->name('search');
 
         // Import flow
-        Route::get('/import/history', [MerchantProductImportController::class, 'index'])->name('import.index');
-        Route::get('/import/form', [MerchantProductImportController::class, 'create'])->name('import.create');
-        Route::post('/import/form', [MerchantProductImportController::class, 'store'])->name('import.store');
-        Route::get('/import/search/{id}', [MerchantProductImportController::class, 'show'])->name('import.show');
+        Route::prefix('import')->name('import.')->group(function () {
+            Route::get('/history', [MerchantProductImportController::class, 'index'])->name('index');
+            Route::get('/form', [MerchantProductImportController::class, 'create'])->name('create');
+            Route::post('/form', [MerchantProductImportController::class, 'store'])->name('store');
+            Route::get('/search/{id}', [MerchantProductImportController::class, 'show'])->name('show');
+            
+            // Additional API routes for real-time features
+            Route::get('/progress/{cyclosImportId}', [MerchantProductImportController::class, 'progress'])->name('progress');
+            Route::delete('/cancel/{cyclosImportId}', [MerchantProductImportController::class, 'cancel'])->name('cancel');
+            Route::post('/retry/{cyclosImportId}', [MerchantProductImportController::class, 'retryFailed'])->name('retry');
+            Route::get('/download-errors/{cyclosImportId}', [MerchantProductImportController::class, 'downloadErrors'])->name('download-errors');
+            
+        });
+
+
+        
+
     });
 
+
+    Route::prefix('categories')->name('categories.')->group(function () {
+        Route::get('/', [CategoryController::class, 'index'])->name('index');
+        Route::post('/refresh', [CategoryController::class, 'refresh'])->name('refresh');
+        Route::get('/search', [CategoryController::class, 'search'])->name('search');
+        Route::get('/export', [CategoryController::class, 'export'])->name('export');
+
+
+    });
     Route::prefix('wallet')->name('wallet.')->group(function () {
 
         // Dashboard and overview
@@ -77,7 +107,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('/payout', [WalletController::class, 'showPayoutForm'])->name('payout');
         Route::post('/payout', [WalletController::class, 'requestPayout'])->name('request-payout');
         Route::get('/payout/{payout}', [WalletController::class, 'payoutDetails'])->name('payout.details');
-        Route::delete('/payout/{payout}', [WalletController::class, 'cancelPayout'])->name('payout.cancel');  // ← This is the correct name
+        Route::delete('/payout/{payout}', [WalletController::class, 'cancelPayout'])->name('payout.cancel');
 
         // History and transactions
         Route::get('/history', [WalletController::class, 'history'])->name('history');
@@ -119,7 +149,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
 });
 
 // Protected merchant routes (require subscription and representation)
-Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'subscription', 'representation'])->group(function (): void {
+Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'email.verified', 'subscription', 'representation'])->group(function (): void {
 
     Route::get('/', [MerchantDashboardController::class, 'index'])->name('dashboard');
     Route::get('/external-links', [MerchantDashboardController::class, 'externalLinks'])->name('external-links');
@@ -159,7 +189,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::delete('/empty', [MerchantCartController::class, 'empty']);
         Route::get('/customers', [MerchantCartController::class, 'getCustomers']);
         Route::get('/checkout', [MerchantCartController::class, 'checkout'])->name('checkout');
-        Route::post('/payment/process', [MerchantCartController::class, 'processPayment'])->name('payment.process');
+        // Route::post('/payment/process', [MerchantCartController::class, 'processPayment'])->name('payment.process');
     });
 
     // =============================================
@@ -205,6 +235,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     // Order routes
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/', [MerchantOrderController::class, 'index'])->name('index');
+        Route::get('/{order}', [MerchantOrderController::class, 'show'])->name('show');
     });
 });
 
@@ -219,6 +250,3 @@ Route::prefix('organization')->name('organization-admin.')->middleware(['auth', 
 
     Route::get('/', [OrganizationAdminDashboardController::class, 'index'])->name('dashboard');
 });
-
-/** **************** FAVOR MEMBER ************************ */
-// Add your favor member routes here if needed
