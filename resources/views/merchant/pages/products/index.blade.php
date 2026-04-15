@@ -63,6 +63,9 @@
             </div>
             {{-- Import Actions --}}
             <div class="col-md-6 text-right">
+                <a href="{{ route('merchant.categories.index') }}" class="btn btn-info">
+                    <i class="fa-solid fa-layer-group"></i> Categories
+                </a>
                 <a href="{{ asset('samples/product-import-sample.csv') }}" class="btn btn-outline-info btn-sm" download>
                     <i class="fas fa-download"></i> Download Sample CSV
                 </a>

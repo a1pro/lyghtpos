@@ -21,6 +21,7 @@ use App\Http\Controllers\TradeMember\TradeMemberDashboardController;
 use App\Http\Controllers\Merchant\MerchantProductController;
 use App\Http\Controllers\Merchant\MerchantProductImportController;
 use App\Http\Controllers\Merchant\WalletController;
+use App\Http\Controllers\Merchant\CategoryController;
 
 
 // Merchant Email Verification
@@ -79,9 +80,23 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
             Route::delete('/cancel/{cyclosImportId}', [MerchantProductImportController::class, 'cancel'])->name('cancel');
             Route::post('/retry/{cyclosImportId}', [MerchantProductImportController::class, 'retryFailed'])->name('retry');
             Route::get('/download-errors/{cyclosImportId}', [MerchantProductImportController::class, 'downloadErrors'])->name('download-errors');
+            
         });
+
+
+        
+
     });
 
+
+    Route::prefix('categories')->name('categories.')->group(function () {
+        Route::get('/', [CategoryController::class, 'index'])->name('index');
+        Route::post('/refresh', [CategoryController::class, 'refresh'])->name('refresh');
+        Route::get('/search', [CategoryController::class, 'search'])->name('search');
+        Route::get('/export', [CategoryController::class, 'export'])->name('export');
+
+
+    });
     Route::prefix('wallet')->name('wallet.')->group(function () {
 
         // Dashboard and overview

@@ -219,39 +219,40 @@ class MerchantProductController extends Controller
     /**
      * Display the specified product.
      */
-    public function show(Request $request, string $productId): Factory|View|JsonResponse
+    public function show(Request $request, string $productId): Factory|View|JsonResponse|RedirectResponse
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-
+    
         if (!$cyclosUserId) {
             return $request->wantsJson()
                 ? response()->json(['error' => 'Cyclos user ID not found'], 400)
                 : redirect()->route('merchant.products.index')
                 ->with('error', 'Cyclos user ID not found');
         }
-
+    
         try {
             $product = $this->productService->getProduct($cyclosUserId, $productId);
-
+    
             if (!$product) {
                 return $request->wantsJson()
                     ? response()->json(['error' => 'Product not found'], 404)
                     : redirect()->route('merchant.products.index')
                     ->with('error', 'Product not found');
             }
-
+    
             $formattedProduct = $this->productService->formatProduct($product);
-
+    
             return $request->wantsJson()
                 ? response()->json($formattedProduct)
                 : view('merchant.pages.products.show', ['product' => $formattedProduct]);
+                
         } catch (\Exception $e) {
             Log::error('Error fetching product', [
                 'error' => $e->getMessage(),
                 'product_id' => $productId
             ]);
-
+    
             return $request->wantsJson()
                 ? response()->json(['error' => 'Failed to fetch product'], 500)
                 : redirect()->route('merchant.products.index')

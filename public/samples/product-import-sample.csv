@@ -1,4 +1,3 @@
-title,description,categories,price
-T-shirt,Nice tshirt for men,goods>goodsVehicles,550
-Carpet,A carpet for large floor space,goods>goodsConsumerElectronics,122
-Cycle,"Brand new bike, never used.",goods>goodsVehicles,1122
+name,description,price,stockQuantity,barcode,category_name
+cricket bat,Communiyt Childcare,50,10,35353453,Community > Childcare
+cricket ball,Goods Vechicles,60,50,234234234,Goods > Vehicles
