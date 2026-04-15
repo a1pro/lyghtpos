@@ -135,7 +135,7 @@ class PosCustomerOrderService
             }
 
             // Credit merchant from customer
-            $merchantCredit = $this->cyclosPayment->addFunds(
+            $merchantCredit = $this->cyclosPayment->addFundsFromCustomer(
                 $merchantCyclosID,
                 $orderAmount,
                 'Order #' . $orderId . ' Cyclos Order ID:' . $cyclosOrder['order_id'] ?? null . ' - Payment to merchant',

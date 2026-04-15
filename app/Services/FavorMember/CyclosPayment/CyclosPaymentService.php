@@ -373,7 +373,103 @@ class CyclosPaymentService
     /**
      * Add funds to a user's Cyclos wallet
      */
-    public function addFunds(string $userCyclosId, float $amount, string $description = '', $customer): array
+    public function addFunds(string $userCyclosId, float $amount, string $description = ''): array
+    {
+        // Check if mock mode is enabled
+        if ($this->mockMode) {
+            return $this->mockAddFunds($userCyclosId, $amount, $description);
+        }
+
+        try {
+            $paymentData = [
+                'subject' => $userCyclosId,
+                'amount' => $amount,
+                'type' => $this->paymentTypeId,
+                'description' => $description,
+                'currency' => $this->currencyCode,
+            ];
+
+            Log::info('Adding funds to Cyclos wallet', [
+                'to_user' => $userCyclosId,
+                'amount' => $amount,
+                'payment_type' => $this->paymentTypeId,
+                'from_admin' => $this->adminUserId,
+                'currency' => $this->currencyCode,
+            ]);
+
+            $paymentUrl = $this->baseUrl . "/api/{$this->adminUserId}/payments";
+
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($paymentUrl, $paymentData);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+
+                Log::error('Cyclos payment failed', [
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                    'payment_type_used' => $this->paymentTypeId,
+                    'admin_user_id_used' => $this->adminUserId,
+                ]);
+
+                // If fallback to mock is enabled, return mock success
+                if ($this->fallbackToMock) {
+                    Log::warning('Falling back to mock add funds', [
+                        'user_id' => $userCyclosId,
+                        'amount' => $amount
+                    ]);
+                    return $this->mockAddFunds($userCyclosId, $amount, $description);
+                }
+
+                return [
+                    'success' => false,
+                    'message' => 'Payment failed: ' . json_encode($errorData),
+                ];
+            }
+
+            $data = $response->json();
+            Cache::forget("cyclos_balance_{$userCyclosId}");
+
+            Log::info('Cyclos payment successful', [
+                'transaction_id' => $data['id'] ?? null,
+                'currency' => $this->currencyCode,
+            ]);
+
+            return [
+                'success' => true,
+                'transaction_id' => $data['id'] ?? null,
+                'data' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exception in addFunds', [
+                'error' => $e->getMessage(),
+                'user_id' => $userCyclosId,
+                'amount' => $amount
+            ]);
+
+            // If fallback to mock is enabled, return mock success
+            if ($this->fallbackToMock) {
+                return $this->mockAddFunds($userCyclosId, $amount, $description);
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Add funds customer to merchant for order
+     */
+    public function addFundsFromCustomer(string $userCyclosId, float $amount, string $description = '', $customer): array
     {
         // Check if mock mode is enabled
         if ($this->mockMode) {
