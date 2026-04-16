@@ -41,7 +41,7 @@ class PosCustomerOrderController extends Controller
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'An error occurred while processing your request' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
@@ -67,7 +67,7 @@ class PosCustomerOrderController extends Controller
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'An error occurred while processing your request' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
@@ -95,14 +95,14 @@ class PosCustomerOrderController extends Controller
                     'success' => false,
                     'status_code' => 400,
                     'message' => $e->getMessage()
-                ]);
+                ], 400);
             }
             
             return response()->json([
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'Something went wrong: ' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 

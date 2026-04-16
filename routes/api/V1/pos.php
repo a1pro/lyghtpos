@@ -40,8 +40,6 @@ Route::prefix('pos')->group(function () {
             Route::get('profile', [PosLoginController::class, 'userProfile']);
             Route::get('email/status', [PosRegisterController::class, 'checEmailVerification']);
 
-            
-
             /** ******* Wallet related routes ********** */
             Route::prefix('wallet')->group(function () {
                 Route::get('balance', [PosCustomerWallet::class, 'getBalance']);

@@ -24,13 +24,13 @@ class PosTokenBundleController extends Controller
                 'status_code' => 200,
                 'message' => 'Active Bundles retrieved successfully',
                 'data' => $data
-            ]);
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'An error occurred while processing your request' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 }
