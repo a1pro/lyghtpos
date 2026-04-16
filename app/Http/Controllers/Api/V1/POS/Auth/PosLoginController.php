@@ -13,11 +13,17 @@ class PosLoginController extends Controller
 {
     protected $posAuthService;
 
+    /**
+     * Inject POS authentication service dependency
+     */
     public function __construct(PosAuthService $posAuthService)
     {
         $this->posAuthService = $posAuthService;
     }
 
+    /**
+     * Authenticate user and generate access token
+     */
     public function login(PosLoginRequest $request)
     {
         try {
@@ -53,6 +59,9 @@ class PosLoginController extends Controller
         }
     }
 
+    /**
+     * Get authenticated user profile information
+     */
     public function userProfile()
     {
         try {
@@ -73,6 +82,9 @@ class PosLoginController extends Controller
         }
     }
 
+    /**
+     * Logout user by revoking access token
+     */
     public function logout(Request $request)
     {
         try {
