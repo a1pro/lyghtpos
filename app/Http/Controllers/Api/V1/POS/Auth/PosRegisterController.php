@@ -125,7 +125,7 @@ class PosRegisterController extends Controller
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'Something went wrong: ' . $e->getMessage(),
-            ]);
+            ], 500);
         }
     }
 
@@ -157,7 +157,7 @@ class PosRegisterController extends Controller
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'Something went wrong' .$e->getMessage(),
-            ]);
+            ], 500);
         }
     }
 
@@ -180,7 +180,7 @@ class PosRegisterController extends Controller
                 'status' => 200,
                 'status_code' => 500,
                 'message' => 'Something went wrong'  .$e->getMessage()
-            ]);
+            ], 500);
         }
     }
     
