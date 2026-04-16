@@ -15,6 +15,9 @@ class PosCustomerWallet extends Controller
     protected $posWalletService;
     protected  $cyclosPayment;
 
+    /**
+     * Inject wallet service and payment service dependencies
+     */
     public function __construct(PosCustomerWalletService $posWalletService, CyclosPaymentService $cyclosPayment)
     {
         $this->posWalletService = $posWalletService;
@@ -23,17 +26,11 @@ class PosCustomerWallet extends Controller
 
     /**
      * Get wallet balance for authenticated customer
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getBalance(Request $request)
     {
-        // Get the authenticated user
         $user = $request->user();
 
-        // Get cyclos_user_id from the authenticated user
-        // Adjust this based on where you store the cyclos ID in your User/Customer model
         $cyclosUserId = $user->cyclos_user_id ?? $user->cyclos_id ?? $user->id;
 
         if (!$cyclosUserId) {
@@ -55,9 +52,6 @@ class PosCustomerWallet extends Controller
 
     /**
      * Get complete wallet details for authenticated customer
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getWalletDetails(Request $request)
     {
@@ -76,22 +70,26 @@ class PosCustomerWallet extends Controller
         return response()->json($result);
     }
 
-
-
+    /**
+     * Recharge customer wallet with tokens
+     */
     public function customerWalletRecharge(POSCustomerWalletRequest $request)
     {
         try {
             DB::beginTransaction();
+
             $userId = Auth::id();
             $data = $request->validated();
+
             $amount = $data['amount'];
             $description = 'Amount added';
+
             $cyclosUserId = Auth::user()->cyclos_user_id;
 
             $recharge = $this->cyclosPayment->addFunds($cyclosUserId, $amount, $description);
 
-
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'status_code' => 200,
@@ -107,7 +105,9 @@ class PosCustomerWallet extends Controller
         }
     }
 
-
+    /**
+     * Get transaction history for authenticated customer
+     */
     public function showTransaction()
     {
         try {

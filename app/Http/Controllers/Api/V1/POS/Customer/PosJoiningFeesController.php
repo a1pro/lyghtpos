@@ -12,24 +12,23 @@ class PosJoiningFeesController extends Controller
 
     public function __construct(PosJoiningFeesService $joiningFees)
     {
-        $this->joiningFees = $joiningFees;  // ✅ Fixed: Added assignment
+        $this->joiningFees = $joiningFees;
     }
 
     public function getPlans()
     {
         try {
-            $result = $this->joiningFees->getPlansDetail();  // Returns array
+            $result = $this->joiningFees->getPlansDetail();
             
-            // Check if service returned success
             if (!$result['success']) {
                 throw new \Exception($result['message']);
             }
             
-            $plans = $result['plans'];  // Get the plans collection
+            $plans = $result['plans'];
             
             return response()->json([
                 'success' => true,
-                'status_code' => 200,  // ✅ Fixed: Changed from 500 to 200
+                'status_code' => 200,
                 'message' => 'Plans Fetch Successfully',
                 'plans' => $plans->map(function($plan) {
                     return [
@@ -57,7 +56,7 @@ class PosJoiningFeesController extends Controller
                 'success' => true,
                 'status_code' => 200,
                 'message' => 'Status fetched successfully',
-                'has_paid' => $result['has_paid']  // Returns true if data exists, false if not
+                'has_paid' => $result['has_paid']
             ]);
         } catch (\Exception $e) {
             return response()->json([
