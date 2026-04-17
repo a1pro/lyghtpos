@@ -1,3 +1,3 @@
-name,description,price,stockQuantity,barcode,category_name
-cricket bat,Communiyt Childcare,50,10,35353453,Community > Childcare
-cricket ball,Goods Vechicles,60,50,234234234,Goods > Vehicles
+name,description,price,stockQuantity,barcode,category_id
+cricket stumps,Communiyt Childcare,50,10,35353453,-4143449931026144320
+cricket helmet,Goods Vechicles,60,50,234234234,-4143449931026144320
