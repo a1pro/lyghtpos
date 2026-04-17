@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,3 +18,8 @@ use Illuminate\Support\Facades\Artisan;
 Artisan::command('inspire', function (): void {
     $this->comment(Inspiring::quote());
 })->describe('Display an inspiring quote');
+
+// Process queue jobs every minute
+Schedule::command('queue:work --queue=product-imports,default --stop-when-empty --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping();
