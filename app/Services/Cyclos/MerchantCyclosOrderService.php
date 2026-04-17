@@ -349,7 +349,7 @@ class MerchantCyclosOrderService
     public function acceptOrderAsBuyer($buyer, string $orderId, array $data): array
     {
         try {
-            $paymentTypeId = config('services.cyclos.payment_type_id');
+            $paymentTypeId = config('services.cyclos.order_payment_type_id');
 
             $cyclosUserId = $buyer->cyclos_user_id;
             $url = $this->baseUrl . "/api/orders/{$orderId}/buyer/accept";

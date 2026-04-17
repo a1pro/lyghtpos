@@ -50,6 +50,7 @@ return [
 
         // Must come only from .env
         'payment_type_id' => env('CYCLOS_PAYMENT_TYPE_ID'),
+        'order_payment_type_id' => env('CYCLOS_ORDER_PAYMENT_TYPE_ID'),
         'admin_user_id' => env('CYCLOS_ADMIN_USER_ID'),
 
         // Currency configuration
