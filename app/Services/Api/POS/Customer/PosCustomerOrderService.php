@@ -35,7 +35,7 @@ class PosCustomerOrderService
     public function fetchPendingOrders(string $cyclosUserId)
     {
         try {
-            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'status' => 'pending'])
+            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'payment_status' => 'pending'])
                 ->get()->toArray();
 
             return $orders ?? [];
@@ -52,7 +52,10 @@ class PosCustomerOrderService
     public function fetchOrdersHistory(string $cyclosUserId)
     {
         try {
-            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId])->get()->toArray();
+            $orders = MerchantOrder::where('customer_cyclos_id', $cyclosUserId)
+                ->where('payment_status', '!=', 'pending')
+                ->get()
+                ->toArray();
             return $orders ?? [];
         } catch (\Exception $e) {
             Log::error('Error fetching pending orders', [
