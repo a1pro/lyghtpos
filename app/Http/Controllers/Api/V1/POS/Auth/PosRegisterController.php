@@ -22,38 +22,38 @@ class PosRegisterController extends Controller
 {
     protected $posAuthService;
 
- 
-
+    /**
+     * Inject POS authentication service dependency
+     */
     public function __construct(PosAuthService $posAuthService)
     {
         $this->posAuthService = $posAuthService;
-        
     }
 
+    /**
+     * Register new POS user with validation and email OTP
+     */
     public function register(PosRegisterRequest $request)
     {
         try {
             DB::beginTransaction();
-    
-            // Register user locally
+
             $result = $this->posAuthService->register($request->validated());
-    
-            // Get the created user from result
+
             $user = $result['user'] ?? null;
-    
+
             if (! $user) {
                 throw new \Exception('User creation failed');
             }
-    
+
             DB::commit();
-    
-            // Send Mail with OTP
+
             try {
                 Mail::to($user->email)->send(new CustomerRegisterMail($user, $result['otp'], $result['validity']));
                 Log::info('Welcome email with OTP sent to POS Customer', [
                     'user_id' => $user->id,
                     'user_email' => $user->email,
-                    'otp' => $result['otp'] // Remove this in production, only for debugging
+                    'otp' => $result['otp']
                 ]);
             } catch (\Exception $e) {
                 Log::warning('Failed to send welcome email to POS customer', [
@@ -62,7 +62,7 @@ class PosRegisterController extends Controller
                     'error' => $e->getMessage(),
                 ]);
             }
-    
+
             return response()->json([
                 'success' => true,
                 'status_code' => 201,
@@ -70,37 +70,36 @@ class PosRegisterController extends Controller
                 'data' => [
                     'user' => $user,
                     'token' => $result['token'],
-                    // Don't send OTP in response in production
-                    // 'otp' => $result['otp'] // Only for testing
                 ],
             ], 201);
-    
         } catch (\Exception $e) {
             DB::rollback();
-    
+
             Log::error('POS Registration failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->except('password'),
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'status_code' => 500,
-                'message' => 'An error occurred while processing your request: '.$e->getMessage(),
+                'message' => 'An error occurred while processing your request: ' . $e->getMessage(),
             ], 500);
         }
     }
-    // ======================Register OTP Verification==========================
+
+    /**
+     * Verify user OTP and activate account
+     */
     public function otpVerification(PosOtpVerificationRequest $request)
     {
         try {
             DB::beginTransaction();
             $user = Auth::user();
-            
+
             $verification = $this->posAuthService->otpVerify($request->validated());
-            
-            // Check if verification was successful
+
             if (!$verification['success']) {
                 DB::rollback();
                 return response()->json([
@@ -111,60 +110,62 @@ class PosRegisterController extends Controller
             }
 
             Mail::to($user->email)->send(new CustomerVerificationSuccessMail($user, now()));
-            
+
             DB::commit();
             return response()->json([
                 'success' => true,
                 'status_code' => 200,
                 'message' => 'OTP Verified Successfully'
             ]);
-            
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'Something went wrong: ' . $e->getMessage(),
-            ]);
+            ], 500);
         }
     }
 
-
+    /**
+     * Resend new OTP to user email
+     */
     public function resendOtp(Request $request)
     {
-        try{
+        try {
             DB::beginTransaction();
-            
+
             $user = Auth::user();
             $userId = $user->id;
 
             $newOtp = $this->posAuthService->resendOtp($userId);
 
             Mail::to($user->email)->send(new CustomerResendOtpMail($user, $newOtp['otp'], $newOtp['validity']));
-            
+
             DB::commit();
             return response()->json([
                 'success' => true,
-                'status_code'=>200,
+                'status_code' => 200,
                 'message' => 'Otp resend Successfully',
                 'otp' => $newOtp['otp']
-               
+
             ]);
-        }
-        catch(\Exception $e){
+        } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
                 'success' => false,
                 'status_code' => 500,
-                'message' => 'Something went wrong' .$e->getMessage(),
-            ]);
+                'message' => 'Something went wrong' . $e->getMessage(),
+            ], 500);
         }
     }
 
-
+    /**
+     * Check user email verification status
+     */
     public function checEmailVerification()
     {
-        try{
+        try {
             $userId = Auth::id();
             $status = $this->posAuthService->emailStatus();
 
@@ -174,15 +175,12 @@ class PosRegisterController extends Controller
                 'message' => 'Email verification status retrieved successfully',
                 'email_status' => $status
             ]);
-        }
-        catch(\Exception $e){
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 200,
                 'status_code' => 500,
-                'message' => 'Something went wrong'  .$e->getMessage()
-            ]);
+                'message' => 'Something went wrong'  . $e->getMessage()
+            ], 500);
         }
     }
-    
-   
 }

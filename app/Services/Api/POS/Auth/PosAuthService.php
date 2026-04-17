@@ -22,10 +22,12 @@ class PosAuthService
      */
     public function register(array $data): array
     {
+        // Check for existing email
         if (User::where('email', $data['email'])->exists()) {
             throw ValidationException::withMessages(['email' => 'Email is already taken']);
         }
 
+        // Check for existing phone
         if (User::where('phone', $data['phone'])->exists()) {
             throw ValidationException::withMessages(['phone' => 'Phone number is already taken']);
         }
@@ -33,6 +35,7 @@ class PosAuthService
         $referalCode = $data['referal_code'] ?? null;
         $merchantCode = null;
 
+        // Validate referral code if provided
         if (!empty($referalCode)) {
             $merchantReferal = Merchant::where('merchant_id', $referalCode)->exists();
 
@@ -42,10 +45,12 @@ class PosAuthService
             $merchantCode = Merchant::where('merchant_id', $referalCode)->value('user_id');
         }
 
+        // Generate OTP with 15 minutes validity
         $otp = random_int(100000, 999999);
         $validity = Carbon::now()->addMinutes(15);
         $validityString = $validity->toDateTimeString();
 
+        // Create user account
         $user = User::create([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
@@ -59,6 +64,7 @@ class PosAuthService
             'time_validity' => $validity
         ]);
 
+        // Create associated customer record
         $customer = Customer::create([
             'user_id' => $user->id,
             'first_name' => $user->first_name,
@@ -68,6 +74,7 @@ class PosAuthService
             'address' => $user->location,
         ]);
 
+        // Generate authentication token
         $token = $user->createToken('pos_auth_token')->plainTextToken;
 
         return [
@@ -79,17 +86,17 @@ class PosAuthService
         ];
     }
 
-    // ================Otp Verify API===========================
+    /**
+     * Verify OTP and mark email as verified
+     */
     public function otpVerify(array $data)
     {
         try {
             $userId = Auth::id();
 
-            // ==================Api Request Data=====================
             $enteredOtp = $data['otp'];
             $currentTime = Carbon::now();
 
-            // =================DB Storage Data=======================
             $userOtp = User::where('id', $userId)->select('otp', 'time_validity', 'email_verified_at')->first();
 
             if (!$userOtp) {
@@ -110,7 +117,7 @@ class PosAuthService
             $storedOtp = $userOtp->otp;
             $timeValidity = $userOtp->time_validity;
 
-            // Check if OTP is expired
+            // Check OTP expiration
             if ($currentTime->gt($timeValidity)) {
                 return [
                     'success' => false,
@@ -118,7 +125,7 @@ class PosAuthService
                 ];
             }
 
-            // Check if OTP matches
+            // Validate OTP match
             if ($storedOtp != $enteredOtp) {
                 return [
                     'success' => false,
@@ -126,7 +133,7 @@ class PosAuthService
                 ];
             }
 
-            // OTP is valid - Update user
+            // Update user verification status
             User::where('id', $userId)->update([
                 'email_verified' => 'yes',
                 'email_verified_at' => $currentTime,
@@ -147,8 +154,9 @@ class PosAuthService
         }
     }
 
-    // ================OTP Resend Service========================
-
+    /**
+     * Generate and send new OTP to user
+     */
     public function resendOtp()
     {
         try {
@@ -177,36 +185,35 @@ class PosAuthService
         }
     }
 
-
-    // ===============End========================
-
+    /**
+     * Authenticate user credentials and generate token
+     */
     public function authenticate(array $credentials): array
     {
-        // Find user by email
         $user = User::where('email', $credentials['email'])->first();
 
-        // Check if user exists and password matches
+        // Validate email and password
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        // Check if user has POS role (role_id = 11)
+        // Check POS role authorization
         if ($user->role_id !== 11) {
             throw ValidationException::withMessages([
                 'email' => ['You are not authorized to access the POS system.'],
             ]);
         }
 
-        // Check if user is active (optional - add if you have status field)
+        // Verify account status
         if (isset($user->status) && $user->status !== 'active') {
             throw ValidationException::withMessages([
                 'email' => ['Your account is not active.'],
             ]);
         }
 
-        // Generate token with POS abilities
+        // Generate POS access token
         $token = $user->createToken('pos_auth_token', ['pos-access'])->plainTextToken;
 
         return [
@@ -219,7 +226,7 @@ class PosAuthService
     }
 
     /**
-     * Logout POS user
+     * Get authenticated user profile data
      */
     public function userProfile()
     {
@@ -232,12 +239,18 @@ class PosAuthService
         ];
     }
 
+    /**
+     * Get user email verification status
+     */
     public function emailStatus()
     {
-            $userId = Auth::id();
-            return User::where('id',$userId)->value('email_verified');
+        $userId = Auth::id();
+        return User::where('id', $userId)->value('email_verified');
     }
 
+    /**
+     * Logout user by deleting current access token
+     */
     public function logout(User $user): bool
     {
         // Delete current access token

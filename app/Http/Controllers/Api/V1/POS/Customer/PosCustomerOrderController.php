@@ -14,11 +14,17 @@ class PosCustomerOrderController extends Controller
 {
     protected $customerOrderService;
 
+    /**
+     * Inject customer order service dependency
+     */
     public function __construct(PosCustomerOrderService $customerOrderService)
     {
         $this->customerOrderService = $customerOrderService;
     }
 
+    /**
+     * Get all pending orders for authenticated customer
+     */
     public function getPendingOrders()
     {
         try {
@@ -41,10 +47,13 @@ class PosCustomerOrderController extends Controller
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'An error occurred while processing your request' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
+    /**
+     * Get complete order history for authenticated customer
+     */
     public function getOrdersHistory()
     {
         try {
@@ -67,43 +76,43 @@ class PosCustomerOrderController extends Controller
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'An error occurred while processing your request' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
-
+    /**
+     * Process order purchase with wallet payment
+     */
     public function purchaseOrder(PosPurchaseOrderRequest $request)
     {
-        try{
+        try {
             DB::beginTransaction();
-    
+
             $data = $this->customerOrderService->purchaseOrder($request->validated());
-    
+
             DB::commit();
             return response()->json([
                 'success' => true,
                 'status_code'  => 200,
                 'message' => 'Order Purchase Successfully'
             ]);
-        }
-        catch(\Exception $e){
+        } catch (\Exception $e) {
             DB::rollback();
-            
+
             // Check if it's the insufficient balance error
             if ($e->getMessage() == "You don't have sufficient wallet balance to complete the payment") {
                 return response()->json([
                     'success' => false,
                     'status_code' => 400,
                     'message' => $e->getMessage()
-                ]);
+                ], 400);
             }
-            
+
             return response()->json([
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'Something went wrong: ' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
-
 }

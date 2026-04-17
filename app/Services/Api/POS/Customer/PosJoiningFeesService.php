@@ -31,7 +31,6 @@ class PosJoiningFeesService
         try {
             $userId = Auth::id();
 
-            // Check if any record exists for this user
             $hasPaid = UserJoiningFees::where(['user_id' => $userId, 'status' => 'completed'])->exists();
 
             return [

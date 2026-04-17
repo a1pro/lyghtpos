@@ -68,6 +68,9 @@ class ProcessProductImport implements ShouldQueue
                 return;
             }
             
+            // Get default category ID from environment variable
+            $defaultCategoryId = env('DEFAULT_CATEGORY_ID');
+            
             // Prepare product data for API
             $productPayload = [
                 'name' => $this->productData['name'],
@@ -75,7 +78,7 @@ class ProcessProductImport implements ShouldQueue
                 'price' => (float) $this->productData['price'],
                 'stockquantity' => (int) ($this->productData['stockquantity'] ?? 0),
                 'barcode' => $this->productData['barcode'] ?? null,
-                'category_id' => $this->productData['category_id'] ?? '7157739016492146860', // Default Childcare category
+                'category_id' => $this->productData['category_id'] ?? $defaultCategoryId,
             ];
             
             // Create product in Cyclos

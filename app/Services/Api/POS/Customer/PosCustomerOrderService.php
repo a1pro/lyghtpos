@@ -35,7 +35,8 @@ class PosCustomerOrderService
     public function fetchPendingOrders(string $cyclosUserId)
     {
         try {
-            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'status' => 'pending'])
+            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'payment_status' => 'pending'])
+                ->with('items:id,merchant_order_id,product_name,quantity,price')
                 ->get()->toArray();
 
             return $orders ?? [];
@@ -52,7 +53,11 @@ class PosCustomerOrderService
     public function fetchOrdersHistory(string $cyclosUserId)
     {
         try {
-            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId])->get()->toArray();
+            $orders = MerchantOrder::where('customer_cyclos_id', $cyclosUserId)
+                ->where('payment_status', '!=', 'pending')
+                ->with('items:id,merchant_order_id,product_name,quantity,price')
+                ->get()
+                ->toArray();
             return $orders ?? [];
         } catch (\Exception $e) {
             Log::error('Error fetching pending orders', [
@@ -82,6 +87,10 @@ class PosCustomerOrderService
                 throw new \Exception("Order not found");
             }
 
+            if (!$orderDetail['cyclos_order_id']) {
+                throw new \Exception("Cyclos Order not found");
+            }
+
             if ($orderDetail->status == 'completed') {
                 throw new \Exception("Order already completed");
             }
@@ -96,87 +105,35 @@ class PosCustomerOrderService
                 throw new \Exception("Customer configuration error");
             }
 
-            $orderAmount = $orderDetail['total_amount'];
-
-            // Check if customer has sufficient balance
-            if ($orderAmount > $balance) {
-                throw new \Exception("You don't have sufficient wallet balance to complete the payment");
-            }
-
-            $merchantId = $orderDetail['merchant_id'];
-
-            $merchant = $orderDetail->merchant;
-            $merchantCyclosID = $merchant->cyclos_user_id;
-
-            if (!$merchantCyclosID) {
-                throw new \Exception("Merchant configuration error");
-            }
-
-            $items = $orderDetail->items->map(function ($item) {
-                return [
-                    'product' => $item->product_cyclos_id,
-                    'quantity' => (int) $item->quantity,
-                    'price' => (float) $item->price,
-                ];
-            })->toArray();
-
-            $orderData = [
-                'items' => $items,
+            $acceptData = [
+                'remarks' => 'Order accepted by buyer with pos id:' . $customer->id
             ];
 
-            $cyclosOrder = $this->merchantCyclosOrderService->createOrder($merchant, $customer->cyclos_user_id, $orderData);
+            $cyclosOrder = $this->merchantCyclosOrderService->acceptOrderAsBuyer($customer, $orderDetail['cyclos_order_id'], $acceptData);
 
             if (!$cyclosOrder['success']) {
-                MerchantOrder::where('id', $orderId)->update([
-                    'payment_status' => 'failed',
-                    'status' => 'pending'
-                ]);
-                throw new \Exception("Cyclos Order Creation failed: " . ($merchantCredit['message'] ?? 'Unknown error'));
-            }
-
-            // Credit merchant from customer
-            $merchantCredit = $this->cyclosPayment->addFunds(
-                $merchantCyclosID,
-                $orderAmount,
-                'Order #' . $orderId . ' Cyclos Order ID:' . $cyclosOrder['order_id'] ?? null . ' - Payment to merchant',
-                $customer
-            );
-
-            if (!$merchantCredit['success']) {
-                MerchantOrder::where('id', $orderId)->update([
-                    'payment_status' => 'failed',
-                    'status' => 'pending'
-                ]);
-                throw new \Exception("Payment failed: " . ($merchantCredit['message'] ?? 'Unknown error'));
+                throw new \Exception("Error accepting cyclos order as buyer: " . ($cyclosOrder['message'] ?? 'Unknown error'));
             }
 
             // Update order status
             MerchantOrder::where('id', $orderId)->update([
-                'cyclos_order_id' => $cyclosOrder['order_id'] ?? null,
-                'payment_status' => 'paid',
                 'status' => 'completed',
-                'transaction_id' => $merchantCredit['transaction_id'] ?? null,
+                'payment_status' => 'paid',
                 'paid_at' => now(),
-                'notes' => "Customer {$cyclosUserId} has balance {$balance} TT. Amount {$orderAmount} TT deducted from admin account. Customer needs to pay admin separately."
+                'notes' => "Order marked as accepted from buyer."
             ]);
 
-            Log::info('Order completed - Merchant paid from admin', [
+            Log::info('Order completed - Buyer accepted order', [
                 'order_id' => $orderId,
                 'customer_id' => $cyclosUserId,
                 'customer_balance' => $balance,
-                'merchant_id' => $merchantCyclosID,
-                'amount' => $orderAmount,
-                'merchant_transaction' => $merchantCredit['transaction_id'] ?? null
             ]);
 
             return [
                 'success' => true,
-                'message' => 'Payment processed successfully. Merchant has been credited.',
-                'status' => 'paid',
+                'message' => 'Order processed successfully. Order accepted by buyer.',
+                'status' => 'completed',
                 'order_id' => $orderId,
-                'cyclos_order_id' => $cyclosOrder['order_id'] ?? null,
-                'amount' => $orderAmount,
-                'transaction_id' => $merchantCredit['transaction_id'] ?? null
             ];
         } catch (\Exception $e) {
             Log::error('Error while purchasing the order', [
@@ -187,7 +144,7 @@ class PosCustomerOrderService
             if (isset($orderId) && $orderId) {
                 MerchantOrder::where('id', $orderId)->update([
                     'status' => 'pending',
-                    'payment_status' => 'failed'
+                    'payment_status' => 'failed',
                 ]);
             }
 
