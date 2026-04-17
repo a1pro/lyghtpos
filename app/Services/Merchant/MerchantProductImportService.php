@@ -59,7 +59,8 @@ class MerchantProductImportService
             $this->currencySymbol = $getStringValue('services.cyclos.currency_symbol', 'TT');
             $this->currencyName = $getStringValue('services.cyclos.currency_name', 'TradeTokens');
             $this->adminUserId = $getStringValue('services.cyclos.admin_user_id', '');
-            $this->defaultCategoryId = $getStringValue('services.cyclos.default_category_id', '-4143451305415679040');
+            // Get default category ID directly from env like in job
+            $this->defaultCategoryId = env('DEFAULT_CATEGORY_ID');
 
             Log::info('MerchantProductService settings loaded from config', [
                 'default_category_id' => $this->defaultCategoryId,
@@ -91,7 +92,7 @@ class MerchantProductImportService
             $missing[] = 'services.cyclos.admin_user_id';
         }
         if (empty($this->defaultCategoryId)) {
-            $missing[] = 'services.cyclos.default_category_id';
+            $missing[] = 'DEFAULT_CATEGORY_ID env variable';
         }
 
         if (!empty($missing)) {
@@ -331,8 +332,8 @@ class MerchantProductImportService
             return ['success' => false, 'error' => 'Cyclos username is required'];
         }
         
-        // Get category ID - ensure it's treated as a string
-        $categoryId = $this->defaultCategoryId;
+        // Get category ID from env directly like in job
+        $categoryId = env('DEFAULT_CATEGORY_ID');
         
         // Check if category_id is provided in CSV (exact match to header)
         if (!empty($productData['category_id'])) {
@@ -514,7 +515,7 @@ class MerchantProductImportService
 
     public function getDefaultCategoryId(): string
     {
-        return $this->defaultCategoryId;
+        return env('DEFAULT_CATEGORY_ID');
     }
     
     private function prepareCsv($file, $cyclosUsername)
