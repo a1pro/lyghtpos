@@ -36,6 +36,7 @@ class PosCustomerOrderService
     {
         try {
             $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'payment_status' => 'pending'])
+                ->with('items:id,merchant_order_id,product_name,quantity,price')
                 ->get()->toArray();
 
             return $orders ?? [];
@@ -54,6 +55,7 @@ class PosCustomerOrderService
         try {
             $orders = MerchantOrder::where('customer_cyclos_id', $cyclosUserId)
                 ->where('payment_status', '!=', 'pending')
+                ->with('items:id,merchant_order_id,product_name,quantity,price')
                 ->get()
                 ->toArray();
             return $orders ?? [];
