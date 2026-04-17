@@ -268,13 +268,13 @@ class MerchantCyclosOrderService
                     ],
                 ],
                 "deliveryAddress" => $orderData['delivery_address'] ?? [
-                    "addressLine1" => "",
-                    "street" => "",
-                    "buildingNumber" => "",
-                    "zip" => "",
-                    "city" => "",
-                    "region" => "",
-                    "country" => "US"
+                    "addressLine1" => "arizona 1158",
+                    "street" => "arizona main street",
+                    "buildingNumber" => "1158",
+                    "zip" => "85003",
+                    "city" => "Arizona",
+                    "region" => "Arizona",
+                    "country" => "US" // test address
                 ],
                 "draft" => false,
                 "items" => $orderData['items'],
@@ -332,6 +332,84 @@ class MerchantCyclosOrderService
             ];
         } catch (Exception $e) {
             Log::error('Exception in createOrder', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Accept order as buyer
+     */
+    public function acceptOrderAsBuyer($buyer, string $orderId, array $data): array
+    {
+        try {
+            $paymentTypeId = config('services.cyclos.payment_type_id');
+
+            $cyclosUserId = $buyer->cyclos_user_id;
+            $url = $this->baseUrl . "/api/orders/{$orderId}/buyer/accept";
+
+            $payload = [
+                'remarks' => $data['remarks'] ?? null,
+                'paymentType' => $paymentTypeId,
+            ];
+
+            Log::info('Accepting order as buyer in Cyclos', [
+                'buyer_cyclos_id' => $cyclosUserId,
+                'order_id' => $orderId,
+                'url' => $url,
+                'payload' => $payload,
+            ]);
+
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($buyer->cyclos_username, $buyer->cyclos_user_password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($url, $payload);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+                $errorMessage = $errorData['message'] ?? $errorData['code'] ?? 'Failed to accept order';
+
+                Log::error('Failed to accept order in Cyclos', [
+                    'order_id' => $orderId,
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                    'response_body' => $response->body(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => $errorData,
+                    'status_code' => $response->status()
+                ];
+            }
+
+            $resData = $response->json();
+
+            Log::info('Order accepted successfully in Cyclos', [
+                'order_id' => $orderId,
+                'response' => $resData,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Order accepted successfully',
+                'data' => $resData,
+            ];
+        } catch (Exception $e) {
+            Log::error('Exception in acceptOrderAsBuyer', [
+                'order_id' => $orderId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

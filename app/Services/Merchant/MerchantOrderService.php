@@ -4,12 +4,23 @@ namespace App\Services\Merchant;
 
 use App\Models\MerchantOrder;
 use App\Models\MerchantOrderItem;
+use App\Services\Cyclos\MerchantCyclosOrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MerchantOrderService
 {
+    protected $customerWallet;
+    protected $cyclosPayment;
+    protected $merchantCyclosOrderService;
+
+    public function __construct(
+        MerchantCyclosOrderService $merchantCyclosOrderService
+    ) {
+        $this->merchantCyclosOrderService =  $merchantCyclosOrderService;
+    }
+
     /**
      * Create a local order and its items from the cart.
      */
@@ -21,7 +32,8 @@ class MerchantOrderService
         ?string $notes = null
     ): MerchantOrder {
         return DB::transaction(function () use ($customerCyclosId, $cartItems, $paymentMethod, $totalAmount, $notes) {
-            $merchantId = Auth::id();
+            $merchant = Auth::user();
+            $merchantId = $merchant->id;
 
             // Determine status based on payment method
             $status = 'pending';
@@ -54,6 +66,34 @@ class MerchantOrderService
                     'product_name' => $item['name'] ?? null,
                     'price' => $price,
                     'quantity' => $quantity,
+                ]);
+            }
+
+            if ($paymentMethod === 'pos_mobile') {
+                $items = array_map(function ($item) {
+                    return [
+                        'product' => $item['product_cyclos_id'] ?? $item['id'] ?? null,
+                        'quantity' => (int) ($item['pivot']['quantity'] ?? $item['quantity'] ?? 1),
+                        'price' => (float) ($item['price'] ?? 0),
+                    ];
+                }, $cartItems);
+
+                $orderData = [
+                    'items' => $items,
+                ];
+
+                $cyclosOrder = $this->merchantCyclosOrderService->createOrder($merchant, $customerCyclosId, $orderData);
+
+                if (!$cyclosOrder['success']) {
+                    throw new \Exception("Cyclos order creation failed: " . ($cyclosOrder['message'] ?? 'Unknown error'));
+                }
+
+                if (!$cyclosOrder['order_id']) {
+                    throw new \Exception("Cyclos order ID not found in response: " . ($cyclosOrder['message'] ?? 'Unknown error'));
+                }
+
+                $order->update([
+                    'cyclos_order_id' => $cyclosOrder['order_id']
                 ]);
             }
 
