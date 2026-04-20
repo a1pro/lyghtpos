@@ -52,7 +52,7 @@
             <div class="col-md-6">
                 <form action="{{ route('merchant.products.index') }}" method="GET" class="form-inline">
                     <div class="input-group w-100">
-                        <input type="text" name="search" class="form-control" placeholder="{{ __('product.Search_Products') }}" value="{{ request('search') }}">
+                        <input type="text" name="search" class="form-control" placeholder=" Search Products" value="{{ request('search') }}">
                         <div class="input-group-append">
                             <button class="btn btn-outline-secondary" type="submit">
                                 <i class="fas fa-search"></i>
@@ -63,7 +63,7 @@
             </div>
             {{-- Import Actions --}}
             <div class="col-md-6 text-right">
-                <a href="{{ route('merchant.categories.index') }}" class="btn btn-info">
+                <a href="{{ route('merchant.categories.index') }}" class="btn btn-info btn-sm">
                     <i class="fa-solid fa-layer-group"></i> Categories
                 </a>
                 <a href="{{ asset('samples/product-import-sample.csv') }}" class="btn btn-outline-info btn-sm" download>
@@ -87,11 +87,9 @@
                     <th width="80">{{ __('product.Image') }}</th>
                     <th>{{ __('product.Barcode') }}</th>
                     <th>{{ __('product.Price') }}</th>
-
-
                     <th>{{ __('product.Created_At') }}</th>
                     <th>{{ __('product.Updated_At') }}</th>
-
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,12 +112,15 @@
 
                     <td>{{ $product['created_at'] ? date('Y-m-d H:i', strtotime($product['created_at'])) : 'N/A' }}</td>
                     <td>{{ $product['updated_at'] ? date('Y-m-d H:i', strtotime($product['updated_at'])) : 'N/A' }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-delete" data-url="{{ route('merchant.products.destroy', $product['id']) }}"><i class="fas fa-trash"></i></button>
+                    </td>
 
                 </tr>
                 @empty
                 <tr>
                     <td colspan="10" class="text-center">
-                        {{ __('product.No_Products_Found') }}
+                        No Products Found
                     </td>
                 </tr>
                 @endforelse
@@ -140,7 +141,7 @@
 
 @section('js')
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-<script>
+<script type="module">
     $(document).ready(function() {
         // Delete product confirmation
         $(document).on('click', '.btn-delete', function() {
@@ -148,14 +149,14 @@
             var url = $this.data('url');
 
             Swal.fire({
-                title: '{{ __("product.sure") }}'
-                , text: '{{ __("product.really_delete") }}'
+                title: 'Are you sure?'
+                , text: 'You won\'t be able to revert this!'
                 , icon: 'warning'
                 , showCancelButton: true
                 , confirmButtonColor: '#d33'
                 , cancelButtonColor: '#3085d6'
-                , confirmButtonText: '{{ __("product.yes_delete") }}'
-                , cancelButtonText: '{{ __("product.No") }}'
+                , confirmButtonText: 'Yes'
+                , cancelButtonText: 'No'
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
@@ -176,22 +177,22 @@
                                 });
 
                                 Swal.fire(
-                                    '{{ __("common.Deleted") }}'
-                                    , '{{ __("product.deleted_success") }}'
+                                    'Deleted!'
+                                    , 'Product has been deleted.'
                                     , 'success'
                                 );
                             } else {
                                 Swal.fire(
-                                    '{{ __("common.Error") }}'
-                                    , res.message || '{{ __("product.error_deleting") }}'
+                                    'Error!'
+                                    , res.message || 'Error deleting product'
                                     , 'error'
                                 );
                             }
                         }
                         , error: function(xhr) {
                             Swal.fire(
-                                '{{ __("common.Error") }}'
-                                , xhr.responseJSON ? .message || '{{ __("product.error_deleting") }}'
+                                'Error!'
+                                , xhr.responseJSON?.message || 'Error deleting product'
                                 , 'error'
                             );
                         }
@@ -199,6 +200,7 @@
                 }
             });
         });
+
     });
 
 </script>

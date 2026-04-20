@@ -167,6 +167,7 @@ class MerchantProductService
                 'url' => $url,
             ]);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -392,6 +393,7 @@ class MerchantProductService
                 'query_params' => $queryParams,
             ]);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -527,6 +529,7 @@ class MerchantProductService
                 'url' => $url,
             ]);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -609,6 +612,7 @@ class MerchantProductService
                 return null;
             }
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -675,6 +679,7 @@ class MerchantProductService
                 'url' => $url,
             ]);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -712,12 +717,6 @@ class MerchantProductService
 
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
-
-            // Upload image if provided
-            $imageKey = null;
-            if ($image) {
-                $imageKey = $this->uploadImage($cyclosUserId, $image);
-            }
 
             // Get the category ID from the array (single category)
             $categoryId = null;
@@ -812,11 +811,6 @@ class MerchantProductService
                 $cyclosProductData['barcode'] = $productData['barcode'];
             }
 
-            // Add images if uploaded
-            if ($imageKey) {
-                $cyclosProductData['images'] = [$imageKey];
-            }
-
             // Remove end date if null
             if ($cyclosProductData['publicationPeriod']['end'] === null) {
                 unset($cyclosProductData['publicationPeriod']['end']);
@@ -832,6 +826,7 @@ class MerchantProductService
                 'product_data' => $cyclosProductData,
             ]);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -888,6 +883,16 @@ class MerchantProductService
                 $productId = $data['_id'];
             } elseif (is_string($data) && strlen($data) > 10) {
                 $productId = $data;
+            } else {
+                $productId = $data;
+            }
+
+            if (!$productId) {
+                Log::error('No product ID returned from Cyclos', ['response' => $data]);
+                return [
+                    'success' => false,
+                    'message' => 'Product created but no ID returned',
+                ];
             }
 
             Log::info('Product created successfully in Cyclos', [
@@ -896,9 +901,22 @@ class MerchantProductService
                 'full_response' => $data
             ]);
 
+            $imageUploaded = false;
+            if ($image) {
+                $imageUploaded = $this->assignImageToProduct($productId, $image);
+
+                if (!$imageUploaded) {
+                    Log::warning('Product created but image upload failed', [
+                        'product_id' => $productId,
+                    ]);
+                    // Continue - product was created successfully even if image upload fails
+                }
+            }
+
             return [
                 'success' => true,
                 'product_id' => $productId,
+                'image_uploaded' => $imageUploaded,
                 'data' => $data,
             ];
         } catch (Exception $e) {
@@ -911,6 +929,70 @@ class MerchantProductService
                 'success' => false,
                 'message' => 'Exception: ' . $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Assign an image to an existing product using the marketplace images endpoint
+     * POST /api/marketplace/{productId}/images
+     */
+    public function assignImageToProduct(string $productId, UploadedFile $image): bool
+    {
+        try {
+            $url = $this->baseUrl . "/api/marketplace/{$productId}/images";
+
+            Log::info('Assigning image to product', [
+                'product_id' => $productId,
+                'url' => $url,
+                'file_name' => $image->getClientOriginalName(),
+                'file_size' => $image->getSize(),
+                'mime_type' => $image->getMimeType(),
+            ]);
+
+            $fileContents = file_get_contents($image->getRealPath());
+
+            if ($fileContents === false) {
+                Log::error('Failed to read image file contents');
+                return false;
+            }
+
+            /** @var Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'text/plain',
+                    'Channel' => $this->channel,
+                ])
+                ->attach(
+                    'image',
+                    $fileContents,
+                    $image->getClientOriginalName(),
+                    ['Content-Type' => $image->getMimeType()]
+                )
+                ->timeout(60)
+                ->post($url);
+
+            if ($response->failed()) {
+                Log::error('Failed to assign image to product', [
+                    'product_id' => $productId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return false;
+            }
+
+            Log::info('Image assigned to product successfully', [
+                'product_id' => $productId,
+                'response' => $response->body(),
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Exception in assignImageToProduct', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'product_id' => $productId,
+            ]);
+            return false;
         }
     }
 
@@ -1034,6 +1116,7 @@ class MerchantProductService
                 ->timeout(30)
                 ->put($url, $cyclosProductData);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             if ($response->failed()) {
                 $errorData = $response->json();
 
@@ -1085,7 +1168,7 @@ class MerchantProductService
         }
 
         try {
-            $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace/{$productId}";
+            $url = $this->baseUrl . "/api/marketplace/{$productId}";
 
             Log::info('Deleting product from Cyclos', [
                 'cyclos_user_id' => $cyclosUserId,
@@ -1093,13 +1176,7 @@ class MerchantProductService
                 'url' => $url,
             ]);
 
-            $product = $this->getProduct($cyclosUserId, $productId);
-            if ($product && isset($product['images']) && is_array($product['images'])) {
-                foreach ($product['images'] as $image) {
-                    $this->deleteImage($cyclosUserId, $image);
-                }
-            }
-
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -1178,8 +1255,20 @@ class MerchantProductService
      */
     public function formatProduct(array $rawProduct): array
     {
-        $imageKey = $rawProduct['images'][0] ?? null;
-        $imageUrl = $imageKey ? $this->baseUrl . "/api/files/{$imageKey}/data" : null;
+        $imageUrl = null;
+
+        if (isset($rawProduct['image']) && is_array($rawProduct['image']) && isset($rawProduct['image']['url'])) {
+            $imageUrl = $rawProduct['image']['url'];
+        }
+        elseif (isset($rawProduct['images']) && is_array($rawProduct['images']) && !empty($rawProduct['images'])) {
+            $firstImage = $rawProduct['images'][0];
+
+            if (is_array($firstImage) && isset($firstImage['url'])) {
+                $imageUrl = $firstImage['url'];
+            } elseif (is_string($firstImage)) {
+                $imageUrl = $this->baseUrl . "/api/files/{$firstImage}/data";
+            }
+        }
 
         $customValues = $rawProduct['customValues'] ?? [];
         $barcode = $customValues['barcode'] ?? 'N/A';
@@ -1208,7 +1297,6 @@ class MerchantProductService
             'quantity' => $quantity,
             'unlimited_stock' => (bool) ($rawProduct['unlimitedStock'] ?? false),
             'status' => $this->determineProductStatus($rawProduct),
-            'image_key' => $imageKey,
             'image_url' => $imageUrl,
             'created_at' => $createdAt,
             'updated_at' => $updatedAt,

@@ -84,6 +84,7 @@ class MerchantProductController extends Controller
             );
 
             $productsData = $products->toArray();
+
             $productsData['pagination_headers'] = [
                 'x_current_page'   => $headers['x-current-page'] ?? null,
                 'x_page_size'      => $headers['x-page-size'] ?? null,
@@ -223,36 +224,35 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-    
+
         if (!$cyclosUserId) {
             return $request->wantsJson()
                 ? response()->json(['error' => 'Cyclos user ID not found'], 400)
                 : redirect()->route('merchant.products.index')
                 ->with('error', 'Cyclos user ID not found');
         }
-    
+
         try {
             $product = $this->productService->getProduct($cyclosUserId, $productId);
-    
+
             if (!$product) {
                 return $request->wantsJson()
                     ? response()->json(['error' => 'Product not found'], 404)
                     : redirect()->route('merchant.products.index')
                     ->with('error', 'Product not found');
             }
-    
+
             $formattedProduct = $this->productService->formatProduct($product);
-    
+
             return $request->wantsJson()
                 ? response()->json($formattedProduct)
                 : view('merchant.pages.products.show', ['product' => $formattedProduct]);
-                
         } catch (\Exception $e) {
             Log::error('Error fetching product', [
                 'error' => $e->getMessage(),
                 'product_id' => $productId
             ]);
-    
+
             return $request->wantsJson()
                 ? response()->json(['error' => 'Failed to fetch product'], 500)
                 : redirect()->route('merchant.products.index')
@@ -381,7 +381,10 @@ class MerchantProductController extends Controller
             $result = $this->productService->deleteProduct($cyclosUserId, $productId);
 
             if ($result['success']) {
-                return response()->json(['success' => true]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product deleted successfully'
+                ]);
             } else {
                 return response()->json([
                     'success' => false,
@@ -400,7 +403,6 @@ class MerchantProductController extends Controller
             ], 500);
         }
     }
-
     /**
      * Search products (AJAX endpoint)
      */
