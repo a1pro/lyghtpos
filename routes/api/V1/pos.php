@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use App\Http\Controllers\Api\V1\POS\Customer\PosJoiningFeesController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosTokenBundleController;
+use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerSubscriptionController;
 use App\Http\Controllers\Api\V1\POS\Settings\PosSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,12 +34,22 @@ Route::prefix('pos')->group(function () {
             Route::get('payment-history', [PosPayPalPaymentController::class, 'getPaymentHistory']);
         });
 
+
+   
+
+
         /** ************** User Routes ************************ */
         Route::prefix('user')->group(function () {
             Route::post('otp/verification', [PosRegisterController::class, 'otpVerification']);
             Route::post('otp/resend', [PosRegisterController::class, 'resendOtp']);
             Route::get('profile', [PosLoginController::class, 'userProfile']);
             Route::get('email/status', [PosRegisterController::class, 'checEmailVerification']);
+
+             /** *************** Customer Subscription Plans ****************** */
+             Route::prefix('subscription-plans')->group(function(){
+                Route::get('/',[PosCustomerSubscriptionController::class,'plans']);
+                Route::post('/purchase',[PosCustomerSubscriptionController::class,'planPurchase']);
+             });    
 
             /** ******* Wallet related routes ********** */
             Route::prefix('wallet')->group(function () {
