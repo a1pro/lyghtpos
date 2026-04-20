@@ -16,6 +16,7 @@ use App\Http\Controllers\Pos\OrderController;
 use App\Http\Controllers\Settings\SettingController;
 use App\Http\Controllers\Admin\JoiningFeesController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
+use App\Http\Controllers\Admin\CustomerPlanController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
@@ -83,6 +84,12 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
 
     /** ********************************* Subscription Plan Routes ***************************************** */
     Route::resource('subscription-plans', SubscriptionPlanController::class)->except(['show'])->names('admin.subscription-plans');
+
+
+Route::resource('customer-plans', CustomerPlanController::class)->except(['show'])->names('admin.customer-plans');
+
+
+ 
 
     // ===================================Merchant List===========================================================
 

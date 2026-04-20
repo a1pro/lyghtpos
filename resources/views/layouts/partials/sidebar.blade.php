@@ -130,6 +130,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.customer-plans.index') }}" class="nav-link {{ request()->routeIs('admin.customer-plans.index') ? 'active' : '' }}">
+                        <i class="fa-solid fa-money-bill-1"></i>
+                        <p>LyghtPOX Plans</p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.joining-fees.index') }}" class="nav-link {{ request()->routeIs('admin.joining-fees.index') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-percent"></i>
                         <p>Joining Fees</p>
