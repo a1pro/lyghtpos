@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Services\Api\POS\Customer\PosCustomerPlanService;
 use App\Http\Requests\Api\POS\Customer\PosCustomPlanPurchase;
 use DB;
-
+use Auth;
 
 class PosCustomerSubscriptionController extends Controller
 {
@@ -57,5 +57,31 @@ class PosCustomerSubscriptionController extends Controller
     		DB::rollback();
     		return response()->json(['success'=>false,'status_code'=>500,'message'=>'Something went wrong'.$e->getMessage],500);
     	}
+    }
+
+
+    /**  Customer Current Plan Detail  */
+    public function customerPlanDetail()
+    {
+        try{
+            $userId = Auth::id();
+           
+            $plan = $this->customerPlans->currentPlan($userId);
+             
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Plan fetch successfully',
+                'data'    => $plan
+            ],200);
+        }
+        catch(\Exception $e)
+        {
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'Something went wrong' .$e->getMessage()
+            ],500);
+        }
     }
 }

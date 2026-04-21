@@ -30,4 +30,17 @@ class CustomerPlans extends Model
         'yearly_price' => 'decimal:2',
         'yearly_total' => 'decimal:2'
     ];
+
+
+    public function purchases()
+    {
+        return $this->hasMany(CustomerPlanPurchase::class,'plan_id');
+    }
+
+    public function activePurchases()
+    {
+        return $this->hasMany(CustomerPlanPurchase::class, 'plan_id')
+                    ->where('status', 'active')
+                    ->where('end_date', '>', now()); 
+    }
 }
