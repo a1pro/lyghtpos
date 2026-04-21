@@ -82,6 +82,43 @@
 		}
 	}
 
+/**  Customer Current plan Function  */
+
+	public function currentPlan($userId)
+	{
+		try{
+			$currentDate = Carbon::now();
+
+			$currentPlan = CustomerPlanPurchase::with('plan')->where('user_id',$userId)->where('end_date','>',$currentDate)->first();
+			 
+
+			if($currentPlan){
+				return [
+					'success' => true,
+					'message' => 'Current Plan fetch successfully',
+					'plan'    => $currentPlan
+				];
+			}
+			
+
+			$expiredPlan = CustomerPlanPurchase::with('plan')->where('user_id',$userId)->where('end_date','<',$currentDate)->first();
+			return [
+				'success' =>true,
+				'message'=> 'Plan Is Expired',
+				'expiredPlan' => $expiredPlan
+			];	
+
+}
+		catch(\Exception $e){
+			return [
+				'success' => false,
+				'message' => 'Something went wrong' .$e->getMessage()
+			];
+		}
+	}
+
+
+	
 
  }
 ?>

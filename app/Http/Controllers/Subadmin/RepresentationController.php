@@ -7,6 +7,7 @@ use App\Models\Representation;
 use App\Models\RepresentationReviewLog;
 use App\Models\User;
 use App\Models\Notification;
+use App\Models\UserJoiningFees;
 use App\Models\GovernanceLayer;
 use App\Models\UserGovernanceLayer;
 use Illuminate\Http\Request;
@@ -24,7 +25,8 @@ class RepresentationController extends Controller
         $representation = Representation::where('user_id', $userId)
             ->with('user', 'user.merchant', 'reviewLogs.user')
             ->first();
-
+ 
+         $join = UserJoiningFees::where('user_id', $userId)->count();   
         $isReviewed = false;
         $governanceLayers = collect();
         $userGovernanceLayers = collect();
@@ -67,6 +69,7 @@ class RepresentationController extends Controller
 
         return view('subadmin.pages.merchants.representation-view', compact(
             'representation', 
+            'join',
             'isReviewed',
             'governanceLayers',
             'userGovernanceLayers',

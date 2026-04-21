@@ -49,6 +49,8 @@ Route::prefix('pos')->group(function () {
              Route::prefix('subscription-plans')->group(function(){
                 Route::get('/',[PosCustomerSubscriptionController::class,'plans']);
                 Route::post('/purchase',[PosCustomerSubscriptionController::class,'planPurchase']);
+
+                Route::get('/detail',[PosCustomerSubscriptionController::class,'customerPlanDetail']);
              });    
 
             /** ******* Wallet related routes ********** */

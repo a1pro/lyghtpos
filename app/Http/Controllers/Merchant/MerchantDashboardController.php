@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Merchant;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\JoiningFees;
+use App\Models\UserJoiningFees;
 
 class MerchantDashboardController extends Controller
 {
