@@ -36,7 +36,7 @@ class MerchantCartService
         $enrichedCart = [];
         foreach ($cart as $productId => $item) {
             try {
-                $product = $this->productService->getProduct(Auth::user()->cyclos_user_id, (string) $productId);
+                $product = $this->productService->getProduct((string) $productId);
                 if ($product) {
                     $enrichedCart[$productId] = [
                         'id' => (string) $productId,
@@ -72,7 +72,7 @@ class MerchantCartService
         $cyclosUserId = Auth::user()->cyclos_user_id;
 
         // Get product details to check stock
-        $product = $this->productService->getProduct($cyclosUserId, $productId);
+        $product = $this->productService->getProduct($productId);
 
         if (!$product) {
             return [
@@ -143,7 +143,7 @@ class MerchantCartService
         }
 
         // Check stock availability
-        $product = $this->productService->getProduct(Auth::user()->cyclos_user_id, $productId);
+        $product = $this->productService->getProduct($productId);
         $availableStock = $product['quantity'] ?? 0;
 
         if ($availableStock < $quantity) {
