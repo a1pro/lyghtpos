@@ -233,7 +233,7 @@ class MerchantProductController extends Controller
         }
 
         try {
-            $product = $this->productService->getProduct($cyclosUserId, $productId);
+            $product = $this->productService->getProduct($productId);
 
             if (!$product) {
                 return $request->wantsJson()
@@ -274,7 +274,7 @@ class MerchantProductController extends Controller
         }
 
         try {
-            $product = $this->productService->getProduct($cyclosUserId, $productId);
+            $product = $this->productService->getProduct($productId);
 
             if (!$product) {
                 return redirect()->route('merchant.products.index')
@@ -282,18 +282,22 @@ class MerchantProductController extends Controller
             }
 
             $formattedProduct = $this->productService->formatProduct($product);
-
             $categoriesData = $this->productService->getMarketplaceCategories();
             $flattenedCategories = $this->productService->flattenCategories($categoriesData);
+
             $tradeTypes = $this->productService->getTradeTypes();
             $currencies = $this->productService->getCurrencies();
+
+            $selectedCategoryId = $this->getSelectedCategoryId($product, $categoriesData);
 
             return view('merchant.pages.products.edit', [
                 'product' => $formattedProduct,
                 'rawProduct' => $product,
                 'flattenedCategories' => $flattenedCategories,
+                'categoriesData' => $categoriesData,
                 'tradeTypes' => $tradeTypes,
-                'currencies' => $currencies
+                'currencies' => $currencies,
+                'selectedCategoryId' => $selectedCategoryId  // Pass just the ID
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching product for edit', [
@@ -328,17 +332,10 @@ class MerchantProductController extends Controller
                 $productData['trade_type'] = 'tradeTypeOffer';
             }
 
-            $existingProduct = $this->productService->getProduct($cyclosUserId, $productId);
-            $existingImageKey = $existingProduct['images'][0] ?? null;
-
-            $image = $request->hasFile('image') ? $request->file('image') : null;
-
             $result = $this->productService->updateProduct(
                 $cyclosUserId,
                 $productId,
-                $productData,
-                $image,
-                $existingImageKey
+                $productData
             );
 
             if ($result['success']) {
@@ -439,5 +436,31 @@ class MerchantProductController extends Controller
                 'message' => 'Error searching products'
             ], 500);
         }
+    }
+
+    /**
+     * Get selected category ID from product
+     */
+    private function getSelectedCategoryId($rawProduct, $categoriesData): ?string
+    {
+        if (empty($rawProduct['categories']) || !is_array($rawProduct['categories'])) {
+            return null;
+        }
+
+        $firstCategory = $rawProduct['categories'][0];
+
+        // Get the internal name (could be string or array)
+        $internalName = null;
+        if (is_array($firstCategory) && isset($firstCategory['internalName'])) {
+            $internalName = $firstCategory['internalName'];
+        } elseif (is_string($firstCategory)) {
+            $internalName = $firstCategory;
+        }
+
+        if (!$internalName) {
+            return null;
+        }
+
+        return $this->productService->findCategoryIdByInternalName($categoriesData, $internalName);
     }
 }
