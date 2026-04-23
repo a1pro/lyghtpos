@@ -15,7 +15,7 @@ class PosPayPalPaymentController extends Controller
 {
     protected $paypalService;
     protected $cyclosUserService;
-    
+
     public function __construct(PosPayPalPaymentService $paypalService, CyclosUserService $cyclosUserService)
     {
         $this->paypalService = $paypalService;
@@ -82,7 +82,6 @@ class PosPayPalPaymentController extends Controller
                     'approval_url' => $result['approval_url']
                 ]
             ]);
-
         } catch (\Exception $e) {
             Log::error('Create order error: ' . $e->getMessage());
             return response()->json([
@@ -102,37 +101,37 @@ class PosPayPalPaymentController extends Controller
         try {
             $token = $request->query('token');
             $payerId = $request->query('PayerID');
-            
+
             Log::info('PayPal success callback received', [
                 'token' => $token,
                 'payer_id' => $payerId
             ]);
-            
+
             if (!$token) {
                 Log::error('No token in PayPal success callback');
                 return redirect($this->getFrontendUrl() . '/payment-error?message=No payment token found');
             }
-            
+
             // Get the payment record
             $userJoiningFee = UserJoiningFees::where('transaction_id', $token)->first();
-            
+
             if (!$userJoiningFee) {
                 Log::error('Payment record not found', ['token' => $token]);
                 return redirect($this->getFrontendUrl() . '/payment-error?message=Payment record not found');
             }
-            
+
             // Get the local user
             $user = User::find($userJoiningFee->user_id);
-            
+
             if (!$user) {
                 Log::error('User not found', ['user_id' => $userJoiningFee->user_id]);
                 return redirect($this->getFrontendUrl() . '/payment-error?message=User not found');
             }
-            
+
             // Check if already completed
-            if ($userJoiningFee->status === 'completed') {
+            if ($userJoiningFee->status == 'completed') {
                 Log::info('Payment already completed', ['token' => $token]);
-                
+
                 // Return local user ID and Cyclos ID
                 return redirect($this->getFrontendUrl() . '/payment-success?' . http_build_query([
                     'order_id' => $token,
@@ -141,39 +140,39 @@ class PosPayPalPaymentController extends Controller
                     'status' => 'success'
                 ]));
             }
-            
+
             // Capture the payment
             Log::info('Capturing payment', ['token' => $token]);
             $captureResult = $this->paypalService->capturePayment($token);
-            
+
             if (!$captureResult['success']) {
                 Log::error('Payment capture failed', [
                     'token' => $token,
                     'error' => $captureResult['message']
                 ]);
-                
+
                 return redirect($this->getFrontendUrl() . '/payment-error?message=' . urlencode($captureResult['message']));
             }
-            
+
             Log::info('Payment captured successfully', ['token' => $token]);
-            
+
             // Create or get Cyclos user
             $cyclosResponse = $this->createOrGetCyclosUser($user, $userJoiningFee);
-            
+
             if (!$cyclosResponse || !isset($cyclosResponse['user_id'])) {
                 Log::error('Failed to create/get Cyclos user', ['user_id' => $user->id]);
                 return redirect($this->getFrontendUrl() . '/payment-error?message=Failed to setup user account');
             }
-            
+
             // Update user with Cyclos data
             $this->updateUserWithCyclosData($user, $cyclosResponse);
-            
+
             // Update payment record
             $userJoiningFee->update([
                 'status' => 'completed',
                 'capture_id' => $captureResult['capture_data']['purchase_units'][0]['payments']['captures'][0]['id'] ?? null
             ]);
-            
+
             // Redirect to app with local user ID (not Cyclos ID as primary)
             $successUrl = $this->getFrontendUrl() . '/payment-success?' . http_build_query([
                 'order_id' => $token,
@@ -182,37 +181,36 @@ class PosPayPalPaymentController extends Controller
                 'cyclos_username' => $cyclosResponse['username'] ?? '',
                 'status' => 'success'
             ]);
-            
+
             Log::info('Payment success - Redirecting to app', [
                 'user_id' => $user->id,
                 'cyclos_user_id' => $cyclosResponse['user_id']
             ]);
-            
+
             return redirect($successUrl);
-            
         } catch (\Exception $e) {
             Log::error('PayPal success handler error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return redirect($this->getFrontendUrl() . '/payment-error?message=' . urlencode($e->getMessage()));
         }
     }
-    
+
     /**
      * PayPal Cancel Redirect (Web endpoint)
      */
     public function paypalCancel(Request $request)
     {
         $token = $request->query('token');
-        
+
         Log::info('PayPal cancel callback', ['token' => $token]);
-        
+
         if ($token) {
             UserJoiningFees::where('transaction_id', $token)->update(['status' => 'cancelled']);
         }
-        
+
         return redirect($this->getFrontendUrl() . '/payment-cancelled?message=Payment was cancelled');
     }
 
@@ -227,7 +225,7 @@ class PosPayPalPaymentController extends Controller
             ]);
 
             $user = Auth::user();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
@@ -238,7 +236,7 @@ class PosPayPalPaymentController extends Controller
 
             // Check local payment record
             $localPayment = UserJoiningFees::where('transaction_id', $request->order_id)->first();
-            
+
             if (!$localPayment) {
                 return response()->json([
                     'success' => false,
@@ -246,18 +244,18 @@ class PosPayPalPaymentController extends Controller
                     'message' => 'Payment record not found'
                 ], 404);
             }
-            
+
             // Check if user is authorized (payment belongs to this user)
-            if ($localPayment->user_id !== $user->id) {
+            if ($localPayment->user_id != $user->id) {
                 return response()->json([
                     'success' => false,
                     'status_code' => 403,
                     'message' => 'Unauthorized'
                 ], 403);
             }
-            
+
             // Check if already completed
-            if ($localPayment->status === 'completed') {
+            if ($localPayment->status == 'completed') {
                 return response()->json([
                     'success' => true,
                     'status_code' => 200,
@@ -269,21 +267,21 @@ class PosPayPalPaymentController extends Controller
                     ]
                 ]);
             }
-            
+
             // Check PayPal status
             $statusResult = $this->paypalService->getPaymentStatus($request->order_id);
-            
-            if ($statusResult['success'] && $statusResult['status'] === 'COMPLETED') {
+
+            if ($statusResult['success'] && $statusResult['status'] == 'COMPLETED') {
                 // Update local status
                 $localPayment->update(['status' => 'completed']);
-                
+
                 // Create/get Cyclos user if needed
                 $cyclosResponse = $this->createOrGetCyclosUser($user, $localPayment);
-                
+
                 if ($cyclosResponse && isset($cyclosResponse['user_id'])) {
                     $this->updateUserWithCyclosData($user, $cyclosResponse);
                 }
-                
+
                 return response()->json([
                     'success' => true,
                     'status_code' => 200,
@@ -295,15 +293,15 @@ class PosPayPalPaymentController extends Controller
                     ]
                 ]);
             }
-            
-            if ($statusResult['status'] !== 'APPROVED') {
+
+            if ($statusResult['status'] != 'APPROVED') {
                 return response()->json([
                     'success' => false,
                     'status_code' => 400,
                     'message' => 'Order not approved yet. Current status: ' . $statusResult['status']
                 ], 400);
             }
-            
+
             // Capture the payment
             $result = $this->paypalService->capturePayment($request->order_id);
 
@@ -317,7 +315,7 @@ class PosPayPalPaymentController extends Controller
 
             // Create Cyclos user
             $cyclosResponse = $this->createOrGetCyclosUser($user, $localPayment);
-            
+
             if (!$cyclosResponse || !isset($cyclosResponse['user_id'])) {
                 return response()->json([
                     'success' => false,
@@ -329,10 +327,10 @@ class PosPayPalPaymentController extends Controller
                     ]
                 ], 500);
             }
-            
+
             // Update user with Cyclos data
             $this->updateUserWithCyclosData($user, $cyclosResponse);
-            
+
             // Update payment record
             $localPayment->update([
                 'status' => 'completed',
@@ -351,7 +349,6 @@ class PosPayPalPaymentController extends Controller
                     'cyclos_username' => $cyclosResponse['username'] ?? null
                 ]
             ]);
-
         } catch (\Exception $e) {
             Log::error('Capture payment error: ' . $e->getMessage());
             return response()->json([
@@ -373,7 +370,7 @@ class PosPayPalPaymentController extends Controller
             ]);
 
             $user = Auth::user();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
@@ -383,8 +380,8 @@ class PosPayPalPaymentController extends Controller
             }
 
             $localPayment = UserJoiningFees::where('transaction_id', $request->order_id)->first();
-            
-            if (!$localPayment || $localPayment->user_id !== $user->id) {
+
+            if (!$localPayment || $localPayment->user_id != $user->id) {
                 return response()->json([
                     'success' => false,
                     'status_code' => 404,
@@ -404,11 +401,10 @@ class PosPayPalPaymentController extends Controller
                     'amount' => $localPayment->amount,
                     'user_id' => $user->id,
                     'cyclos_user_id' => $user->cyclos_user_id,
-                    'can_capture' => ($result['status'] ?? '') === 'APPROVED',
-                    'is_completed' => $localPayment->status === 'completed'
+                    'can_capture' => ($result['status'] ?? '') == 'APPROVED',
+                    'is_completed' => $localPayment->status == 'completed'
                 ]
             ]);
-
         } catch (\Exception $e) {
             Log::error('Check payment status error: ' . $e->getMessage());
             return response()->json([
@@ -426,7 +422,7 @@ class PosPayPalPaymentController extends Controller
     {
         try {
             $userId = Auth::id();
-            
+
             if (!$userId) {
                 return response()->json([
                     'success' => false,
@@ -445,7 +441,6 @@ class PosPayPalPaymentController extends Controller
                 'message' => 'Payment history retrieved',
                 'data' => $payments
             ]);
-
         } catch (\Exception $e) {
             Log::error('Get payment history error: ' . $e->getMessage());
             return response()->json([
@@ -482,7 +477,7 @@ class PosPayPalPaymentController extends Controller
                     'exists' => true
                 ];
             }
-            
+
             // Prepare additional data for Cyclos
             $additionalData = [
                 'business_name' => $user->business_name ?? ($user->first_name . ' ' . $user->last_name),
@@ -494,14 +489,14 @@ class PosPayPalPaymentController extends Controller
                 'user_type' => 'POS',
                 'referral_code' => $userJoiningFee ? $userJoiningFee->referral_code : null
             ];
-            
+
             Log::info('Creating Cyclos user', [
                 'user_id' => $user->id,
                 'email' => $user->email
             ]);
-            
+
             $response = $this->cyclosUserService->createUser($user, $additionalData);
-            
+
             if ($response && isset($response['user_id'])) {
                 Log::info('Cyclos user created successfully', [
                     'user_id' => $user->id,
@@ -509,10 +504,9 @@ class PosPayPalPaymentController extends Controller
                 ]);
                 return $response;
             }
-            
+
             Log::error('Cyclos user creation failed', ['response' => $response]);
             return null;
-            
         } catch (\Exception $e) {
             Log::error('Exception in createOrGetCyclosUser', [
                 'user_id' => $user->id ?? null,
@@ -521,7 +515,7 @@ class PosPayPalPaymentController extends Controller
             return null;
         }
     }
-    
+
     /**
      * Update user with Cyclos data
      */
@@ -540,7 +534,7 @@ class PosPayPalPaymentController extends Controller
             $user->cyclos_user_password = $cyclosData['password'];
         }
         $user->save();
-        
+
         Log::info('User updated with Cyclos data', [
             'user_id' => $user->id,
             'cyclos_user_id' => $user->cyclos_user_id
