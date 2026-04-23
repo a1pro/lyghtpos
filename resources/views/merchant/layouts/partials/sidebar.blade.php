@@ -99,10 +99,10 @@
                         </a>
                     </li>
 
-                    <li class="nav-header">{{ __('Purchases') }}</li>
+                    {{-- <li class="nav-header">{{ __('Purchases') }}</li> --}}
                     
                     <!-- Purchases (Dropdown) -->
-                    <li class="nav-item {{ request()->routeIs('merchant.purchases.*') ? 'menu-open' : '' }}">
+                    {{-- <li class="nav-item {{ request()->routeIs('merchant.purchases.*') ? 'menu-open' : '' }}">
                         <a href="#" class="nav-link">
                             <i class="nav-icon fas fa-box"></i>
                             <p>
@@ -124,15 +124,15 @@
                                 </a>
                             </li>
                         </ul>
-                    </li>
+                    </li> --}}
                     
                     <!-- Suppliers -->
-                    <li class="nav-item">
+                    {{-- <li class="nav-item">
                         <a href="{{ route('merchant.suppliers.index') }}" class="nav-link {{ activeSegment('suppliers') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-truck"></i>
                             <p>{{ __('Supplier') }}</p>
                         </a>
-                    </li>
+                    </li> --}}
 
                     <!-- Settings Section for Merchants -->
                     <li class="nav-header">Settings</li>
