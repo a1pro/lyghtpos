@@ -11,7 +11,7 @@ class MerchantCheckout extends Component {
             cart: [],
             amountDue: 0,
             customerId: "",
-            selectedPayment: "cash",
+            selectedPayment: "pos_mobile",
             loading: false,
             loadingCart: false,
             translations: {},
@@ -347,6 +347,7 @@ class MerchantCheckout extends Component {
                             <div className="card-body">
                                 <div className="payment-options">
                                     {/* Pay with Cash */}
+                                    {/*
                                     <div
                                         className={`payment-option border rounded mb-3 p-3 ${selectedPayment === 'cash' ? 'border-primary bg-light' : 'border'}`}
                                         onClick={() => this.handlePaymentSelect('cash')}
@@ -366,8 +367,10 @@ class MerchantCheckout extends Component {
                                             <div className="text-muted small mt-1">Complete order immediately</div>
                                         </div>
                                     </div>
+                                    */}
 
                                     {/* Send to PAX */}
+                                    {/*
                                     <div
                                         className={`payment-option border rounded mb-3 p-3 ${selectedPayment === 'pax' ? 'border-primary bg-light' : 'border'}`}
                                         onClick={() => this.handlePaymentSelect('pax')}
@@ -387,6 +390,7 @@ class MerchantCheckout extends Component {
                                             <div className="text-muted small mt-1">Send order to PAX device for processing</div>
                                         </div>
                                     </div>
+                                    */}
 
                                     {/* Send to POS Mobile App */}
                                     <div
@@ -410,6 +414,7 @@ class MerchantCheckout extends Component {
                                     </div>
 
                                     {/* Use Unyti Credits */}
+                                    {/*
                                     <div
                                         className={`payment-option border rounded mb-3 p-3 ${selectedPayment === 'unyti' ? 'border-primary bg-light' : 'border'}`}
                                         onClick={() => this.handlePaymentSelect('unyti')}
@@ -429,6 +434,7 @@ class MerchantCheckout extends Component {
                                             <div className="text-muted small mt-1">Pay with Unyti credits</div>
                                         </div>
                                     </div>
+                                    */}
                                 </div>
 
                                 {/* Proceed button for all methods */}
