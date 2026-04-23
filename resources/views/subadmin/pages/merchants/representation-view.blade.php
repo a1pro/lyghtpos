@@ -405,7 +405,7 @@
                 @endif
 
                 <!-- Review Section -->
-                @if($representation)
+                @if($representation && $join!==0)
                 <div class="review-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0">

@@ -84,6 +84,7 @@ class MerchantProductController extends Controller
             );
 
             $productsData = $products->toArray();
+
             $productsData['pagination_headers'] = [
                 'x_current_page'   => $headers['x-current-page'] ?? null,
                 'x_page_size'      => $headers['x-page-size'] ?? null,
@@ -223,36 +224,35 @@ class MerchantProductController extends Controller
     {
         $user = Auth::user();
         $cyclosUserId = $user->cyclos_user_id;
-    
+
         if (!$cyclosUserId) {
             return $request->wantsJson()
                 ? response()->json(['error' => 'Cyclos user ID not found'], 400)
                 : redirect()->route('merchant.products.index')
                 ->with('error', 'Cyclos user ID not found');
         }
-    
+
         try {
-            $product = $this->productService->getProduct($cyclosUserId, $productId);
-    
+            $product = $this->productService->getProduct($productId);
+
             if (!$product) {
                 return $request->wantsJson()
                     ? response()->json(['error' => 'Product not found'], 404)
                     : redirect()->route('merchant.products.index')
                     ->with('error', 'Product not found');
             }
-    
+
             $formattedProduct = $this->productService->formatProduct($product);
-    
+
             return $request->wantsJson()
                 ? response()->json($formattedProduct)
                 : view('merchant.pages.products.show', ['product' => $formattedProduct]);
-                
         } catch (\Exception $e) {
             Log::error('Error fetching product', [
                 'error' => $e->getMessage(),
                 'product_id' => $productId
             ]);
-    
+
             return $request->wantsJson()
                 ? response()->json(['error' => 'Failed to fetch product'], 500)
                 : redirect()->route('merchant.products.index')
@@ -274,7 +274,7 @@ class MerchantProductController extends Controller
         }
 
         try {
-            $product = $this->productService->getProduct($cyclosUserId, $productId);
+            $product = $this->productService->getProduct($productId);
 
             if (!$product) {
                 return redirect()->route('merchant.products.index')
@@ -282,18 +282,22 @@ class MerchantProductController extends Controller
             }
 
             $formattedProduct = $this->productService->formatProduct($product);
-
             $categoriesData = $this->productService->getMarketplaceCategories();
             $flattenedCategories = $this->productService->flattenCategories($categoriesData);
+
             $tradeTypes = $this->productService->getTradeTypes();
             $currencies = $this->productService->getCurrencies();
+
+            $selectedCategoryId = $this->getSelectedCategoryId($product, $categoriesData);
 
             return view('merchant.pages.products.edit', [
                 'product' => $formattedProduct,
                 'rawProduct' => $product,
                 'flattenedCategories' => $flattenedCategories,
+                'categoriesData' => $categoriesData,
                 'tradeTypes' => $tradeTypes,
-                'currencies' => $currencies
+                'currencies' => $currencies,
+                'selectedCategoryId' => $selectedCategoryId  // Pass just the ID
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching product for edit', [
@@ -328,17 +332,10 @@ class MerchantProductController extends Controller
                 $productData['trade_type'] = 'tradeTypeOffer';
             }
 
-            $existingProduct = $this->productService->getProduct($cyclosUserId, $productId);
-            $existingImageKey = $existingProduct['images'][0] ?? null;
-
-            $image = $request->hasFile('image') ? $request->file('image') : null;
-
             $result = $this->productService->updateProduct(
                 $cyclosUserId,
                 $productId,
-                $productData,
-                $image,
-                $existingImageKey
+                $productData
             );
 
             if ($result['success']) {
@@ -381,7 +378,10 @@ class MerchantProductController extends Controller
             $result = $this->productService->deleteProduct($cyclosUserId, $productId);
 
             if ($result['success']) {
-                return response()->json(['success' => true]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product deleted successfully'
+                ]);
             } else {
                 return response()->json([
                     'success' => false,
@@ -400,7 +400,6 @@ class MerchantProductController extends Controller
             ], 500);
         }
     }
-
     /**
      * Search products (AJAX endpoint)
      */
@@ -437,5 +436,31 @@ class MerchantProductController extends Controller
                 'message' => 'Error searching products'
             ], 500);
         }
+    }
+
+    /**
+     * Get selected category ID from product
+     */
+    private function getSelectedCategoryId($rawProduct, $categoriesData): ?string
+    {
+        if (empty($rawProduct['categories']) || !is_array($rawProduct['categories'])) {
+            return null;
+        }
+
+        $firstCategory = $rawProduct['categories'][0];
+
+        // Get the internal name (could be string or array)
+        $internalName = null;
+        if (is_array($firstCategory) && isset($firstCategory['internalName'])) {
+            $internalName = $firstCategory['internalName'];
+        } elseif (is_string($firstCategory)) {
+            $internalName = $firstCategory;
+        }
+
+        if (!$internalName) {
+            return null;
+        }
+
+        return $this->productService->findCategoryIdByInternalName($categoriesData, $internalName);
     }
 }

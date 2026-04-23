@@ -285,7 +285,7 @@ class ManagerMerchantProductController extends Controller
         $cyclosUserId = $effectiveMerchant->cyclos_user_id;
 
         try {
-            $product = $this->productService->getProduct($cyclosUserId, $productId);
+            $product = $this->productService->getProduct($productId);
             
             if (!$product) {
                 return $request->wantsJson()
@@ -337,7 +337,7 @@ class ManagerMerchantProductController extends Controller
         $cyclosUserId = $effectiveMerchant->cyclos_user_id;
 
         try {
-            $product = $this->productService->getProduct($cyclosUserId, $productId);
+            $product = $this->productService->getProduct($productId);
             
             if (!$product) {
                 return redirect()->route('merchant.manager.products.index')
@@ -399,7 +399,7 @@ class ManagerMerchantProductController extends Controller
                 $productData['trade_type'] = 'tradeTypeOffer';
             }
             
-            $existingProduct = $this->productService->getProduct($cyclosUserId, $productId);
+            $existingProduct = $this->productService->getProduct($productId);
             $existingImageKey = $existingProduct['images'][0] ?? null;
 
             $image = $request->hasFile('image') ? $request->file('image') : null;

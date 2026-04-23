@@ -7,25 +7,36 @@
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="mb-0">Dashboard</h3> 
-                        @php $paymentCheck = payment_check(); @endphp
+                        
+                        @php
+                            use App\Models\JoiningFees;
+                            use App\Models\UserJoiningFees;
+                            
+                            $userId = auth()->id();
+                            $hasPaidJoiningFee = UserJoiningFees::where('user_id', $userId)
+                                ->where('status', 'completed')
+                                ->exists();
+                            
+                            $joiningFee = JoiningFees::where('role_id', 2)
+                                ->where('status', 'active')
+                                ->first();
+                            
+                            $showPopup = !$hasPaidJoiningFee && $joiningFee;
+                            $joiningFeeAmount = $joiningFee ? $joiningFee->amount : null;
+                        @endphp
 
-                        @if($paymentCheck['show_popup'])
+                        @if($showPopup)
                         <!-- Direct Payment Button - No Modal -->
-                        <a href="{{ route('merchant.payments.create', ['amount' => $paymentCheck['pledge_value']]) }}" 
+                        <a href="{{ route('merchant.payments.create', ['amount' => $joiningFeeAmount]) }}" 
                            class="btn btn-info"
-                           onclick="sessionStorage.setItem('payment_amount', '{{ $paymentCheck['pledge_value'] }}');">
-                            <i class="fas fa-credit-card me-2"></i>Complete Payment ${{ number_format($paymentCheck['pledge_value'], 2) }}
+                           onclick="sessionStorage.setItem('payment_amount', '{{ $joiningFeeAmount }}');">
+                            <i class="fas fa-credit-card me-2"></i>Complete Payment ${{ number_format($joiningFeeAmount, 2) }}
                         </a>
                         @else
-                            @if(!$paymentCheck['all_layers_approved'] && $paymentCheck['total_layers'] > 0)
-                                <span class="badge bg-warning">
-                                    <i class="fas fa-clock me-1"></i>
-                                    Governance Checks: {{ $paymentCheck['approved_count'] }}/{{ $paymentCheck['total_layers'] }} Approved
-                                </span>
-                            @elseif(in_array($paymentCheck['payment_status'], ['approved', 'completed', 'success']))
+                            @if($hasPaidJoiningFee)
                                 <span class="badge bg-success">
                                     <i class="fas fa-check-circle me-1"></i>
-                                    Payment Completed
+                                    Joining Fee Paid
                                 </span>
                             @endif
                         @endif
@@ -56,10 +67,10 @@
 </div>
 
 <!-- Store payment amount on page load -->
-@if($paymentCheck['show_popup'])
+@if(isset($showPopup) && $showPopup)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    sessionStorage.setItem('payment_amount', '{{ $paymentCheck['pledge_value'] }}');
+    sessionStorage.setItem('payment_amount', '{{ $joiningFeeAmount }}');
 });
 </script>
 @endif

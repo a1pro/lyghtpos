@@ -8,7 +8,8 @@ use net\authorize\api\contract\v1 as AnetAPI;
 use net\authorize\api\controller as AnetController;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Config;
-use App\Models\Representation;
+use App\Models\JoiningFees;
+use App\Models\UserJoiningFees;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -30,7 +31,6 @@ class PaymentService
 
     /**
      * Load Authorize.net settings from config
-     * This will get values from database (if available) or fall back to .env from services.php
      */
     private function loadSettings(): void
     {
@@ -70,7 +70,6 @@ class PaymentService
             Log::info('Authorize.net settings loaded from config', [
                 'has_api_login_id' => !empty($this->apiLoginId),
                 'has_transaction_key' => !empty($this->transactionKey),
-                'api_login_id' => $this->apiLoginId ? substr($this->apiLoginId, 0, 5) . '***' : null,
                 'sandbox_mode' => $this->sandboxMode,
                 'currency' => $this->currency,
                 'mock_mode' => $this->mockMode
@@ -81,6 +80,38 @@ class PaymentService
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Check if user has paid joining fees
+     */
+    public function hasUserPaidJoiningFee($userId): bool
+    {
+        return UserJoiningFees::where('user_id', $userId)
+            ->where('status', 'completed')
+            ->exists();
+    }
+
+    /**
+     * Get joining fee amount from JoiningFees table
+     */
+    public function getJoiningFeeAmount(): ?float
+    {
+        $joiningFee = JoiningFees::where('role_id', 2)
+            ->where('status', 'active')
+            ->first();
+        
+        return $joiningFee ? (float) $joiningFee->amount : null;
+    }
+
+    /**
+     * Get active joining fee record
+     */
+    public function getActiveJoiningFee()
+    {
+        return JoiningFees::where('role_id', 2)
+            ->where('status', 'active')
+            ->first();
     }
 
     /**
@@ -157,7 +188,7 @@ class PaymentService
             $order = new AnetAPI\OrderType();
             $orderDescription = isset($cardData['order_description']) && !empty($cardData['order_description']) 
                 ? $cardData['order_description'] 
-                : 'Payment for order - ' . date('Y-m-d H:i:s');
+                : 'Merchant Joining Fee Payment - ' . date('Y-m-d H:i:s');
             $order->setDescription($orderDescription);
 
             // Set the customer's Bill To address with validation
@@ -173,8 +204,8 @@ class PaymentService
                 $customerAddress->setCountry($billing['country'] ?? 'USA');
             } else {
                 // Set default billing address if not provided
-                $customerAddress->setFirstName('Customer');
-                $customerAddress->setLastName('Name');
+                $customerAddress->setFirstName(auth()->user()->first_name ?? 'Customer');
+                $customerAddress->setLastName(auth()->user()->last_name ?? 'Name');
                 $customerAddress->setAddress('123 Main St');
                 $customerAddress->setCity('Anytown');
                 $customerAddress->setState('CA');
@@ -340,7 +371,7 @@ class PaymentService
                     ])
                 ];
                 
-                // Create payment record
+                // Create payment record in merchant_payments table
                 $payment = $this->paymentRepository->create($paymentData);
                 
                 Log::info('Payment successful', [

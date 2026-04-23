@@ -23,15 +23,13 @@ class ProductUpdateRequest extends FormRequest
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'barcode' => ['nullable', 'string', 'max:100'],
             'price' => ['sometimes', 'required', 'numeric', 'min:0'],
             'quantity' => ['sometimes', 'required', 'integer', 'min:0'],
             'unlimited_stock' => ['sometimes', 'boolean'],
-            'status' => ['sometimes', 'boolean'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
-            'categories' => ['nullable', 'array'],
+            'categories' => ['required', 'array'],
             'categories.*' => ['string'],
             'trade_type' => ['nullable', 'string', Rule::in(['tradeTypeDemand', 'tradeTypeOffer'])],
+            'status' => ['nullable', 'boolean'],
         ];
     }
 
@@ -46,7 +44,6 @@ class ProductUpdateRequest extends FormRequest
             'price.numeric' => __('validation.numeric', ['attribute' => 'price']),
             'quantity.required' => __('validation.required', ['attribute' => 'quantity']),
             'quantity.integer' => __('validation.integer', ['attribute' => 'quantity']),
-            'image.image' => __('validation.image', ['attribute' => 'image']),
         ];
     }
 
