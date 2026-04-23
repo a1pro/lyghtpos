@@ -200,7 +200,7 @@ class PosAuthService
         }
 
         // Check POS role authorization
-        if ($user->role_id !== 11) {
+        if ($user->role_id != 11) {
             throw ValidationException::withMessages([
                 'email' => ['You are not authorized to access the POS system.'],
             ]);
