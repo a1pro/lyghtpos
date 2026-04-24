@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\POS\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosLoginController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosRegisterController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerOrderController;
@@ -15,6 +16,13 @@ Route::prefix('pos')->group(function () {
     /** ******************* Auth Routes ******************** */
     Route::post('login', [PosLoginController::class, 'login'])->name('pos.login');
     Route::post('register', [PosRegisterController::class, 'register'])->name('pos.register');
+
+    /** ******************* Forgot Password Routes ******************** */
+    Route::prefix('forgot-password')->group(function () {
+        Route::post('send-otp', [ForgotPasswordController::class, 'sendOtp']);
+        Route::post('verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
+        Route::post('reset', [ForgotPasswordController::class, 'resetPassword']);
+    });
 
     Route::get('joining-plans', [PosJoiningFeesController::class, 'getPlans']);
 
@@ -34,10 +42,6 @@ Route::prefix('pos')->group(function () {
             Route::get('payment-history', [PosPayPalPaymentController::class, 'getPaymentHistory']);
         });
 
-
-   
-
-
         /** ************** User Routes ************************ */
         Route::prefix('user')->group(function () {
             Route::post('otp/verification', [PosRegisterController::class, 'otpVerification']);
@@ -45,13 +49,13 @@ Route::prefix('pos')->group(function () {
             Route::get('profile', [PosLoginController::class, 'userProfile']);
             Route::get('email/status', [PosRegisterController::class, 'checEmailVerification']);
 
-             /** *************** Customer Subscription Plans ****************** */
-             Route::prefix('subscription-plans')->group(function(){
-                Route::get('/',[PosCustomerSubscriptionController::class,'plans']);
-                Route::post('/purchase',[PosCustomerSubscriptionController::class,'planPurchase']);
+            /** *************** Customer Subscription Plans ****************** */
+            Route::prefix('subscription-plans')->group(function () {
+                Route::get('/', [PosCustomerSubscriptionController::class, 'plans']);
+                Route::post('/purchase', [PosCustomerSubscriptionController::class, 'planPurchase']);
 
-                Route::get('/detail',[PosCustomerSubscriptionController::class,'customerPlanDetail']);
-             });    
+                Route::get('/detail', [PosCustomerSubscriptionController::class, 'customerPlanDetail']);
+            });
 
             /** ******* Wallet related routes ********** */
             Route::prefix('wallet')->group(function () {
@@ -59,7 +63,7 @@ Route::prefix('pos')->group(function () {
                 Route::post('add/balance', [PosCustomerWallet::class, 'customerWalletRecharge']);
                 Route::get('transaction', [PosCustomerWallet::class, 'showTransaction']);
             });
-            
+
             /** ******* ORDER related routes ********** */
             Route::prefix('order')->group(function () {
                 Route::get('pending', [PosCustomerOrderController::class, 'getPendingOrders']);
