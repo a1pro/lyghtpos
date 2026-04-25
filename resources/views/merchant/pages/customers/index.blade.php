@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('merchant.layouts.main')
 
 @section('title', __('customer.Customer_List'))
 @section('content-header', __('customer.Customer_List'))
