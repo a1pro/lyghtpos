@@ -93,7 +93,7 @@ class MerchantOrderService
                 }
 
                 $order->update([
-                    'cyclos_order_id' => $cyclosOrder['order_id']
+                    'cyclos_order_id' => (string) $cyclosOrder['order_id']
                 ]);
             }
 
