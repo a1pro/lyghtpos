@@ -2,6 +2,7 @@
 
 namespace App\Services\Api\POS\Auth;
 
+use App\Mail\POS\Customer\ForgotPasswordOtpMail;
 use App\Models\Customer;
 use App\Models\User;
 use App\Models\Merchant;
@@ -9,7 +10,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class PosAuthService
 {
@@ -179,7 +182,7 @@ class PosAuthService
         } catch (\Exception $e) {
             Log::error('OTP send fail:' . $e->getMessage());
             return [
-                'succss' => false,
+                'success' => false,
                 'message' => 'Otp resend failed:'  . $e->getMessage(),
             ];
         }
@@ -257,5 +260,145 @@ class PosAuthService
         $user->currentAccessToken()->delete();
 
         return true;
+    }
+
+    /**
+     * Send forgot password OTP to user's email
+     */
+    public function sendForgotPasswordOtp(array $data)
+    {
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['No account found with this email address.']
+            ]);
+        }
+
+        if ($user->role_id != 11) {
+            throw ValidationException::withMessages([
+                'email' => ['You are not authorized to access the POS system.'],
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Generate otp and validity
+            $otp = random_int(100000, 999999);
+            $validity = Carbon::now()->addMinutes(15);
+
+            $user->update([
+                'forgot_password_otp' => $otp,
+                'forgot_password_otp_validity' => $validity
+            ]);
+
+            Mail::to($user->email)->send(new ForgotPasswordOtpMail($user, $otp, $validity));
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'OTP sent successfully',
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('OTP send for forgot password fail: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'message' => 'OTP send for forgot password failed: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    public function verifyForgotPasswordOtp(array $data)
+    {
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['No account found with this email address.']
+            ]);
+        }
+
+        if ($user->role_id != 11) {
+            throw ValidationException::withMessages([
+                'email' => ['You are not authorized to access the POS system.'],
+            ]);
+        }
+
+        if (!$user->forgot_password_otp || !$user->forgot_password_otp_validity) {
+            throw ValidationException::withMessages([
+                'otp' => ['No OTP request found. Please request a new OTP.']
+            ]);
+        }
+
+        // Check if OTP is expired
+        if (Carbon::now()->gt($user->forgot_password_otp_validity)) {
+            throw ValidationException::withMessages([
+                'otp' => ['OTP has expired. Please request a new one.']
+            ]);
+        }
+
+        if ($user->forgot_password_otp !== $data['otp']) {
+            throw ValidationException::withMessages([
+                'otp' => ['Invalid OTP. Please try again.']
+            ]);
+        }
+
+        $user->update([
+            'forgot_password_otp' => null,
+            'forgot_password_otp_validity' => null,
+        ]);
+
+        return [
+            'message' => 'OTP verified successfully',
+            'email' => $user->email
+        ];
+    }
+
+    /**
+     * Reset password
+     */
+    public function resetPassword(array $data)
+    {
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['No account found with this email address.']
+            ]);
+        }
+
+        if ($user->role_id != 11) {
+            throw ValidationException::withMessages([
+                'email' => ['You are not authorized to access the POS system.'],
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $user->password = Hash::make($data['password']);
+            $user->save();
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'Password resets successfully'
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Reset password failed: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'message' => 'Reset password failed: ' . $e->getMessage(),
+            ];
+        }
     }
 }

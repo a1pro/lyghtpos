@@ -22,7 +22,7 @@ use App\Http\Controllers\Merchant\MerchantProductController;
 use App\Http\Controllers\Merchant\MerchantProductImportController;
 use App\Http\Controllers\Merchant\WalletController;
 use App\Http\Controllers\Merchant\CategoryController;
-
+use App\Http\Controllers\Merchant\MerchantProfileController;
 
 // Merchant Email Verification
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
@@ -74,18 +74,13 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
             Route::get('/form', [MerchantProductImportController::class, 'create'])->name('create');
             Route::post('/form', [MerchantProductImportController::class, 'store'])->name('store');
             Route::get('/search/{id}', [MerchantProductImportController::class, 'show'])->name('show');
-            
+
             // Additional API routes for real-time features
             Route::get('/progress/{cyclosImportId}', [MerchantProductImportController::class, 'progress'])->name('progress');
             Route::delete('/cancel/{cyclosImportId}', [MerchantProductImportController::class, 'cancel'])->name('cancel');
             Route::post('/retry/{cyclosImportId}', [MerchantProductImportController::class, 'retryFailed'])->name('retry');
             Route::get('/download-errors/{cyclosImportId}', [MerchantProductImportController::class, 'downloadErrors'])->name('download-errors');
-            
         });
-
-
-        
-
     });
 
 
@@ -94,8 +89,6 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::post('/refresh', [CategoryController::class, 'refresh'])->name('refresh');
         Route::get('/search', [CategoryController::class, 'search'])->name('search');
         Route::get('/export', [CategoryController::class, 'export'])->name('export');
-
-
     });
     Route::prefix('wallet')->name('wallet.')->group(function () {
 
@@ -173,6 +166,11 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [MerchantProfileController::class, 'index'])->name('index');
+        Route::post('/update', [MerchantProfileController::class, 'updateProfile'])->name('update');
+    });
 
     Route::resource('customers', CustomerController::class)->names('customers');
     Route::resource('suppliers', SupplierController::class)->names('suppliers');

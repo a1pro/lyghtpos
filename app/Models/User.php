@@ -40,7 +40,9 @@ class User extends Authenticatable
         'otp',
         'time_validity',
         'email_verified',
-        'email_verified_at'
+        'email_verified_at',
+        'forgot_password_otp',
+        'forgot_password_otp_validity'
     ];
 
     /**
@@ -96,7 +98,7 @@ class User extends Authenticatable
 
     public function getAvatar(): string
     {
-        return 'https://www.gravatar.com/avatar/'.md5($this->email);
+        return 'https://ui-avatars.com/api/?name=' . $this->getFullname() . '&background=random';
     }
 
     public function role()
