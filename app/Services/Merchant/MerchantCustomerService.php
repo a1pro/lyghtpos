@@ -9,6 +9,7 @@ use App\Services\Cyclos\CyclosUserService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Exception;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -98,13 +99,25 @@ class MerchantCustomerService
                 'cyclos_user_password' => $cyclosUserResponse['password'] ?? null,
             ]);
 
+            $forceAcceptAgreementsResponse = $this->cyclosUserService->forceAcceptAgreements($cyclosUserResponse['username'], $cyclosUserResponse['password']);
+
+            if (!$forceAcceptAgreementsResponse['success']) {
+                Log::info("Something went wrong while force accepting user agreements", [
+                    "forceAcceptAgreementsResponse" => $forceAcceptAgreementsResponse
+                ]);
+            } else {
+                Log::info("Force accepted user agreements successfully", [
+                    "forceAcceptAgreementsResponse" => $forceAcceptAgreementsResponse
+                ]);
+            }
+
             $customer = Customer::create([
                 ...$data,
                 'user_id' => $data['merchant_id'],
             ]);
 
             DB::commit();
-    
+
             Mail::to($user->email)
                 ->queue(new NewCustomerCreated($user, $plainPassword));
 
