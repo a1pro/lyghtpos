@@ -83,7 +83,6 @@ class DatabaseConfigServiceProvider extends ServiceProvider
             $settings = AppSetting::where('group', $service)->get();
             
             if ($settings->isEmpty()) {
-                Log::info("No database settings found for service: {$service}");
                 return;
             }
             
@@ -112,10 +111,6 @@ class DatabaseConfigServiceProvider extends ServiceProvider
             
             // Set the final config
             config(["services.{$service}" => $mergedConfig]);
-            
-            Log::info("Configuration loaded for service: {$service}", [
-                'database_keys' => $settings->pluck('key')->toArray()
-            ]);
             
         } catch (\Exception $e) {
             Log::error("Failed to load configuration for service: {$service}", [

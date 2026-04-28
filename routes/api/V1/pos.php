@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\POS\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosLoginController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosRegisterController;
+use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerAgreementsController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerOrderController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use App\Http\Controllers\Api\V1\POS\Customer\PosJoiningFeesController;
@@ -73,6 +74,13 @@ Route::prefix('pos')->group(function () {
 
             /**  ************ Joining Fees Related Routes ***************** */
             Route::get('joining/fees/status', [PosJoiningFeesController::class, 'getPaymentStatus']);
+
+            /** ************** Agreement Relate Routes ******************* */
+            Route::prefix('agreements')->name('agreements.')->group(function (){
+                Route::get('/pending', [PosCustomerAgreementsController::class, 'getPendingAgreements'])->name('pending');
+                Route::post('/content', [PosCustomerAgreementsController::class, 'getAgreementContent'])->name('content');
+                Route::post('/accept', [PosCustomerAgreementsController::class, 'acceptAgreement'])->name('accept');
+            });
         });
     });
 });

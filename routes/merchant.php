@@ -10,6 +10,7 @@ use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\PurchaseCartController;
 use App\Http\Controllers\Inventory\PurchaseController;
 use App\Http\Controllers\Management\SupplierController;
+use App\Http\Controllers\Merchant\AgreementController;
 use App\Http\Controllers\Merchant\CheckoutController;
 use App\Http\Controllers\Merchant\CustomerController;
 use App\Http\Controllers\Merchant\MerchantCartController;
@@ -32,6 +33,12 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::post('/resend-otp', 'resendOtp')->name('resend-otp');
         Route::post('/verify-otp', 'verifyOtp')->name('verify-otp');
         Route::get('/status', 'checkStatus')->name('status');
+    });
+
+    Route::prefix('agreements')->name('agreements.')->group(function () {
+        Route::get('/', [AgreementController::class, 'index'])->name('index');
+        Route::get('/content/{agreementId}', [AgreementController::class, 'getContent'])->name('content');
+        Route::post('/accept', [AgreementController::class, 'accept'])->name('accept');
     });
 });
 
@@ -56,6 +63,47 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('/{id}', 'show')->name('show');
     });
 
+
+    Route::prefix('subscription')->name('subscription.')->group(function () {
+        Route::get('/plans', [PlanController::class, 'index'])->name('plans');
+        Route::get('/success', [PlanController::class, 'subscriptionSuccess'])->name('success');
+
+        // PayPal routes
+        Route::post('/paypal/create', [PlanController::class, 'processPayPalPayment'])->name('paypal.create');
+        Route::get('/paypal/success', [PlanController::class, 'paypalSuccess'])->name('paypal.success');
+        Route::get('/paypal/cancel', [PlanController::class, 'paypalCancel'])->name('paypal.cancel');
+        Route::post('/paypal/ipn', [PlanController::class, 'paypalIpn'])->name('paypal.ipn');
+
+        // AJAX routes
+        Route::get('/plan-details/{planId}', [PlanController::class, 'getPlanDetails'])->name('plan.details');
+    });
+});
+
+// Protected merchant routes (require subscription and representation)
+Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'email.verified', 'subscription', 'representation', 'check.agreements'])->group(function (): void {
+
+    // *********************** Single Routes ***********************
+    Route::get('/', [MerchantDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/external-links', [MerchantDashboardController::class, 'externalLinks'])->name('external-links');
+
+    Route::get('/barter-assist-cash-price', [MerchantDashboardController::class, 'showBarterAssistCashPrice'])->name('barter-assist-cash-price');
+    Route::get('/barter-assist-pos', [MerchantDashboardController::class, 'showBarterAssistPos'])->name('barter-assist-pos');
+
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [MerchantProfileController::class, 'index'])->name('index');
+        Route::post('/update', [MerchantProfileController::class, 'updateProfile'])->name('update');
+    });
+
+
+    Route::prefix('representation')->name('representation.')->group(function (): void {
+        Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
+        Route::post('/submit', [MerchantRepresentationController::class, 'submitForm'])->name('submit');
+    });
+
+    // *********************** Product Routes ***********************
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('/', [MerchantProductController::class, 'index'])->name('index');
         Route::get('create', [MerchantProductController::class, 'create'])->name('create');
@@ -83,13 +131,15 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         });
     });
 
-
+    // *********************** Categories Routes ***********************
     Route::prefix('categories')->name('categories.')->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
         Route::post('/refresh', [CategoryController::class, 'refresh'])->name('refresh');
         Route::get('/search', [CategoryController::class, 'search'])->name('search');
         Route::get('/export', [CategoryController::class, 'export'])->name('export');
     });
+
+    // *********************** Wallet Routes ***********************
     Route::prefix('wallet')->name('wallet.')->group(function () {
 
         // Dashboard and overview
@@ -116,6 +166,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('/export', [WalletController::class, 'export'])->name('export');
     });
 
+    // *********************** Team Member Routes ***********************
     Route::prefix('team-members')->name('team-members.')->group(function () {
         Route::get('/', [TeamMemberController::class, 'index'])->name('index');
         Route::get('/create', [TeamMemberController::class, 'create'])->name('create');
@@ -125,51 +176,13 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::delete('/{teamMember}', [TeamMemberController::class, 'destroy'])->name('destroy');
     });
 
-
-    Route::prefix('subscription')->name('subscription.')->group(function () {
-        Route::get('/plans', [PlanController::class, 'index'])->name('plans');
-        Route::get('/success', [PlanController::class, 'subscriptionSuccess'])->name('success');
-
-        // PayPal routes
-        Route::post('/paypal/create', [PlanController::class, 'processPayPalPayment'])->name('paypal.create');
-        Route::get('/paypal/success', [PlanController::class, 'paypalSuccess'])->name('paypal.success');
-        Route::get('/paypal/cancel', [PlanController::class, 'paypalCancel'])->name('paypal.cancel');
-        Route::post('/paypal/ipn', [PlanController::class, 'paypalIpn'])->name('paypal.ipn');
-
-        // AJAX routes
-        Route::get('/plan-details/{planId}', [PlanController::class, 'getPlanDetails'])->name('plan.details');
-    });
-});
-
-// Protected merchant routes (require subscription and representation)
-Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant', 'email.verified', 'subscription', 'representation'])->group(function (): void {
-
-    Route::get('/', [MerchantDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/external-links', [MerchantDashboardController::class, 'externalLinks'])->name('external-links');
-
-    Route::get('/barter-assist-cash-price', [MerchantDashboardController::class, 'showBarterAssistCashPrice'])->name('barter-assist-cash-price');
-    Route::get('/barter-assist-pos', [MerchantDashboardController::class, 'showBarterAssistPos'])->name('barter-assist-pos');
-
-    Route::prefix('representation')->name('representation.')->group(function (): void {
-        Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
-        Route::post('/submit', [MerchantRepresentationController::class, 'submitForm'])->name('submit');
-    });
-
-    // Voucher routes
+    // *********************** Voucher Routes ***********************
     Route::prefix('vouchers')->name('vouchers.')->group(function () {
         Route::get('/', [App\Http\Controllers\Merchant\VoucherController::class, 'index'])->name('index');
         Route::get('/create', [App\Http\Controllers\Merchant\VoucherController::class, 'create'])->name('create');
         Route::post('/generate', [App\Http\Controllers\Merchant\VoucherController::class, 'generate'])->name('generate');
         Route::post('/{voucherId}/change-expiration', [App\Http\Controllers\Merchant\VoucherController::class, 'changeExpiration'])->name('change-expiration');
         Route::post('/{voucherId}/cancel', [App\Http\Controllers\Merchant\VoucherController::class, 'cancel'])->name('cancel');
-    });
-
-    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
-
-    Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [MerchantProfileController::class, 'index'])->name('index');
-        Route::post('/update', [MerchantProfileController::class, 'updateProfile'])->name('update');
     });
 
     Route::resource('customers', CustomerController::class)->names('customers');
