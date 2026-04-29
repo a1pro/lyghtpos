@@ -54,6 +54,36 @@
                                         <p class="text-muted">per month, billed annually (${{ number_format($plan->yearly_total ?? ($plan->yearly_price * 12), 0) }}/yr)</p>
                                     </div>
 
+                                    <!-- Monthly Limits (Visible by default) -->
+                                    <div class="monthly-limits mt-3">
+                                        <div class="border-top pt-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span><i class="fas fa-box me-2"></i>Products Upload:</span>
+                                                <strong>{{ $plan->products_limit == -1 ? 'Unlimited' : number_format($plan->products_limit) }}</strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span><i class="fas fa-users me-2"></i>Customers:</span>
+                                                <strong>{{ $plan->customer_limit == -1 ? 'Unlimited' : number_format($plan->customer_limit) }}</strong>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">per month</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Yearly Limits (Hidden by default) -->
+                                    <div class="yearly-limits d-none mt-3">
+                                        <div class="border-top pt-3">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span><i class="fas fa-box me-2"></i>Products Upload:</span>
+                                                <strong>{{ $plan->yearly_products_limit == -1 ? 'Unlimited' : number_format($plan->yearly_products_limit) }}</strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span><i class="fas fa-users me-2"></i>Customers:</span>
+                                                <strong>{{ $plan->yearly_customer_limit == -1 ? 'Unlimited' : number_format($plan->yearly_customer_limit) }}</strong>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">per year</small>
+                                        </div>
+                                    </div>
+
                                     <!-- Features -->
                                     <ul class="list-unstyled mt-4 mb-4">
                                         @foreach($plan->features as $feature)
@@ -66,6 +96,8 @@
                                             class="btn {{ $plan->is_popular ? 'btn-primary' : 'btn-outline-' . $plan->badge_color }} w-100 choose-plan-btn" 
                                             data-plan-id="{{ $plan->id }}"
                                             data-plan-name="{{ $plan->name }}"
+                                            data-plan-monthly-price="${{ number_format($plan->monthly_price, 0) }}"
+                                            data-plan-yearly-price="${{ number_format($plan->yearly_price, 0) }}"
                                             data-bs-toggle="modal"
                                             data-bs-target="#paypalModal">
                                         <i class="fab fa-paypal me-2"></i>Choose {{ $plan->name }}
@@ -75,7 +107,7 @@
                         </div>
                         @endforeach
                     </div>
-
+                    
                     <!-- Footer Note -->
                     <div class="text-center mt-4">
                         <small class="text-muted">
@@ -125,6 +157,20 @@
                             <h6 class="alert-heading mb-1" id="selectedPlanName"></h6>
                             <p class="mb-0" id="selectedPlanPrice"></p>
                             <small id="selectedPlanDuration" class="text-muted"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limits Summary -->
+                <div class="alert alert-secondary mb-4" id="limitsSummary" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-chart-line me-2"></i>
+                            <strong>Your Limits:</strong>
+                        </div>
+                        <div class="text-end">
+                            <div id="productsLimitText" class="small"></div>
+                            <div id="customersLimitText" class="small"></div>
                         </div>
                     </div>
                 </div>
@@ -251,12 +297,19 @@
         const yearlyBtn = document.getElementById('yearlyBtn');
         const monthlyPrices = document.querySelectorAll('.monthly-price');
         const yearlyPrices = document.querySelectorAll('.yearly-price');
+        const monthlyLimits = document.querySelectorAll('.monthly-limits');
+        const yearlyLimits = document.querySelectorAll('.yearly-limits');
         const choosePlanBtns = document.querySelectorAll('.choose-plan-btn');
         const paypalBtn = document.getElementById('paypalBtn');
         const selectedPlanSummary = document.getElementById('selectedPlanSummary');
+        const limitsSummary = document.getElementById('limitsSummary');
         const selectedPlanName = document.getElementById('selectedPlanName');
         const selectedPlanPrice = document.getElementById('selectedPlanPrice');
         const selectedPlanDuration = document.getElementById('selectedPlanDuration');
+        
+        // Limits summary elements
+        const productsLimitText = document.getElementById('productsLimitText');
+        const customersLimitText = document.getElementById('customersLimitText');
         
         // Summary elements
         const summaryPlanName = document.getElementById('summaryPlanName');
@@ -289,8 +342,13 @@
                 yearlyBtn.classList.remove('btn-primary', 'active');
             }
 
+            // Toggle prices
             monthlyPrices.forEach(price => price.classList.remove('d-none'));
             yearlyPrices.forEach(price => price.classList.add('d-none'));
+            
+            // Toggle limits
+            monthlyLimits.forEach(limit => limit.classList.remove('d-none'));
+            yearlyLimits.forEach(limit => limit.classList.add('d-none'));
             
             currentBillingType = 'monthly';
             updateSummary();
@@ -304,8 +362,13 @@
                 monthlyBtn.classList.remove('btn-primary', 'active');
             }
 
+            // Toggle prices
             monthlyPrices.forEach(price => price.classList.add('d-none'));
             yearlyPrices.forEach(price => price.classList.remove('d-none'));
+            
+            // Toggle limits
+            monthlyLimits.forEach(limit => limit.classList.add('d-none'));
+            yearlyLimits.forEach(limit => limit.classList.remove('d-none'));
             
             currentBillingType = 'yearly';
             updateSummary();
@@ -315,25 +378,49 @@
         function updateSummary() {
             if (!selectedPlan) return;
 
-            const price = currentBillingType === 'monthly' 
-                ? selectedPlan.monthly_price_formatted 
-                : selectedPlan.yearly_price_formatted;
+            // Get limits based on billing type
+            const productsLimit = currentBillingType === 'monthly' 
+                ? selectedPlan.products_limit 
+                : selectedPlan.yearly_products_limit;
             
-            const totalYearly = currentBillingType === 'yearly' 
-                ? ` (${selectedPlan.yearly_total}/yr)` 
-                : '';
+            const customersLimit = currentBillingType === 'monthly' 
+                ? selectedPlan.customer_limit 
+                : selectedPlan.yearly_customer_limit;
             
-            const days = currentBillingType === 'monthly' ? '30 days' : '365 days';
+            const productsLimitTextValue = productsLimit == -1 ? 'Unlimited' : number_format(productsLimit);
+            const customersLimitTextValue = customersLimit == -1 ? 'Unlimited' : number_format(customersLimit);
+            
+            const period = currentBillingType === 'monthly' ? 'month' : 'year';
+            
+            // Update limits summary
+            if (productsLimitText) {
+                productsLimitText.innerHTML = `<i class="fas fa-box me-1"></i> Products: ${productsLimitTextValue} per ${period}`;
+            }
+            if (customersLimitText) {
+                customersLimitText.innerHTML = `<i class="fas fa-users me-1"></i> Customers: ${customersLimitTextValue} per ${period}`;
+            }
+            
+            // Format price display
+            let price = '';
+            let totalDisplay = '';
+            
+            if (currentBillingType === 'monthly') {
+                price = selectedPlan.monthly_price_formatted || `$${number_format(selectedPlan.monthly_price)}`;
+                totalDisplay = price;
+                if (selectedPlanDuration) selectedPlanDuration.textContent = `Duration: 30 days`;
+            } else {
+                price = selectedPlan.yearly_price_formatted || `$${number_format(selectedPlan.yearly_price)}`;
+                totalDisplay = price;
+                const yearlyTotal = selectedPlan.yearly_total || (selectedPlan.yearly_price * 12);
+                if (selectedPlanDuration) selectedPlanDuration.textContent = `Duration: 365 days ($${number_format(yearlyTotal)} total)`;
+            }
 
             // Update modal summary
             if (selectedPlanName) {
                 selectedPlanName.textContent = `${selectedPlan.name} Plan`;
             }
             if (selectedPlanPrice) {
-                selectedPlanPrice.textContent = `Amount: ${price}${totalYearly}`;
-            }
-            if (selectedPlanDuration) {
-                selectedPlanDuration.textContent = `Duration: ${days}`;
+                selectedPlanPrice.textContent = `Amount: ${price}`;
             }
 
             // Update payment summary
@@ -347,8 +434,13 @@
                 summaryAmount.textContent = price;
             }
             if (summaryTotal) {
-                summaryTotal.textContent = price;
+                summaryTotal.textContent = totalDisplay;
             }
+        }
+
+        // Helper function to format numbers
+        function number_format(number) {
+            return new Intl.NumberFormat().format(number);
         }
 
         // Add event listeners for billing toggle
@@ -361,6 +453,11 @@
                 selectedPlanId = this.dataset.planId;
                 const planName = this.dataset.planName;
                 
+                // Store price data from button attributes
+                const monthlyPrice = this.dataset.planMonthlyPrice;
+                const yearlyPrice = this.dataset.planYearlyPrice;
+                const yearlyTotal = this.dataset.planYearlyTotal;
+                
                 console.log('Plan selected:', { planId: selectedPlanId, planName, billingType: currentBillingType });
                 
                 // Fetch plan details
@@ -371,13 +468,16 @@
                 if (selectedPlanSummary) {
                     selectedPlanSummary.style.display = 'none';
                 }
+                if (limitsSummary) {
+                    limitsSummary.style.display = 'none';
+                }
                 
                 fetch(planDetailsUrl, {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                     }
                 })
                 .then(async response => {
@@ -386,6 +486,9 @@
                     if (!response.ok) {
                         if (response.status === 302) {
                             throw new Error('Redirect detected. Please check if you are logged in.');
+                        }
+                        if (response.status === 401) {
+                            throw new Error('Please login to continue.');
                         }
                         const errorText = await response.text();
                         console.error('Error response:', errorText);
@@ -399,18 +502,29 @@
                     if (data.success) {
                         selectedPlan = data.data;
                         
+                        // Ensure limits are set
+                        selectedPlan.products_limit = selectedPlan.products_limit || 0;
+                        selectedPlan.customer_limit = selectedPlan.customer_limit || 0;
+                        selectedPlan.yearly_products_limit = selectedPlan.yearly_products_limit || 0;
+                        selectedPlan.yearly_customer_limit = selectedPlan.yearly_customer_limit || 0;
+                        
                         // Update summary
                         updateSummary();
                         
                         if (selectedPlanSummary) {
                             selectedPlanSummary.style.display = 'block';
                         }
+                        if (limitsSummary) {
+                            limitsSummary.style.display = 'block';
+                        }
                         
                         // Reset PayPal button state
                         if (paypalBtn) {
                             paypalBtn.disabled = false;
-                            paypalBtn.querySelector('.button-text').textContent = 'Pay with PayPal';
-                            paypalBtn.querySelector('.spinner-border').classList.add('d-none');
+                            const buttonText = paypalBtn.querySelector('.button-text');
+                            if (buttonText) buttonText.textContent = 'Pay with PayPal';
+                            const spinner = paypalBtn.querySelector('.spinner-border');
+                            if (spinner) spinner.classList.add('d-none');
                         }
                     } else {
                         console.error('Error fetching plan details:', data.message);
@@ -434,12 +548,15 @@
                 
                 // Disable button and show loading
                 paypalBtn.disabled = true;
-                paypalBtn.querySelector('.button-text').textContent = 'Redirecting to PayPal...';
-                paypalBtn.querySelector('.spinner-border').classList.remove('d-none');
+                const buttonText = paypalBtn.querySelector('.button-text');
+                const spinner = paypalBtn.querySelector('.spinner-border');
+                if (buttonText) buttonText.textContent = 'Redirecting to PayPal...';
+                if (spinner) spinner.classList.remove('d-none');
                 
                 // Show processing modal
                 processingModal.show();
-                document.getElementById('processingMessage').textContent = 'Redirecting to PayPal...';
+                const processingMessage = document.getElementById('processingMessage');
+                if (processingMessage) processingMessage.textContent = 'Redirecting to PayPal...';
                 
                 console.log('Sending PayPal request:', {
                     plan_id: selectedPlanId,
@@ -451,7 +568,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
@@ -469,7 +586,7 @@
                     return data;
                 })
                 .then(data => {
-                    if (data.success) {
+                    if (data.success && data.approval_url) {
                         console.log('Redirecting to PayPal:', data.approval_url);
                         // Redirect to PayPal
                         window.location.href = data.approval_url;
@@ -488,8 +605,8 @@
                     
                     // Reset button
                     paypalBtn.disabled = false;
-                    paypalBtn.querySelector('.button-text').textContent = 'Pay with PayPal';
-                    paypalBtn.querySelector('.spinner-border').classList.add('d-none');
+                    if (buttonText) buttonText.textContent = 'Pay with PayPal';
+                    if (spinner) spinner.classList.add('d-none');
                 });
             });
         }
@@ -497,7 +614,8 @@
         // Show success message if redirected from PayPal
         @if(Session::has('success'))
             successModal.show();
-            document.getElementById('successMessage').textContent = '{{ Session::get('success') }}';
+            const successMsg = document.getElementById('successMessage');
+            if (successMsg) successMsg.textContent = '{{ Session::get('success') }}';
             
             // Auto redirect after 3 seconds
             setTimeout(function() {
@@ -526,27 +644,20 @@
         // Initialize monthly view
         showMonthly();
 
-        // Format expiry date input (if any)
-        const expiryInput = document.getElementById('expiry');
-        if (expiryInput) {
-            expiryInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                if (value.length >= 2) {
-                    value = value.slice(0, 2) + '/' + value.slice(2, 4);
+        // Handle modal close
+        const paypalModalElement = document.getElementById('paypalModal');
+        if (paypalModalElement) {
+            paypalModalElement.addEventListener('hidden.bs.modal', function () {
+                // Reset PayPal button if modal is closed
+                if (paypalBtn) {
+                    paypalBtn.disabled = false;
+                    const buttonText = paypalBtn.querySelector('.button-text');
+                    const spinner = paypalBtn.querySelector('.spinner-border');
+                    if (buttonText) buttonText.textContent = 'Pay with PayPal';
+                    if (spinner) spinner.classList.add('d-none');
                 }
-                e.target.value = value;
             });
         }
-
-        // Handle modal close
-        document.getElementById('paypalModal').addEventListener('hidden.bs.modal', function () {
-            // Reset PayPal button if modal is closed
-            if (paypalBtn) {
-                paypalBtn.disabled = false;
-                paypalBtn.querySelector('.button-text').textContent = 'Pay with PayPal';
-                paypalBtn.querySelector('.spinner-border').classList.add('d-none');
-            }
-        });
     });
 </script>
 @endsection

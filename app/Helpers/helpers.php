@@ -9,6 +9,9 @@ use App\Models\Notification;
 use App\Models\GovernanceLayer;
 use App\Models\UserGovernanceLayer;
 use App\Models\Role;
+use App\Models\UserSubscription;
+use Carbon\Carbon;
+ 
 
 if (!function_exists('activeSegment')) {
     function activeSegment($name, $segment = 2, $class = 'active')
@@ -155,7 +158,7 @@ if (!function_exists('formatMoney')) {
         $currency = config('app.currency_symbol', '$');
         return $currency . ' ' . number_format($amount, 2);
     }
-
+}
 // =======================Fetch All Roles====================
 
 if(!function_exists('userRoles')){
@@ -167,4 +170,102 @@ if(!function_exists('userRoles')){
 }
 
 
+
+// ================Check User Subscription=================
+
+    if (!function_exists('userSubscription')) {
+    /**
+     * Check user's subscription status
+     * 
+     * @return string 'Active' or 'Expired'
+     */
+     function userSubscription()
+    {   
+        // Check if user is authenticated
+        if (!Auth::check()) {
+            return 'Expired';
+        }
+        
+        $userId = Auth::id();
+        $currentDate = Carbon::now();
+        
+        $userPlan = UserSubscription::where('user_id', $userId)
+            ->where('status', 'active')
+            ->first();
+        
+        // If no active subscription found, consider as expired
+        if (!$userPlan) {
+            return 'Expired';
+        }
+        
+        $endDate = $userPlan->end_date;
+        
+        if ($endDate < $currentDate) {
+            return 'Expired';
+        } else {
+            return 'Active';
+        }
+    }
+}
+
+if (!function_exists('getUserCurrentPlan')) {
+    /**
+     * Get user's current active subscription
+     * 
+     * @return UserSubscription|null
+     */
+    function getUserCurrentPlan()
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+        
+        return UserSubscription::with('plan')
+            ->where('user_id', Auth::id())
+            ->where('status', 'active')
+            ->where('end_date', '>', Carbon::now())
+            ->first();
+    }
+}
+
+if (!function_exists('getAvailableUpgradePlans')) {
+    /**
+     * Get plans that are upgrades from current plan
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    function getAvailableUpgradePlans()
+    {
+        $currentPlan = getUserCurrentPlan();
+        
+        $query = SubscriptionPlan::where('is_active', true);
+        
+        if ($currentPlan) {
+            // Get plans with higher price or different features
+            $query->where(function($q) use ($currentPlan) {
+                $q->where('monthly_price', '>', $currentPlan->plan->monthly_price)
+                  ->orWhere('yearly_price', '>', $currentPlan->plan->yearly_price);
+            });
+        }
+        
+        return $query->orderBy('monthly_price')->get();
+    }
+}
+
+
+if (!function_exists('userSubscriptionStatus')) {
+    function userSubscriptionStatus()
+    {
+        $subscription = getUserCurrentPlan();
+        
+        if (!$subscription) {
+            return 'No Active Subscription';
+        }
+        
+        if ($subscription->downgrade_to_plan_id) {
+            return 'Active - Downgrade Scheduled';
+        }
+        
+        return 'Active';
+    }
 }
