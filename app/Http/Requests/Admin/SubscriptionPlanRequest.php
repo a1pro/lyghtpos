@@ -21,11 +21,15 @@ class SubscriptionPlanRequest extends FormRequest
             'description'       => 'nullable|string',
             'monthly_price'     => 'required|numeric|min:0',
             'yearly_price'      => 'required|numeric|min:0',
-            'yearly_total'      => 'nullable|numeric|min:0',
+            
             'features'          => 'nullable|array',
             'sort_order'        => 'integer|min:0',
             'is_popular'        => 'boolean',
             'is_active'         => 'boolean',
+            'products_limit'    => 'required',
+            'customer_limit'    => 'required',
+        'yearly_products_limit' => 'required',
+        'yearly_customer_limit' => 'required'
         ];
     }
 

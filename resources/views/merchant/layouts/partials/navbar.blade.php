@@ -11,8 +11,10 @@
             <a href="{{ route('home') }}" class="nav-link">
                 {{ __('dashboard.title') }}
             </a>
-        @else
+        @elseif(userSubscription()=='Active')
             <button type="button" class="btn btn-success btn-sm ml-2">Subscribed</button>
+        @else
+            <button type="button" class="btn btn-danger btn-sm ml-2">Plan is Expired Expired</button>
         @endif
     </ul>
 

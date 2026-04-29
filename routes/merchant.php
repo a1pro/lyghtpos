@@ -128,10 +128,18 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
 
     Route::prefix('subscription')->name('subscription.')->group(function () {
         Route::get('/plans', [PlanController::class, 'index'])->name('plans');
+        Route::get('/upgrade', [PlanController::class, 'upgradePlans'])->name('upgrade');
+
+        Route::get('/plan-details/{planId}', [PlanController::class, 'getPlanDetails'])->name('plan.details');
+
         Route::get('/success', [PlanController::class, 'subscriptionSuccess'])->name('success');
+
+  Route::post('/downgrade/cancel', [PlanController::class, 'cancelDowngrade'])->name('downgrade.cancel');
+          Route::post('/plan/change', [PlanController::class, 'processPlanChange'])->name('plan.change');
 
         // PayPal routes
         Route::post('/paypal/create', [PlanController::class, 'processPayPalPayment'])->name('paypal.create');
+        Route::post('/upgrade/process', [PlanController::class, 'processUpgrade'])->name('upgrade.process');
         Route::get('/paypal/success', [PlanController::class, 'paypalSuccess'])->name('paypal.success');
         Route::get('/paypal/cancel', [PlanController::class, 'paypalCancel'])->name('paypal.cancel');
         Route::post('/paypal/ipn', [PlanController::class, 'paypalIpn'])->name('paypal.ipn');

@@ -22,7 +22,16 @@ class SubscriptionPlan extends Model
         'features',
         'sort_order',
         'is_popular',
-        'is_active'
+        'is_active',
+        'products_limit',
+        'customer_limit',
+        'yearly_products_limit',
+        'yearly_customer_limit',
+        'upgraded_from_plan_id',
+                'upgraded_from_subscription_id',
+                'upgraded_to_plan_id',
+                'upgraded_at',
+                'prorated_amount'
     ];
 
     protected $casts = [

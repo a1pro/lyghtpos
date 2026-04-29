@@ -24,7 +24,12 @@ class UserSubscription extends Model
         'paypal_sale_id',
         'status',
         'paypal_order_id',
-        'paypal_capture_id'
+        'paypal_capture_id',
+        'downgrade_to_plan_id',
+        'downgrade_to_billing_type',
+        'downgrade_scheduled_at',
+        'downgrade_effective_date',
+        'refund_amount'
     ];
 
     protected $casts = [

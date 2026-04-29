@@ -77,6 +77,80 @@
                 @enderror
             </div>
 
+            <!-- Monthly Limits Section -->
+            <div class="card card-primary collapsed-card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title">Monthly Subscription Limits</h5>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="products_limit">Monthly Product Upload Limit <span class="text-danger">*</span></label>
+                                <input type="number" name="products_limit" class="form-control @error('products_limit') is-invalid @enderror" id="products_limit" placeholder="e.g., 100" value="{{ old('products_limit', $plan->products_limit) }}">
+                                <small class="form-text text-muted">Maximum number of products customer can upload on monthly plan. Use -1 for unlimited.</small>
+                                @error('products_limit')
+                                <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="customer_limit">Monthly Customer Limit <span class="text-danger">*</span></label>
+                                <input type="number" name="customer_limit" class="form-control @error('customer_limit') is-invalid @enderror" id="customer_limit" placeholder="e.g., 50" value="{{ old('customer_limit', $plan->customer_limit) }}">
+                                <small class="form-text text-muted">Maximum number of customers customer can add on monthly plan. Use -1 for unlimited.</small>
+                                @error('customer_limit')
+                                <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Yearly Limits Section -->
+            <div class="card card-success collapsed-card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title">Yearly Subscription Limits</h5>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="yearly_products_limit">Yearly Product Upload Limit <span class="text-danger">*</span></label>
+                                <input type="number" name="yearly_products_limit" class="form-control @error('yearly_products_limit') is-invalid @enderror" id="yearly_products_limit" placeholder="e.g., 1200" value="{{ old('yearly_products_limit', $plan->yearly_products_limit) }}">
+                                <small class="form-text text-muted">Maximum number of products customer can upload on yearly plan. Use -1 for unlimited.</small>
+                                @error('yearly_products_limit')
+                                <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="yearly_customer_limit">Yearly Customer Limit <span class="text-danger">*</span></label>
+                                <input type="number" name="yearly_customer_limit" class="form-control @error('yearly_customer_limit') is-invalid @enderror" id="yearly_customer_limit" placeholder="e.g., 600" value="{{ old('yearly_customer_limit', $plan->yearly_customer_limit) }}">
+                                <small class="form-text text-muted">Maximum number of customers customer can add on yearly plan. Use -1 for unlimited.</small>
+                                @error('yearly_customer_limit')
+                                <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -99,14 +173,7 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="yearly_total">Yearly Total (Optional - if different from yearly price)</label>
-                <input type="number" step="0.01" name="yearly_total" class="form-control @error('yearly_total') is-invalid @enderror" id="yearly_total" placeholder="Leave empty to use yearly price" value="{{ old('yearly_total', $plan->yearly_total) }}">
-                <small class="form-text text-muted">Only fill if yearly total is different from the yearly price above.</small>
-                @error('yearly_total')
-                <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
-                @enderror
-            </div>
+           
 
             <div class="form-group">
                 <label for="features">Features (One per line)</label>
@@ -144,4 +211,15 @@
         </form>
     </div>
 </div>
+@endsection
+
+@section('js')
+<script>
+    $(document).ready(function() {
+        // Initialize collapse/expand functionality
+        $('[data-card-widget="collapse"]').on('click', function() {
+            $(this).find('i').toggleClass('fa-plus fa-minus');
+        });
+    });
+</script>
 @endsection
