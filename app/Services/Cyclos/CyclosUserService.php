@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use Illuminate\Support\Str;
 use App\Models\AppSetting;
+use Exception;
 
 class CyclosUserService
 {
@@ -39,34 +40,19 @@ class CyclosUserService
         try {
             // Debug: Check what's actually in the config
             $cyclosConfig = config('services.cyclos');
-            
-            Log::info('Cyclos config structure', [
-                'config_type' => gettype($cyclosConfig),
-                'config_keys' => is_array($cyclosConfig) ? array_keys($cyclosConfig) : 'not array',
-                'full_config' => $cyclosConfig
-            ]);
-            
+
             // Now try to get the base_url properly
             $baseUrlConfig = config('services.cyclos.base_url');
-            
-            Log::info('Base URL config', [
-                'type' => gettype($baseUrlConfig),
-                'value' => $baseUrlConfig
-            ]);
-            
+
             // Fix: Check if base_url is an array and extract the string value
             $baseUrl = '';
             if (is_array($baseUrlConfig)) {
                 // If it's an array, try to get the first value or handle accordingly
                 $baseUrl = reset($baseUrlConfig) ?: '';
-                Log::warning('base_url was an array, extracted first value', [
-                    'original' => $baseUrlConfig,
-                    'extracted' => $baseUrl
-                ]);
             } else {
                 $baseUrl = $baseUrlConfig ?: '';
             }
-            
+
             $this->baseUrl = rtrim($baseUrl, '/');
             $this->username = config('services.cyclos.username', '');
             $this->password = config('services.cyclos.password', '');
@@ -81,13 +67,6 @@ class CyclosUserService
             $this->mockMode = config('services.cyclos.mock_mode', false);
             $this->fallbackToMock = config('services.cyclos.fallback_to_mock', true);
             $this->useApiPassword = config('services.cyclos.use_api_password', true);
-            
-            Log::info('Cyclos settings loaded from config', [
-                'base_url' => $this->baseUrl,
-                'has_username' => !empty($this->username),
-                'has_password' => !empty($this->password),
-            ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to load Cyclos settings', [
                 'error' => $e->getMessage()
@@ -113,9 +92,6 @@ class CyclosUserService
     {
         // Check if Cyclos is configured
         if (!$this->isConfigured()) {
-            Log::warning('Cyclos not configured, skipping user creation', [
-                'user_id' => $user->id
-            ]);
             return null;
         }
 
@@ -202,7 +178,7 @@ class CyclosUserService
 
             // FIXED: Extract data from the nested structure based on actual API response
             // The user data is inside the 'user' object
-            
+
             // Extract data from the nested structure based on actual API response
             $userData = $responseData['user'] ?? null;
 
@@ -330,6 +306,7 @@ class CyclosUserService
         }
 
         try {
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -370,6 +347,7 @@ class CyclosUserService
         }
 
         try {
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -430,7 +408,7 @@ class CyclosUserService
     }
 
 
-      /**
+    /**
      * Get admin user ID
      *
      * @return string|null
@@ -479,5 +457,274 @@ class CyclosUserService
         Log::info('Cyclos settings reloaded', [
             'is_configured' => $this->isConfigured()
         ]);
+    }
+
+    /**
+     * Get pending agreements for a user
+     */
+    public function getUserAgreements(string $username, string $password): ?array
+    {
+        // Check if Cyclos is configured
+        if (!$this->isConfigured()) {
+            Log::warning('Cyclos not configured, cannot fetch agreements');
+            throw new Exception("Cyclos not configured, cannot fetch agreements", 500);
+        }
+
+        try {
+            $url = $this->baseUrl . '/api/agreements/pending';
+
+            $response = Http::withBasicAuth($username, $password)
+                ->withHeaders([
+                    'accept' => 'application/json',
+                ])
+                ->get($url);
+
+            if ($response->failed()) {
+                Log::error('Failed to fetch user agreements', [
+                    'username' => $username,
+                    'status' => $response->status(),
+                    'error' => $response->body()
+                ]);
+                throw new Exception($response->body(), 500);
+            }
+
+            $agreements = $response->json();
+
+            Log::info('User agreements fetched successfully', [
+                'username' => $username,
+                'agreements_count' => count($agreements)
+            ]);
+
+            return $agreements;
+        } catch (\Exception $e) {
+            Log::error('Exception in getUserAgreements', [
+                'username' => $username,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get agreement content by ID
+     */
+    public function getAgreementContent(string $username, string $password, string $agreementId): ?array
+    {
+        if (!$this->isConfigured()) {
+            Log::warning('Cyclos not configured, cannot fetch agreement content');
+            throw new Exception("Cyclos not configured, cannot fetch agreement content", 500);
+        }
+
+        try {
+            $url = $this->baseUrl . '/api/agreements/' . $agreementId . '/content';
+
+            $response = Http::withBasicAuth($username, $password)
+                ->withHeaders([
+                    'accept' => 'application/json',
+                ])
+                ->get($url);
+
+            if ($response->failed()) {
+                Log::error('Failed to fetch agreement content', [
+                    'agreement_id' => $agreementId,
+                    'status' => $response->status(),
+                    'error' => $response->body()
+                ]);
+                throw new Exception($response->body(), 500);
+            }
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('Exception in getAgreementContent', [
+                'agreement_id' => $agreementId,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Accept multiple agreements
+     */
+    public function acceptAgreements(string $username, string $password, array $agreementIds)
+    {
+        if (!$this->isConfigured()) {
+            Log::warning('Cyclos not configured, cannot accept agreements');
+            throw new Exception("Cyclos not configured, cannot accept agreements", 500);
+        }
+
+        if (empty($agreementIds)) {
+            return true;
+        }
+
+        try {
+            $url = $this->baseUrl . '/api/agreements/accept';
+
+            // Build query string with multiple agreement parameters
+            $queryParams = [];
+            foreach ($agreementIds as $id) {
+                $queryParams['agreements'][] = $id;
+            }
+
+            $queryString = http_build_query($queryParams);
+            $queryString = '';
+            foreach ($agreementIds as $index => $id) {
+                $queryString .= ($index > 0 ? '&' : '') . 'agreements=' . urlencode($id);
+            }
+            $fullUrl = $url . '?' . $queryString;
+
+            Log::info('Accepting agreements', [
+                'url' => $fullUrl,
+                'agreement_ids' => $agreementIds
+            ]);
+
+            $response = Http::withBasicAuth($username, $password)
+                ->withHeaders([
+                    'accept' => '*/*',
+                ])
+                ->post($fullUrl, []);
+
+            if ($response->failed()) {
+                Log::error('Failed to accept agreements', [
+                    'username' => $username,
+                    'agreement_ids' => $agreementIds,
+                    'status' => $response->status(),
+                    'error' => $response->body()
+                ]);
+                throw new Exception($response->body(), 500);
+            }
+
+            Log::info('Agreements accepted successfully', [
+                'username' => $username,
+                'agreement_ids' => $agreementIds
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Exception in acceptAgreements', [
+                'username' => $username,
+                'agreement_ids' => $agreementIds,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get user's Cyclos credentials from database
+     */
+    public function getUserCredentials(User $user): ?array
+    {
+        // Assuming these fields exist in your users table
+        if (empty($user->cyclos_username) || empty($user->cyclos_user_password)) {
+            Log::warning('User missing Cyclos credentials', [
+                'user_id' => $user->id,
+                'has_username' => !empty($user->cyclos_username),
+                'has_password' => !empty($user->cyclos_user_password)
+            ]);
+            return null;
+        }
+
+        return [
+            'username' => $user->cyclos_username,
+            'password' => $user->cyclos_user_password
+        ];
+    }
+
+    /**
+     * Force accept all pending agreements for a user
+     * This method will:
+     * 1. Fetch all pending agreements
+     * 2. Auto-accept all of them in one go
+     */
+    public function forceAcceptAgreements(string $username, string $password): array
+    {
+        if (!$this->isConfigured()) {
+            Log::warning('Cyclos not configured, cannot force accept agreements');
+            throw new Exception("Cyclos not configured, cannot force accept agreements", 500);
+        }
+
+        try {
+            // Fetch all pending agreements
+            Log::info('Force accepting agreements - Step 1: Fetching pending agreements', [
+                'username' => $username
+            ]);
+
+            $pendingAgreements = $this->getUserAgreements($username, $password);
+
+            // Check if there are any pending agreements
+            if (empty($pendingAgreements)) {
+                Log::info('No pending agreements found for user', [
+                    'username' => $username
+                ]);
+
+                return [
+                    'success' => true,
+                    'accepted' => false,
+                    'message' => 'No pending agreements found',
+                    'agreements_count' => 0,
+                    'agreements' => []
+                ];
+            }
+
+            // Extract agreement IDs
+            $agreementIds = [];
+            foreach ($pendingAgreements as $agreement) {
+                if (isset($agreement['id'])) {
+                    $agreementIds[] = $agreement['id'];
+                }
+            }
+
+            if (empty($agreementIds)) {
+                Log::warning('Pending agreements found but no valid IDs', [
+                    'username' => $username,
+                    'agreements' => $pendingAgreements
+                ]);
+
+                return [
+                    'success' => false,
+                    'accepted' => false,
+                    'message' => 'Pending agreements found but no valid agreement IDs',
+                    'agreements_count' => count($pendingAgreements),
+                    'agreements' => $pendingAgreements
+                ];
+            }
+
+            Log::info('Force accepting agreements - Step 2: Auto-accepting all agreements', [
+                'username' => $username,
+                'agreement_ids' => $agreementIds,
+                'count' => count($agreementIds)
+            ]);
+
+            // Accept all pending agreements
+            $acceptResult = $this->acceptAgreements($username, $password, $agreementIds);
+
+            if ($acceptResult) {
+                Log::info('Force accept agreements completed successfully', [
+                    'username' => $username,
+                    'accepted_count' => count($agreementIds),
+                    'agreement_ids' => $agreementIds
+                ]);
+
+                return [
+                    'success' => true,
+                    'accepted' => true,
+                    'message' => 'Successfully accepted ' . count($agreementIds) . ' pending agreements',
+                    'agreements_count' => count($agreementIds),
+                    'agreements' => $pendingAgreements,
+                    'accepted_ids' => $agreementIds
+                ];
+            } else {
+                throw new Exception('Failed to accept agreements after fetching them');
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception in forceAcceptAgreements', [
+                'username' => $username,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw new Exception('Force accept agreements failed: ' . $e->getMessage(), 500);
+        }
     }
 }

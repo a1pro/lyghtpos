@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
             'representation' => \App\Http\Middleware\Merchant\MerchantRepresentationMiddleware::class,
             'subscription' => \App\Http\Middleware\Merchant\MerchantSubscribedMiddleware::class,
+
+            'check.agreements' => \App\Http\Middleware\CheckCyclosAgreements::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
