@@ -34,7 +34,7 @@ class CustomerPlanService
    		{
    			$data['features']  == array_filter($data['features']);
    		}
-
+     
    		$plan = CustomerPlans::create($data);
    		return [
    			 'success' => true,

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Merchant\ProductStoreRequest;
 use App\Http\Requests\Merchant\ProductUpdateRequest;
 use App\Services\Merchant\MerchantProductService;
+use App\Models\MerchantProductCount;
+use App\Models\UserSubscription;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -159,63 +161,139 @@ class MerchantProductController extends Controller
     /**
      * Store a newly created product in Cyclos.
      */
-    public function store(ProductStoreRequest $request): RedirectResponse
-    {
-        $user = Auth::user();
-        $cyclosUserId = $user->cyclos_user_id;
+public function store(ProductStoreRequest $request): RedirectResponse
+{
+    $user = Auth::user();
+    $cyclosUserId = $user->cyclos_user_id;
 
-        if (!$cyclosUserId) {
+    if (!$cyclosUserId) {
+        return redirect()->back()
+            ->withInput()
+            ->with('error', 'Cyclos user ID not found');
+    }
+
+    try {
+        // Check if user can add products BEFORE creating the product
+        $canAddCheck = MerchantProductCount::canAddProducts($user->id);
+        
+        if (!$canAddCheck['can_add']) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Cyclos user ID not found');
+                ->with('error', $canAddCheck['message']);
+        }
+        
+        $productData = $request->validated();
+
+        // Add trade_type if not present (default to offer)
+        if (!isset($productData['trade_type'])) {
+            $productData['trade_type'] = 'tradeTypeOffer';
         }
 
-        try {
-            $productData = $request->validated();
+        $image = $request->hasFile('image') ? $request->file('image') : null;
 
-            // Add trade_type if not present (default to offer)
-            if (!isset($productData['trade_type'])) {
-                $productData['trade_type'] = 'tradeTypeOffer';
+        $result = $this->productService->createProduct(
+            $cyclosUserId,
+            $productData,
+            $image
+        );
+
+        if ($result['success']) {
+            // After successful product creation, record the product count
+            try {
+                $this->addProductCount($user->id, 1);
+            } catch (\Exception $e) {
+                // Log error but don't fail the product creation
+                Log::error('Failed to record product count', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+                
+                // Optional: You might want to return error here if tracking is critical
+                // return redirect()->back()->withInput()->with('error', 'Product created but failed to update count: ' . $e->getMessage());
             }
 
-            $image = $request->hasFile('image') ? $request->file('image') : null;
-
-            $result = $this->productService->createProduct(
-                $cyclosUserId,
-                $productData,
-                $image
-            );
-
-            if ($result['success']) {
-                return redirect()->route('merchant.products.index')
-                    ->with('success', 'Product created successfully');
-            } else {
-                if (isset($result['needs_category']) && $result['needs_category']) {
-                    $categoriesData = $this->productService->getMarketplaceCategories();
-                    $flattenedCategories = $this->productService->flattenCategories($categoriesData);
-
-                    return redirect()->back()
-                        ->withInput()
-                        ->with('error', $result['message'])
-                        ->with('show_category_warning', true)
-                        ->with('flattened_categories', $flattenedCategories);
-                }
+            return redirect()->route('merchant.products.index')
+                ->with('success', 'Product created successfully');
+        } else {
+            if (isset($result['needs_category']) && $result['needs_category']) {
+                $categoriesData = $this->productService->getMarketplaceCategories();
+                $flattenedCategories = $this->productService->flattenCategories($categoriesData);
 
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', $result['message'] ?? 'Error creating product');
+                    ->with('error', $result['message'])
+                    ->with('show_category_warning', true)
+                    ->with('flattened_categories', $flattenedCategories);
             }
-        } catch (\Exception $e) {
-            Log::error('Exception in product store', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
 
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error creating product: ' . $e->getMessage());
+                ->with('error', $result['message'] ?? 'Error creating product');
         }
+    } catch (\Exception $e) {
+        Log::error('Exception in product store', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()->back()
+            ->withInput()
+            ->with('error', 'Error creating product: ' . $e->getMessage());
     }
+}
+
+    protected function addProductCount($userId, $count)
+{
+    try {
+        // Get user's active subscription
+        $activeSubscription = UserSubscription::where('user_id', $userId)
+            ->where('status', 'active')
+            ->where('end_date', '>', now())
+            ->latest()
+            ->first();
+        
+        if (!$activeSubscription) {
+            throw new \Exception('No active subscription found for this user');
+        }
+        
+        // Check if user can add products
+        $canAddCheck = MerchantProductCount::canAddProducts($userId, $count);
+        
+        if (!$canAddCheck['can_add']) {
+            throw new \Exception($canAddCheck['message']);
+        }
+        
+        // Create record of added products for this plan period
+        $productCount = MerchantProductCount::create([
+            'user_id' => $userId,
+            'plan_id' => $activeSubscription->plan_id,
+            'product_insert_count' => $count,
+            'plan_start_date' => $activeSubscription->start_date,
+            'plan_end_date' => $activeSubscription->end_date
+        ]);
+        
+        return $productCount;
+        
+    } catch (\Exception $e) {
+        Log::error('Error in addProductCount', [
+            'user_id' => $userId,
+            'count' => $count,
+            'error' => $e->getMessage()
+        ]);
+        
+        throw $e; // Re-throw to handle in the calling method
+    }
+}
+
+
+public function getRemainingProductCount()
+{
+    $user = Auth::user();
+    $canAddCheck = MerchantProductCount::canAddProducts($user->id);
+    
+    return $canAddCheck['remaining'] ?? 0;
+}
+
 
     /**
      * Display the specified product.
