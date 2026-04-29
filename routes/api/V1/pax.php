@@ -19,6 +19,7 @@ Route::prefix('pax')->group(function () {
             /** ****************** Customer Routes ****************** */
             Route::prefix('customers')->name('customers.')->group(function () {
                 Route::get('/', [PaxCustomersController::class, 'getMerchantCustomers']);
+                Route::post('/add', [PaxCustomersController::class, 'createMerchantCustomer']);
             });
         });
     });
