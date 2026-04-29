@@ -2,23 +2,13 @@
 
 namespace App\Services\Api\PAX\Auth;
 
-use App\Mail\POS\Customer\ForgotPasswordOtpMail;
-use App\Models\Customer;
 use App\Models\User;
-use App\Models\Merchant;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Carbon\Carbon;
-use Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class PaxAuthService
 {
-
-
-	/**
+    /**
      * Authenticate user credentials and generate token
      */
     public function authenticate(array $credentials): array
@@ -32,13 +22,11 @@ class PaxAuthService
             ]);
         }
 
- 
-
         if (!in_array($user->role_id, [2, 9, 10])) {
-    throw ValidationException::withMessages([
-        'email' => ['You are not authorized to access the POS system.'],
-    ]);
-}
+            throw ValidationException::withMessages([
+                'email' => ['You are not authorized to access the POS system.'],
+            ]);
+        }
 
         // Verify account status
         if (isset($user->status) && $user->status !== 'active') {
@@ -59,8 +47,7 @@ class PaxAuthService
         ];
     }
 
-
-     /**
+    /**
      * Get authenticated user profile data
      */
     public function userProfile()
@@ -73,7 +60,4 @@ class PaxAuthService
             }),
         ];
     }
-
-
-
 }
