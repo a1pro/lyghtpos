@@ -24,6 +24,8 @@ use App\Http\Controllers\Merchant\MerchantProductImportController;
 use App\Http\Controllers\Merchant\WalletController;
 use App\Http\Controllers\Merchant\CategoryController;
 use App\Http\Controllers\Merchant\MerchantProfileController;
+use App\Http\Controllers\Merchant\MerchantManageSubscriptionController;
+
 
 // Merchant Email Verification
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
@@ -101,6 +103,20 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::prefix('representation')->name('representation.')->group(function (): void {
         Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
         Route::post('/submit', [MerchantRepresentationController::class, 'submitForm'])->name('submit');
+    });
+
+    /* 
+    Manage Subscription Routes
+    */
+
+    Route::prefix('manage-subscriptions')->name('manage-subscriptions.')->group(function(){
+        Route::get('/', [MerchantManageSubscriptionController::class, 'index'])->name('index');
+        Route::get('/plan-details/{planId}', [MerchantManageSubscriptionController::class, 'getPlanDetails'])->name('plan.details');
+        Route::post('/process-plan-change', [MerchantManageSubscriptionController::class, 'processPlanChange'])->name('process.plan.change');
+        Route::get('/paypal/success', [MerchantManageSubscriptionController::class, 'paypalSuccess'])->name('paypal.success');
+        Route::get('/paypal/cancel', [MerchantManageSubscriptionController::class, 'paypalCancel'])->name('paypal.cancel');
+        Route::get('/history', [MerchantManageSubscriptionController::class, 'history'])->name('history');
+
     });
 
     // *********************** Product Routes ***********************

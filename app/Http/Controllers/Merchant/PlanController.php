@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Merchant;
 use App\Http\Controllers\Controller;
 use App\Models\SubscriptionPlan;
 use App\Models\UserSubscription;
+use App\Models\UserSubscriptionHistory;
 use App\Services\Paypal\ModernPayPalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -255,6 +256,19 @@ class PlanController extends Controller
                             'paypal_payer_id' => $payerId,
                             'paypal_capture_id' => $result['capture_id'],
                             'status' => 'active'
+                        ]);
+
+                        UserSubscriptionHistory::create([
+                            'user_id' => $user->id,
+                            'plan_id' => $plan->id,
+                            'user_subscription_id' => $subscription->id,
+                            'billing_type' => $pendingSubscription['billing_type'],
+                            'start_date' => $startDate,
+                            'end_date' => $endDate,
+                            'transaction_id' => $transactionId,
+                            'amount_paid' => $pendingSubscription['amount'],
+                            'payment_method' => 'paypal',
+                            'status' => 'history'
                         ]);
                     }
 

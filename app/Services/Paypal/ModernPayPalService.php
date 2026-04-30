@@ -278,6 +278,123 @@ class ModernPayPalService
         }
     }
 
+
+public function createUpdateOrder(
+        $amount,
+        $currency = 'USD',
+        $description = 'Subscription Payment',
+        ?string $returnUrl = null,
+        ?string $cancelUrl = null
+    ) {
+        // Check if mock mode is enabled
+        if ($this->mockMode) {
+            return $this->mockCreateOrder($amount, $currency, $description, $returnUrl, $cancelUrl);
+        }
+        
+        try {
+            // Check if credentials are configured
+            if (!$this->hasValidCredentials()) {
+                Log::error('PayPal credentials not configured for ' . $this->mode . ' mode');
+                
+                if ($this->fallbackToMock) {
+                    Log::warning('Falling back to mock PayPal order creation');
+                    return $this->mockCreateOrder($amount, $currency, $description, $returnUrl, $cancelUrl);
+                }
+                
+                return [
+                    'success' => false,
+                    'message' => 'Payment gateway is not properly configured. Please contact administrator.'
+                ];
+            }
+
+            $referenceId = 'SUB-' . Str::random(8) . '-' . time();
+
+            $pendingSubscription = Session::get('pending_subscription', []);
+
+            $customData = json_encode([
+                'plan_id' => $pendingSubscription['plan_id'] ?? null,
+                'billing_type' => $pendingSubscription['billing_type'] ?? null,
+                'user_id' => $pendingSubscription['user_id'] ?? null,
+                'timestamp' => now()->timestamp
+            ]);
+
+            $orderData = [
+                'intent' => 'CAPTURE',
+                'purchase_units' => [
+                    [
+                        'reference_id' => $referenceId,
+                        'description' => $description,
+                        'amount' => [
+                            'currency_code' => $currency,
+                            'value' => number_format($amount, 2, '.', '')
+                        ],
+                        'custom_id' => $customData
+                    ]
+                ],
+                'application_context' => [
+                    'brand_name' => config('app.name'),
+                    'return_url' => $returnUrl ?: route('merchant.manage-subscriptions.paypal.success'),
+                    'cancel_url' => $cancelUrl ?: route('merchant.manage-subscriptions.paypal.cancel'),
+                    'user_action' => 'PAY_NOW',
+                    'shipping_preference' => 'NO_SHIPPING'
+                ]
+            ];
+
+            $response = $this->provider->createOrder($orderData);
+
+            Log::info('PayPal order created', [
+                'order_id' => $response['id'] ?? null,
+                'status' => $response['status'] ?? null,
+                'mode' => $this->mode,
+                'return_url' => $orderData['application_context']['return_url'],
+                'cancel_url' => $orderData['application_context']['cancel_url'],
+            ]);
+
+            if (isset($response['id']) && $response['id']) {
+                $approvalUrl = null;
+                foreach ($response['links'] as $link) {
+                    if ($link['rel'] === 'approve') {
+                        $approvalUrl = $link['href'];
+                        break;
+                    }
+                }
+
+                return [
+                    'success' => true,
+                    'order_id' => $response['id'],
+                    'approval_url' => $approvalUrl,
+                    'status' => $response['status'],
+                    'response' => $response
+                ];
+            }
+
+            if ($this->fallbackToMock) {
+                return $this->mockCreateOrder($amount, $currency, $description, $returnUrl, $cancelUrl);
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to create PayPal order: Invalid response',
+                'error' => $response
+            ];
+        } catch (Exception $e) {
+            Log::error('PayPal create order error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'mode' => $this->mode
+            ]);
+
+            if ($this->fallbackToMock) {
+                return $this->mockCreateOrder($amount, $currency, $description, $returnUrl, $cancelUrl);
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to create PayPal order: ' . $this->getUserFriendlyError($e),
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
     /**
      * Capture order
      */
