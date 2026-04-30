@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Merchant\ProductStoreRequest;
 use App\Http\Requests\Merchant\ProductUpdateRequest;
 use App\Services\Merchant\MerchantProductService;
+use App\Services\Merchant\MerchantPlansConditionService;
 use App\Models\MerchantProductCount;
 use App\Models\UserSubscription;
 use Illuminate\Contracts\View\Factory;
@@ -19,10 +20,12 @@ use Auth;
 class MerchantProductController extends Controller
 {
     protected MerchantProductService $productService;
+    protected MerchantPlansConditionService $productPlanCondition;
 
-    public function __construct(MerchantProductService $productService)
+    public function __construct(MerchantProductService $productService , MerchantPlansConditionService $productPlanCondition)
     {
         $this->productService = $productService;
+        $this->productPlanCondition = $productPlanCondition;
     }
 
     /**
@@ -174,7 +177,7 @@ public function store(ProductStoreRequest $request): RedirectResponse
 
     try {
         // Check if user can add products BEFORE creating the product
-        $canAddCheck = MerchantProductCount::canAddProducts($user->id);
+        $canAddCheck = $this->productPlanCondition->canAddProducts($user->id);
         
         if (!$canAddCheck['can_add']) {
             return redirect()->back()
@@ -257,7 +260,7 @@ public function store(ProductStoreRequest $request): RedirectResponse
         }
         
         // Check if user can add products
-        $canAddCheck = MerchantProductCount::canAddProducts($userId, $count);
+        $canAddCheck = $this->productPlanCondition->canAddProducts($userId, $count);
         
         if (!$canAddCheck['can_add']) {
             throw new \Exception($canAddCheck['message']);
