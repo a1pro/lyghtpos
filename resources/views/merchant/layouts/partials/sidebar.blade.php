@@ -24,137 +24,145 @@
 
                 <!-- Check if merchant status is approved -->
                 @if($status == 'approved')
-                    <!-- POS -->
-                    <li class="nav-item">
-                        <a href="{{ route('merchant.team-members.index') }}" class="nav-link {{ request()->routeIs('merchant.team-members.index') ? 'active' : '' }}">
-                            <i class="fa-solid fa-people-group"></i>
-                            <p>Team Members</p>
-                        </a>
-                    </li>
+                <!-- POS -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.team-members.index') }}" class="nav-link {{ request()->routeIs('merchant.team-members.index') ? 'active' : '' }}">
+                        <i class="fa-solid fa-people-group"></i>
+                        <p>Team Members</p>
+                    </a>
+                </li>
 
 
-                    {{-- <li class="nav-item">
+                {{-- <li class="nav-item">
                         <a href="{{ route('merchant.barter-assist-pos') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-pos') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-th-large"></i>
-                            <p>{{ __('POS') }}</p>
-                        </a>
-                    </li>
+                <i class="nav-icon fas fa-th-large"></i>
+                <p>{{ __('POS') }}</p>
+                </a>
+                </li>
 
 
-                    <!-- Cash Price -->
-                    <li class="nav-item">
-                        <a href="{{ route('merchant.barter-assist-cash-price') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-cash-price') ? 'active' : '' }}">
-                            <i class="fa-solid fa-circle-dollar-to-slot"></i>
-                            <p>{{ __('Cash Price') }}</p>
-                        </a>
-                    </li> --}}
+                <!-- Cash Price -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.barter-assist-cash-price') }}" class="nav-link {{ request()->routeIs('merchant.barter-assist-cash-price') ? 'active' : '' }}">
+                        <i class="fa-solid fa-circle-dollar-to-slot"></i>
+                        <p>{{ __('Cash Price') }}</p>
+                    </a>
+                </li> --}}
 
-                    <!-- External links -->
-                    <li class="nav-item">
-                        <a href="{{ route('merchant.external-links') }}" class="nav-link {{ request()->routeIs('merchant.external-links') ? 'active' : '' }}">
-                            <i class="fa-solid fa-link"></i>
-                            <p>{{ __('External Links') }}</p>
-                        </a>
-                    </li>
+                <!-- External links -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.external-links') }}" class="nav-link {{ request()->routeIs('merchant.external-links') ? 'active' : '' }}">
+                        <i class="fa-solid fa-link"></i>
+                        <p>{{ __('External Links') }}</p>
+                    </a>
+                </li>
 
-                    <!-- Products -->
-                    <li class="nav-item">
-                        <a href="{{ route('merchant.products.index') }}" class="nav-link {{ activeSegment('products') ? 'active' : '' }}">
-                            <i class="fa-solid fa-bag-shopping"></i>
-                            <p>{{ __('product.title') }}</p>
-                        </a>
-                    </li>
+                <!-- Products -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.products.index') }}" class="nav-link {{ activeSegment('products') ? 'active' : '' }}">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                        <p>{{ __('product.title') }}</p>
+                    </a>
+                </li>
 
-                    <!-- Vouchers (commented out, uncomment if needed) -->
-                    {{-- <li class="nav-item">
+                <!-- Vouchers (commented out, uncomment if needed) -->
+                {{-- <li class="nav-item">
                         <a href="{{ route('merchant.vouchers.index') }}" class="nav-link {{ activeSegment('vouchers') ? 'active' : '' }}">
-                            <i class="fa-solid fa-ticket"></i>
-                            <p>Vouchers</p>
-                        </a>
-                    </li> --}}
+                <i class="fa-solid fa-ticket"></i>
+                <p>Vouchers</p>
+                </a>
+                </li> --}}
 
-                    <li class="nav-header">{{ __('Sales') }}</li>
-                    
-                    <!-- POS Cart -->
+                <li class="nav-header">{{ __('Sales') }}</li>
+
+                <!-- POS Cart -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.cart.index') }}" class="nav-link {{ activeSegment('cart') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-cart-plus"></i>
+                        <p>{{ __('POS') }}</p>
+                    </a>
+                </li>
+
+                <!-- Orders -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.orders.index') }}" class="nav-link {{ activeSegment('orders') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <p>{{ __('Order List') }}</p>
+                    </a>
+                </li>
+
+                <!-- Customers -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.customers.index') }}" class="nav-link {{ activeSegment('customers') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-users"></i>
+                        <p>{{ __('customer.title') }}</p>
+                    </a>
+                </li>
+
+                {{-- <li class="nav-header">{{ __('Purchases') }}</li> --}}
+
+                <!-- Purchases (Dropdown) -->
+                {{-- <li class="nav-item {{ request()->routeIs('merchant.purchases.*') ? 'menu-open' : '' }}">
+                <a href="#" class="nav-link">
+                    <i class="nav-icon fas fa-box"></i>
+                    <p>
+                        {{ __('Purchases') }}
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
+                </a>
+                <ul class="nav nav-treeview">
                     <li class="nav-item">
-                        <a href="{{ route('merchant.cart.index') }}" class="nav-link {{ activeSegment('cart') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-cart-plus"></i>
-                            <p>{{ __('POS') }}</p>
+                        <a href="{{ route('merchant.purchases.create') }}" class="nav-link {{ request()->routeIs('merchant.purchases.create') ? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>{{ __('New Purchase') }}</p>
                         </a>
                     </li>
-
-                    <!-- Orders -->
                     <li class="nav-item">
-                        <a href="{{ route('merchant.orders.index') }}" class="nav-link {{ activeSegment('orders') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-shopping-cart"></i>
-                            <p>{{ __('Order List') }}</p>
+                        <a href="{{ route('merchant.purchases.index') }}" class="nav-link {{ request()->routeIs('merchant.purchases.index') ? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>{{ __('All Purchases') }}</p>
                         </a>
                     </li>
+                </ul>
+                </li> --}}
 
-                    <!-- Customers -->
-                    <li class="nav-item">
-                        <a href="{{ route('merchant.customers.index') }}" class="nav-link {{ activeSegment('customers') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-users"></i>
-                            <p>{{ __('customer.title') }}</p>
-                        </a>
-                    </li>
-
-                    {{-- <li class="nav-header">{{ __('Purchases') }}</li> --}}
-                    
-                    <!-- Purchases (Dropdown) -->
-                    {{-- <li class="nav-item {{ request()->routeIs('merchant.purchases.*') ? 'menu-open' : '' }}">
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-box"></i>
-                            <p>
-                                {{ __('Purchases') }}
-                                <i class="right fas fa-angle-left"></i>
-                            </p>
-                        </a>
-                        <ul class="nav nav-treeview">
-                            <li class="nav-item">
-                                <a href="{{ route('merchant.purchases.create') }}" class="nav-link {{ request()->routeIs('merchant.purchases.create') ? 'active' : '' }}">
-                                    <i class="far fa-circle nav-icon"></i>
-                                    <p>{{ __('New Purchase') }}</p>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="{{ route('merchant.purchases.index') }}" class="nav-link {{ request()->routeIs('merchant.purchases.index') ? 'active' : '' }}">
-                                    <i class="far fa-circle nav-icon"></i>
-                                    <p>{{ __('All Purchases') }}</p>
-                                </a>
-                            </li>
-                        </ul>
-                    </li> --}}
-                    
-                    <!-- Suppliers -->
-                    {{-- <li class="nav-item">
+                <!-- Suppliers -->
+                {{-- <li class="nav-item">
                         <a href="{{ route('merchant.suppliers.index') }}" class="nav-link {{ activeSegment('suppliers') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-truck"></i>
-                            <p>{{ __('Supplier') }}</p>
-                        </a>
-                    </li> --}}
+                <i class="nav-icon fas fa-truck"></i>
+                <p>{{ __('Supplier') }}</p>
+                </a>
+                </li> --}}
 
-                    <!-- Settings Section for Merchants -->
-                    <li class="nav-header">Settings</li>
-                    
+                <!-- Settings Section for Merchants -->
+
+                <li class="nav-item">
+                    <a href="{{ route('merchant.manage-subscriptions.index') }}" class="nav-link {{ request()->routeIs('merchant.manage-subscriptions.index') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <p>Manage Subscription</p>
+                    </a>
+                </li>
+
+                <li class="nav-header">Settings</li>
+
                 @else
-                    <!-- Show pending status message for unapproved merchants -->
-                    <li class="nav-header">{{ __('Account Status') }}</li>
-                    <li class="nav-item">
-                        <div class="nav-link disabled">
-                            <i class="nav-icon fas fa-info-circle"></i>
-                            <p>{{ __('Your account is pending approval') }}</p>
-                        </div>
-                    </li>
-                    
-                    <!-- Optionally show limited menu items for pending merchants -->
-                    <li class="nav-header">{{ __('Limited Access') }}</li>
-                    <li class="nav-item">
-                        <a href="{{ route('merchant.settings.index') }}" class="nav-link {{ activeSegment('settings') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-cogs"></i>
-                            <p>{{ __('settings.title') }}</p>
-                        </a>
-                    </li>
+                <!-- Show pending status message for unapproved merchants -->
+                <li class="nav-header">{{ __('Account Status') }}</li>
+                <li class="nav-item">
+                    <div class="nav-link disabled">
+                        <i class="nav-icon fas fa-info-circle"></i>
+                        <p>{{ __('Your account is pending approval') }}</p>
+                    </div>
+                </li>
+
+                <!-- Optionally show limited menu items for pending merchants -->
+                <li class="nav-header">{{ __('Limited Access') }}</li>
+                <li class="nav-item">
+                    <a href="{{ route('merchant.settings.index') }}" class="nav-link {{ activeSegment('settings') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-cogs"></i>
+                        <p>{{ __('settings.title') }}</p>
+                    </a>
+                </li>
                 @endif
 
                 <!-- Logout (Always visible) -->

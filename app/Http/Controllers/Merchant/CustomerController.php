@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Merchant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\CustomerStoreRequest;
 use App\Http\Requests\Customer\CustomerUpdateRequest;
+use App\Services\Merchant\MerchantPlansConditionService;
 use App\Models\Customer;
 use App\Services\Merchant\MerchantCustomerService;
 use Illuminate\Contracts\View\Factory;
@@ -19,11 +20,12 @@ use Illuminate\Support\Facades\Storage;
 class CustomerController extends Controller
 {
     protected MerchantCustomerService $merchantCustomerService;
+    protected MerchantPlansConditionService $merchantPlanCondition;
 
-    public function __construct(
-        MerchantCustomerService $merchantCustomerService
+    public function __construct(MerchantCustomerService $merchantCustomerService , MerchantPlansConditionService $merchantPlanCondition
     ) {
         $this->merchantCustomerService = $merchantCustomerService;
+        $this->merchantPlanCondition  = $merchantPlanCondition;
     }
 
     /**
@@ -51,30 +53,39 @@ class CustomerController extends Controller
      * @return RedirectResponse
      */
     public function store(CustomerStoreRequest $request)
-    {
-        try {
-            $data = $request->validated();
-
-            if ($request->hasFile('avatar')) {
-                $data['avatar'] = $request->file('avatar')->store('customers', 'public');
-            }
-
-            $data['merchant_id'] = Auth::id();
-
-            $this->merchantCustomerService->createCustomer($data);
-
-            return redirect()->route('merchant.customers.index')
-                ->with('success', 'Customer created successfully.');
-        } catch (\Throwable $e) {
-            Log::error('Customer creation failed', [
-                'error' => $e->getMessage()
-            ]);
-
+{
+    try {
+        $data = $request->validated();
+        $userId = Auth::id();
+        $customerAdd = $this->merchantPlanCondition->canAddCustomer($userId);
+        
+        // Check using 'can_add' key (or 'success' key)
+        if (!$customerAdd['can_add']) {  // Or use if (!$customerAdd['success'])
             return back()
                 ->withInput()
-                ->with('error', 'Something went wrong while creating customer.');
+                ->with('error', $customerAdd['message']);
+        }       
+
+        if ($request->hasFile('avatar')) {
+            $data['avatar'] = $request->file('avatar')->store('customers', 'public');
         }
+
+        $data['merchant_id'] = Auth::id();
+
+        $this->merchantCustomerService->createCustomer($data);
+
+        return redirect()->route('merchant.customers.index')
+            ->with('success', 'Customer created successfully.');
+    } catch (\Throwable $e) {
+        Log::error('Customer creation failed', [
+            'error' => $e->getMessage()
+        ]);
+
+        return back()
+            ->withInput()
+            ->with('error', 'Something went wrong while creating customer.');
     }
+}
 
     /**
      * Show the form for editing the specified resource.
