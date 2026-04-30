@@ -115,6 +115,8 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::post('/process-plan-change', [MerchantManageSubscriptionController::class, 'processPlanChange'])->name('process.plan.change');
         Route::get('/paypal/success', [MerchantManageSubscriptionController::class, 'paypalSuccess'])->name('paypal.success');
         Route::get('/paypal/cancel', [MerchantManageSubscriptionController::class, 'paypalCancel'])->name('paypal.cancel');
+        Route::get('/history', [MerchantManageSubscriptionController::class, 'history'])->name('history');
+
     });
 
     // *********************** Product Routes ***********************

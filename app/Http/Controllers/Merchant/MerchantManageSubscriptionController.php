@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Merchant;
 use App\Http\Controllers\Controller;
 use App\Models\SubscriptionPlan;
 use App\Models\UserSubscription;
+use App\Models\UserSubscriptionHistory;
 use App\Services\Paypal\ModernPayPalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -41,6 +42,93 @@ class MerchantManageSubscriptionController extends Controller
         } catch (\Exception $e) {
             Log::error('Error loading plans: ' . $e->getMessage());
             return back()->with('error', 'Failed to load plans. Please try again.');
+        }
+    }
+
+    /*
+    Merchant Subscription Plan History
+    */
+    public function history(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            // Get current active subscription
+            $currentSubscription = UserSubscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->where('end_date', '>', now())
+                ->first();
+            
+            // Build query - get all history entries
+            $query = UserSubscriptionHistory::where('user_id', $user->id)
+                ->with('plan');
+            
+            // Apply filters
+            if ($request->filled('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+            
+            if ($request->filled('billing_type') && $request->billing_type !== 'all') {
+                $query->where('billing_type', $request->billing_type);
+            }
+            
+            if ($request->filled('date_from')) {
+                $query->whereDate('start_date', '>=', Carbon::parse($request->date_from));
+            }
+            
+            if ($request->filled('date_to')) {
+                $query->whereDate('end_date', '<=', Carbon::parse($request->date_to));
+            }
+            
+            if ($request->filled('payment_method') && $request->payment_method !== 'all') {
+                $query->where('payment_method', $request->payment_method);
+            }
+            
+            if ($request->filled('search')) {
+                $query->where('transaction_id', 'like', '%' . $request->search . '%');
+            }
+            
+            // Get paginated results
+            $histories = $query->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->withQueryString();
+            
+            // Get statistics
+            $stats = [
+                'total_subscriptions' => UserSubscriptionHistory::where('user_id', $user->id)->count(),
+                'history_count' => UserSubscriptionHistory::where('user_id', $user->id)->count(),
+                'total_spent' => UserSubscriptionHistory::where('user_id', $user->id)->sum('amount_paid'),
+                'current_plan' => $currentSubscription ? [
+                    'id' => $currentSubscription->id,
+                    'name' => $currentSubscription->plan->name ?? 'N/A',
+                    'plan_id' => $currentSubscription->plan_id,
+                    'billing_type' => $currentSubscription->billing_type,
+                    'end_date' => $currentSubscription->end_date,
+                    'amount_paid' => $currentSubscription->amount_paid,
+                    'start_date' => $currentSubscription->start_date
+                ] : null
+            ];
+            
+            // Get unique values for filters
+            $billingTypes = UserSubscriptionHistory::where('user_id', $user->id)
+                ->distinct()
+                ->pluck('billing_type');
+            
+            $paymentMethods = UserSubscriptionHistory::where('user_id', $user->id)
+                ->distinct()
+                ->pluck('payment_method');
+            
+            return view('merchant.pages.manage-subscriptions.history', compact(
+                'histories', 
+                'stats', 
+                'billingTypes', 
+                'paymentMethods',
+                'currentSubscription'
+            ));
+            
+        } catch (\Exception $e) {
+            Log::error('Error loading subscription history: ' . $e->getMessage());
+            return back()->with('error', 'Failed to load subscription history. Please try again.');
         }
     }
 
@@ -212,7 +300,29 @@ class MerchantManageSubscriptionController extends Controller
                         ->first();
 
                     if ($existingSubscription) {
-                        // Update existing subscription instead of creating new one
+                        // IMPORTANT: Store the OLD subscription in history BEFORE updating
+                        UserSubscriptionHistory::create([
+                            'user_id' => $user->id,
+                            'plan_id' => $existingSubscription->plan_id,
+                            'user_subscription_id' => $existingSubscription->id,
+                            'billing_type' => $existingSubscription->billing_type,
+                            'start_date' => $existingSubscription->start_date,
+                            'end_date' => $existingSubscription->end_date,
+                            'transaction_id' => $existingSubscription->transaction_id,
+                            'amount_paid' => $existingSubscription->amount_paid,
+                            'payment_method' => $existingSubscription->payment_method,
+                            'status' => 'expired', // Mark as expired/changed
+                            'changed_to_plan_id' => $plan->id, // Track which plan it was changed to
+                            'changed_at' => now()
+                        ]);
+                        
+                        Log::info('Old subscription moved to history', [
+                            'old_plan_id' => $existingSubscription->plan_id,
+                            'new_plan_id' => $plan->id,
+                            'subscription_id' => $existingSubscription->id
+                        ]);
+                        
+                        // Update existing subscription with new plan
                         $existingSubscription->update([
                             'plan_id' => $plan->id,
                             'billing_type' => $pendingSubscription['billing_type'],
@@ -225,11 +335,13 @@ class MerchantManageSubscriptionController extends Controller
                             'paypal_order_id' => $orderId,
                             'paypal_capture_id' => $result['capture_id'] ?? null,
                             'status' => 'active',
-                            'updated_at' => now()
+                            'updated_at' => now(),
+                            'previous_plan_id' => $existingSubscription->plan_id // Track previous plan
                         ]);
                         
                         $subscription = $existingSubscription;
-                        Log::info('Updated existing subscription', ['subscription_id' => $subscription->id]);
+                        Log::info('Updated existing subscription with new plan', ['subscription_id' => $subscription->id]);
+                        
                     } else {
                         // Create new subscription if none exists
                         $subscription = UserSubscription::create([
@@ -246,6 +358,21 @@ class MerchantManageSubscriptionController extends Controller
                             'paypal_capture_id' => $result['capture_id'] ?? null,
                             'status' => 'active'
                         ]);
+
+                        // For new subscription, also add to history
+                        UserSubscriptionHistory::create([
+                            'user_id' => $user->id,
+                            'plan_id' => $plan->id,
+                            'user_subscription_id' => $subscription->id,
+                            'billing_type' => $pendingSubscription['billing_type'],
+                            'start_date' => $startDate,
+                            'end_date' => $endDate,
+                            'transaction_id' => $transactionId,
+                            'amount_paid' => $pendingSubscription['amount'],
+                            'payment_method' => 'paypal',
+                            'status' => 'active'
+                        ]);
+
                         Log::info('Created new subscription', ['subscription_id' => $subscription->id]);
                     }
 
@@ -257,7 +384,7 @@ class MerchantManageSubscriptionController extends Controller
                     
                     DB::commit();
 
-                    return redirect()->route('merchant.dashboard')
+                    return redirect()->route('merchant.manage-subscriptions.index')
                         ->with('success', 'Subscription activated successfully!');
 
                 } catch (\Exception $e) {

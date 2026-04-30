@@ -10,10 +10,16 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-body">
-                    <!-- Header Section -->
-                    <div class="text-center mb-4">
-                        <h3 class="fw-bold">Choose your plan</h3>
-                        <p class="text-muted">Select the perfect plan for your business needs</p>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="text-center flex-grow-1">
+                            <h3 class="fw-bold mb-0">Choose your plan</h3>
+                            <p class="text-muted mb-0">Select the perfect plan for your business needs</p>
+                        </div>
+                        <div>
+                            <a href="{{ route('merchant.manage-subscriptions.history') }}" class="btn btn-outline-info">
+                                <i class="fas fa-history me-1"></i> View History
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Pricing Toggle (Monthly/Yearly) -->
@@ -124,6 +130,7 @@
                             <div class="alert alert-info text-center">
                                 <i class="fas fa-info-circle"></i> No subscription plans available at the moment.
                             </div>
+
                         </div>
                         @endforelse
                     </div>
