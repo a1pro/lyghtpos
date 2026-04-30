@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosTokenBundleController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerSubscriptionController;
 use App\Http\Controllers\Api\V1\POS\Settings\PosSettingsController;
+use App\Http\Controllers\Location\LocationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('pos')->group(function () {
@@ -32,6 +33,13 @@ Route::prefix('pos')->group(function () {
 
     /**  *************** Settings Routes ********************* */
     Route::get('custom-token-charge', [PosSettingsController::class, 'getCustomTokenCharge']);
+
+    /** *************** Location Routes (Country, State, City) ***************** */
+    Route::prefix('locations')->group(function () {
+        Route::get('countries', [LocationController::class, 'getCountries']);
+        Route::get('countries/{countryId}/states', [LocationController::class, 'getStatesByCountry']);
+        Route::get('states/{stateId}/cities', [LocationController::class, 'getCitiesByState']);
+    });
 
     Route::middleware('auth:sanctum')->group(function () {
 

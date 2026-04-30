@@ -4,9 +4,17 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PAX\Auth\PaxAuthController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxCustomersController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxProductsController;
+use App\Http\Controllers\Location\LocationController;
 
 Route::prefix('pax')->group(function () {
     Route::post('login', [PaxAuthController::class, 'login']);
+
+    /** *************** Location Routes (Country, State, City) ***************** */
+    Route::prefix('locations')->group(function () {
+        Route::get('countries', [LocationController::class, 'getCountries']);
+        Route::get('countries/{countryId}/states', [LocationController::class, 'getStatesByCountry']);
+        Route::get('states/{stateId}/cities', [LocationController::class, 'getCitiesByState']);
+    });
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('user')->group(function () {
