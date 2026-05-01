@@ -25,8 +25,13 @@ class PaxCustomerCreateRequest extends FormRequest
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:500',
+            'phone' => 'nullable|string|max:20|unique:users,phone',
+
+            'address' => 'required|string|max:500',
+            'city' => 'required|string|max:100',
+            'state' => 'required|string|max:100',
+            'postal_code' => 'required|string|max:20',
+            'country' => 'required|string|max:100',
         ];
     }
 
@@ -50,8 +55,25 @@ class PaxCustomerCreateRequest extends FormRequest
             'phone.string' => 'Phone number must be a valid string',
             'phone.max' => 'Phone number cannot exceed 20 characters',
 
-            'address.string' => 'Address must be a valid string',
-            'address.max' => 'Address cannot exceed 500 characters',
+            'address.required' => 'Address is required',
+            'address.string' => 'Address must be a string',
+            'address.max' => 'Address must not exceed 500 characters',
+
+            'city.required' => 'City is required',
+            'city.string' => 'City must be a string',
+            'city.max' => 'City must not exceed 100 characters',
+
+            'state.required' => 'State is required',
+            'state.string' => 'State must be a string',
+            'state.max' => 'State must not exceed 100 characters',
+
+            'postal_code.required' => 'Postal code is required',
+            'postal_code.string' => 'Postal code must be a string',
+            'postal_code.max' => 'Postal code must not exceed 20 characters',
+
+            'country.required' => 'Country is required',
+            'country.string' => 'Country must be a string',
+            'country.max' => 'Country must not exceed 100 characters',
         ];
     }
 }
