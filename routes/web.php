@@ -17,6 +17,7 @@ use App\Http\Controllers\Settings\SettingController;
 use App\Http\Controllers\Admin\JoiningFeesController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\CustomerPlanController;
+use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
@@ -37,6 +38,8 @@ Route::get('/locale/{type}', function ($type) {
 // Custom registration routes for 2-step registration
 Route::get('register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register'])->name('register.step1');
+Route::get('/get-states/{countryId}', [RegisterController::class, 'getStates'])->name('get.states');
+Route::get('/get-cities/{stateId}', [RegisterController::class, 'getCities'])->name('get.cities');
 Route::get('register/representation', [App\Http\Controllers\Auth\RegisterController::class, 'showRepresentationForm'])->name('register.representation');
 Route::post('register/final', [App\Http\Controllers\Auth\RegisterController::class, 'register'])->name('register.final');
 

@@ -51,4 +51,11 @@ class Country extends Model
     {
         return $query->where('country_name', 'like', "%{$name}%");
     }
+
+    public function create()
+{
+    $countries = Country::orderBy('country_name', 'asc')->get();
+
+    return view('merchant.customers.create', compact('countries'));
+}
 }
