@@ -5,6 +5,7 @@ namespace App\Services\Merchant;
 use App\Mail\Merchant\Customers\NewCustomerCreated;
 use App\Models\User;
 use App\Models\Customer;
+use App\Models\UserAddress;
 use App\Services\Cyclos\CyclosUserService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -83,7 +84,17 @@ class MerchantCustomerService
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
                 'password' => Hash::make($plainPassword),
+            ]);
+
+            UserAddress::create([
+                'user_id' => $user->id,
+                'address' => $data['address'],
+                'city' => $data['city'],
+                'state' => $data['state'],
+                'postal_code' => $data['postal_code'],
+                'country' => $data['country'],
             ]);
 
             $cyclosUserResponse = $this->cyclosUserService->createUser($user);
