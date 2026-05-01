@@ -60,29 +60,6 @@ class PosLoginController extends Controller
     }
 
     /**
-     * Get authenticated user profile information
-     */
-    public function userProfile()
-    {
-        try {
-            $data = $this->posAuthService->userProfile(auth()->user());
-
-            return response()->json([
-                'success' => true,
-                'status_code' => 200,
-                'message' => 'User profile retrieved successfully',
-                'data' => $data
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'status_code' => 500,
-                'message' => 'An error occurred while processing your request' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
      * Logout user by revoking access token
      */
     public function logout(Request $request)
