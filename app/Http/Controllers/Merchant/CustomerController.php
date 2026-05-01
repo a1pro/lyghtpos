@@ -7,6 +7,7 @@ use App\Http\Requests\Customer\CustomerStoreRequest;
 use App\Http\Requests\Customer\CustomerUpdateRequest;
 use App\Services\Merchant\MerchantPlansConditionService;
 use App\Models\Customer;
+use App\Models\Country;
 use App\Services\Merchant\MerchantCustomerService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -42,10 +43,12 @@ class CustomerController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): View|Factory
-    {
-        return view('merchant.pages.customers.create');
-    }
+      public function create(): View|Factory
+{
+    $countries = Country::orderBy('country_name', 'asc')->get();
+
+    return view('merchant.pages.customers.create', compact('countries'));
+}
 
     /**
      * Store a newly created resource in storage.

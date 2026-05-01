@@ -13,6 +13,8 @@ use App\Models\Representation;
 use App\Models\UserGovernanceLayer;
 use App\Models\GovernanceLayer;
 use App\Models\Role;
+use App\Models\UserAddress;
+use App\Models\City;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -33,7 +35,8 @@ class RegisterController extends Controller
 
     public function showRegistrationForm()
     {
-        return view('auth.register');
+        $countries = \App\Models\Country::all();
+        return view('auth.register', compact('countries'));
     }
 
     public function register(RegisterRequest $request)
@@ -48,6 +51,9 @@ class RegisterController extends Controller
 
         // Create the user
         $user = $this->create($request->all());
+
+        // Create user address
+        $this->createUserAddress($user, $request->all());
 
         // For FAVOR_MEMBER, directly create Cyclos account and update user
         if ($request->account_type === 'FAVOR_MEMBER') {
@@ -114,6 +120,52 @@ class RegisterController extends Controller
 
         return $user;
     }
+
+    /**
+     * Create user address from dropdown selections
+     */
+    protected function createUserAddress(User $user, array $data)
+    {
+        $cityName = '';
+        $stateName = '';
+        $countryName = '';
+        
+        // Get city details with relationships
+        if (isset($data['city_id']) && !empty($data['city_id'])) {
+            $city = City::with('state.country')->find($data['city_id']);
+            
+            if ($city) {
+                $cityName = $city->city;
+                
+                if ($city->state) {
+                    $stateName = $city->state->state;
+                }
+                
+                if ($city->state && $city->state->country) {
+                    $countryName = $city->state->country->country_name;
+                }
+            }
+        }
+
+        UserAddress::create([
+            'user_id' => $user->id,
+            'address' => $data['address'] ?? '',
+            'city' => $cityName,
+            'state' => $stateName,
+            'postal_code' => $data['postal_code'] ?? '',
+            'country' => $countryName,
+            'is_active' => true,
+        ]);
+        
+        Log::info('Address created for user', [
+            'user_id' => $user->id,
+            'city' => $cityName,
+            'state' => $stateName,
+            'country' => $countryName,
+            'postal_code' => $data['postal_code'] ?? ''
+        ]);
+    }
+
     public function checkEmail(Request $request)
     {
         $email = $request->input('email');
@@ -121,6 +173,35 @@ class RegisterController extends Controller
         
         return response()->json($exists ? false : true);
     }
+
+    /**
+     * Get states by country ID (for AJAX)
+     */
+    public function getStates($countryId)
+    {
+        $states = \App\Models\State::where('country_id', $countryId)
+            ->where('is_active', 1)
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('state', 'asc')
+            ->get();
+        
+        return response()->json($states);
+    }
+
+    /**
+     * Get cities by state ID (for AJAX)
+     */
+    public function getCities($stateId)
+    {
+        $cities = \App\Models\City::where('state_id', $stateId)
+            ->where('is_active', 1)
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('city', 'asc')
+            ->get();
+        
+        return response()->json($cities);
+    }
+
     /**
      * Create Cyclos user directly for favor members
      */
