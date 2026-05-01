@@ -25,9 +25,16 @@ use App\Http\Controllers\Merchant\WalletController;
 use App\Http\Controllers\Merchant\CategoryController;
 use App\Http\Controllers\Merchant\MerchantProfileController;
 use App\Http\Controllers\Merchant\MerchantManageSubscriptionController;
+use App\Http\Controllers\Merchant\MerchantSettingController;
 
 
 // Merchant Email Verification
+
+
+
+Route::get('/get-states/{countryId}', [MerchantProfileController::class, 'getStates'])->name('get.states');
+Route::get('/get-cities/{stateId}', [MerchantProfileController::class, 'getCities'])->name('get.cities');
+
 Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'role:merchant'])->group(function (): void {
     Route::prefix('verify')->name('verify.')->controller(EmailVerificationController::class)->group(function () {
         Route::get('/email', 'showVerificationForm')->name('email');
@@ -95,9 +102,20 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
 
     Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [MerchantProfileController::class, 'index'])->name('index');
-        Route::post('/update', [MerchantProfileController::class, 'updateProfile'])->name('update');
-    });
+            Route::get('/', [MerchantProfileController::class, 'index'])->name('index');
+            Route::post('/update', [MerchantProfileController::class, 'updateProfile'])->name('update');
+            Route::put('/address/update', [MerchantProfileController::class, 'updateAddress'])->name('address.update');
+
+            Route::get('/get-states/{countryId}', [MerchantProfileController::class, 'getStates'])
+                ->name('get-states');
+
+            Route::get('/get-cities/{stateId}', [MerchantProfileController::class, 'getCities'])
+                ->name('get-cities');
+        });
+
+
+        /*  Merchant Setting Controller */
+   
 
 
     Route::prefix('representation')->name('representation.')->group(function (): void {

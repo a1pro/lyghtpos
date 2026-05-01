@@ -10,7 +10,9 @@ use App\Http\Controllers\Api\V1\POS\Customer\PosJoiningFeesController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosTokenBundleController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerSubscriptionController;
+use App\Http\Controllers\Api\V1\POS\Customer\PosProfileController;
 use App\Http\Controllers\Api\V1\POS\Settings\PosSettingsController;
+use App\Http\Controllers\Location\LocationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('pos')->group(function () {
@@ -33,6 +35,13 @@ Route::prefix('pos')->group(function () {
     /**  *************** Settings Routes ********************* */
     Route::get('custom-token-charge', [PosSettingsController::class, 'getCustomTokenCharge']);
 
+    /** *************** Location Routes (Country, State, City) ***************** */
+    Route::prefix('locations')->group(function () {
+        Route::get('countries', [LocationController::class, 'getCountries']);
+        Route::get('states', [LocationController::class, 'getStatesByCountry']);
+        Route::get('cities', [LocationController::class, 'getCitiesByState']);
+    });
+
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('logout', [PosLoginController::class, 'logout']);
@@ -47,8 +56,13 @@ Route::prefix('pos')->group(function () {
         Route::prefix('user')->group(function () {
             Route::post('otp/verification', [PosRegisterController::class, 'otpVerification']);
             Route::post('otp/resend', [PosRegisterController::class, 'resendOtp']);
-            Route::get('profile', [PosLoginController::class, 'userProfile']);
             Route::get('email/status', [PosRegisterController::class, 'checEmailVerification']);
+
+            /** *************** Profile Routes ****************** */
+            Route::prefix('profile')->group(function () {
+                Route::get('/', [PosProfileController::class, 'userProfile']);
+                Route::post('/update', [PosProfileController::class, 'updateProfile']);
+            });
 
             /** *************** Customer Subscription Plans ****************** */
             Route::prefix('subscription-plans')->group(function () {
@@ -76,7 +90,7 @@ Route::prefix('pos')->group(function () {
             Route::get('joining/fees/status', [PosJoiningFeesController::class, 'getPaymentStatus']);
 
             /** ************** Agreement Relate Routes ******************* */
-            Route::prefix('agreements')->name('agreements.')->group(function (){
+            Route::prefix('agreements')->name('agreements.')->group(function () {
                 Route::get('/pending', [PosCustomerAgreementsController::class, 'getPendingAgreements'])->name('pending');
                 Route::post('/content', [PosCustomerAgreementsController::class, 'getAgreementContent'])->name('content');
                 Route::post('/accept', [PosCustomerAgreementsController::class, 'acceptAgreement'])->name('accept');

@@ -1,8 +1,8 @@
 <?php
-
 namespace App\Services\Merchant;
 
 use App\Models\User;
+use App\Models\UserAddress;
 use Illuminate\Support\Facades\Hash;
 
 class MerchantProfileService
@@ -39,6 +39,19 @@ class MerchantProfileService
                 'success' => false,
                 'message' => 'Failed to update profile: ' . $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Get user address
+     */
+    public function getUserAddress(User $user)
+    {
+        try {
+            $address = UserAddress::where('user_id', $user->id)->first();
+            return $address;
+        } catch (\Exception $e) {
+            return null;
         }
     }
 }

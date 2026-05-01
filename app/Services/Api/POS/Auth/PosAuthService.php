@@ -6,10 +6,12 @@ use App\Mail\POS\Customer\ForgotPasswordOtpMail;
 use App\Models\Customer;
 use App\Models\User;
 use App\Models\Merchant;
+use App\Models\UserAddress;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
-use Auth;
+use Exception;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -59,7 +61,6 @@ class PosAuthService
             'last_name' => $data['last_name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'location' => $data['location'],
             'role_id' => 11,
             'password' => Hash::make($data['password']),
             'merchant_id' => $merchantCode,
@@ -74,7 +75,15 @@ class PosAuthService
             'last_name' => $user->last_name,
             'phone' => $user->phone,
             'email' => $user->email,
-            'address' => $user->location,
+        ]);
+
+        $address = UserAddress::create([
+            'user_id' => $user->id,
+            'address' => $data['address'],
+            'city' => $data['city'],
+            'state' => $data['state'],
+            'postal_code' => $data['postal_code'],
+            'country' => $data['country'],
         ]);
 
         // Generate authentication token
@@ -85,6 +94,7 @@ class PosAuthService
             'token' => $token,
             'otp' => $otp,
             'validity' => $validityString,
+            'address' => $address,
             'message' => 'Registration successful',
         ];
     }
@@ -220,7 +230,7 @@ class PosAuthService
         $token = $user->createToken('pos_auth_token', ['pos-access'])->plainTextToken;
 
         return [
-            'user' => collect($user->toArray())->only(['first_name', 'email', 'location', 'phone'])->map(function ($value, $key) {
+            'user' => collect($user->toArray())->only(['first_name', 'email', 'phone'])->map(function ($value, $key) {
                 return $value;
             }),
             'token' => $token,
@@ -233,12 +243,11 @@ class PosAuthService
      */
     public function userProfile()
     {
-        $user = auth()->user(0);
+        $user = User::select('id', 'first_name', 'last_name', 'email', 'phone')->with('address')
+            ->find(Auth::id());
 
         return [
-            'user' => collect($user->toArray())->only(['first_name', 'last_name', 'email', 'location', 'phone'])->map(function ($value, $key) {
-                return $value;
-            }),
+            'user' => $user,
         ];
     }
 
@@ -399,6 +408,57 @@ class PosAuthService
                 'success' => false,
                 'message' => 'Reset password failed: ' . $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Update profile details for given customer
+     */
+    public function updateUserProfile(array $data)
+    {
+        try {
+            DB::beginTransaction();
+
+            $user = Auth::user();
+
+            if (!$user) {
+                throw new Exception("User not found");
+            }
+
+            $user->update([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'phone' => $data['phone'],
+            ]);
+
+            $address = UserAddress::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                ],
+                [
+                    'address' => $data['address'],
+                    'city' => $data['city'],
+                    'state' => $data['state'],
+                    'postal_code' => $data['postal_code'],
+                    'country' => $data['country'],
+                ]
+            );
+
+            DB::commit();
+
+            return [
+                'user' => $user,
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Update profile failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getTraceAsString(),
+                'message' => $e->getMessage()
+            ]);
+
+            throw $e;
         }
     }
 }

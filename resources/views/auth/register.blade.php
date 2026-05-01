@@ -25,18 +25,18 @@
         border-color: #007bff;
         background-color: #f8fbff;
     }
-    
+
     /* Password wrapper styles */
     .password-wrapper {
         position: relative;
         width: 100%;
     }
-    
+
     .password-wrapper input {
         padding-right: 40px;
         width: 100%;
     }
-    
+
     .password-toggle {
         position: absolute;
         right: 10px;
@@ -52,47 +52,68 @@
         align-items: center;
         justify-content: center;
     }
-    
+
     .password-toggle i {
         font-size: 18px;
         color: #6c757d;
         pointer-events: none;
     }
-    
+
     .password-toggle:hover i {
         color: #007bff;
     }
-    
+
     .error-message {
         color: #dc3545;
         font-size: 12px;
         margin-top: 4px;
     }
-    
+
     .is-invalid {
         border-color: #dc3545 !important;
     }
-    
+
     /* Fix for validation messages */
     .invalid-feedback {
         display: block;
     }
-    
+
     /* Ensure proper spacing for password fields */
     .form-group .col-md-6 {
         position: relative;
     }
-    
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .password-toggle i {
             font-size: 16px;
         }
-        
+
         .password-wrapper input {
             padding-right: 35px;
         }
     }
+
+    /* Address dropdown styles */
+    .address-loading {
+        display: none;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        color: #007bff;
+    }
+
+    .form-group {
+        position: relative;
+    }
+
+    select.form-control:disabled {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+    }
+
 </style>
 @endsection
 
@@ -116,7 +137,7 @@
                         <div class="form-group row">
                             <label for="first_name" class="col-md-4 col-form-label text-md-right">{{ __('First Name') }}</label>
                             <div class="col-md-6">
-                                <input id="first_name" type="text" class="form-control @error('first_name') is-invalid @enderror" name="first_name" value="{{ old('first_name') ?: (session('registration.step1.first_name') ?? '') }}" required autocomplete="first_name" autofocus>
+                                <input id="first_name" type="text" class="form-control @error('first_name') is-invalid @enderror" name="first_name" value="{{ old('first_name') }}" required autocomplete="first_name" autofocus>
                                 @error('first_name')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -128,7 +149,7 @@
                         <div class="form-group row">
                             <label for="last_name" class="col-md-4 col-form-label text-md-right">{{ __('Last Name') }}</label>
                             <div class="col-md-6">
-                                <input id="last_name" type="text" class="form-control @error('last_name') is-invalid @enderror" name="last_name" value="{{ old('last_name') ?: (session('registration.step1.last_name') ?? '') }}" required autocomplete="last_name">
+                                <input id="last_name" type="text" class="form-control @error('last_name') is-invalid @enderror" name="last_name" value="{{ old('last_name') }}" required autocomplete="last_name">
                                 @error('last_name')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -140,7 +161,7 @@
                         <div class="form-group row">
                             <label for="email" class="col-md-4 col-form-label text-md-right">{{ __('E-Mail Address') }}</label>
                             <div class="col-md-6">
-                                <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') ?: (session('registration.step1.email') ?? '') }}" required autocomplete="email">
+                                <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email">
                                 @error('email')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -155,7 +176,7 @@
                         <div class="form-group row">
                             <label for="business_name" class="col-md-4 col-form-label text-md-right">{{ __('Business Name') }}</label>
                             <div class="col-md-6">
-                                <input id="business_name" type="text" class="form-control @error('business_name') is-invalid @enderror" name="business_name" value="{{ old('business_name') ?: (session('registration.step1.business_name') ?? '') }}" autocomplete="business_name">
+                                <input id="business_name" type="text" class="form-control @error('business_name') is-invalid @enderror" name="business_name" value="{{ old('business_name') }}" autocomplete="business_name">
                                 @error('business_name')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -167,7 +188,7 @@
                         <div class="form-group row">
                             <label for="primary_contact_name" class="col-md-4 col-form-label text-md-right">{{ __('Primary Contact Name') }}</label>
                             <div class="col-md-6">
-                                <input id="primary_contact_name" type="text" class="form-control @error('primary_contact_name') is-invalid @enderror" name="primary_contact_name" value="{{ old('primary_contact_name') ?: (session('registration.step1.primary_contact_name') ?? '') }}" autocomplete="name">
+                                <input id="primary_contact_name" type="text" class="form-control @error('primary_contact_name') is-invalid @enderror" name="primary_contact_name" value="{{ old('primary_contact_name') }}" autocomplete="name">
                                 @error('primary_contact_name')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -179,7 +200,7 @@
                         <div class="form-group row">
                             <label for="phone" class="col-md-4 col-form-label text-md-right">{{ __('Phone') }}</label>
                             <div class="col-md-6">
-                                <input id="phone" type="text" class="form-control @error('phone') is-invalid @enderror" name="phone" value="{{ old('phone') ?: (session('registration.step1.phone') ?? '') }}" required autocomplete="tel">
+                                <input id="phone" type="text" class="form-control @error('phone') is-invalid @enderror" name="phone" value="{{ old('phone') }}" required autocomplete="tel">
                                 @error('phone')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -191,7 +212,8 @@
                         <div class="form-group row">
                             <label for="location" class="col-md-4 col-form-label text-md-right">{{ __('Location') }}</label>
                             <div class="col-md-6">
-                                <input id="location" type="text" class="form-control @error('location') is-invalid @enderror" name="location" value="{{ old('location') ?: (session('registration.step1.location') ?? '') }}" required autocomplete="address-level2">
+                                <input id="location" type="text" class="form-control @error('location') is-invalid @enderror" name="location" value="{{ old('location') }}" required autocomplete="address-level2">
+                                <small class="form-text text-muted">City/Town name for general location</small>
                                 @error('location')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -203,7 +225,7 @@
                         <div class="form-group row">
                             <label for="website" class="col-md-4 col-form-label text-md-right">{{ __('Website') }}</label>
                             <div class="col-md-6">
-                                <input id="website" type="url" class="form-control @error('website') is-invalid @enderror" name="website" value="{{ old('website') ?: (session('registration.step1.website') ?? '') }}" autocomplete="url" placeholder="https://example.com">
+                                <input id="website" type="url" class="form-control @error('website') is-invalid @enderror" name="website" value="{{ old('website') }}" autocomplete="url" placeholder="https://example.com">
                                 @error('website')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -211,7 +233,87 @@
                                 @enderror
                             </div>
                         </div>
-                        
+
+                        <!-- Address Information Section -->
+                        <h5 class="text-center mb-3 mt-4">Address Information</h5>
+
+                        <div class="form-group row">
+                            <label for="country_id" class="col-md-4 col-form-label text-md-right">{{ __('Country') }}</label>
+                            <div class="col-md-6">
+                                <select id="country_id" name="country_id" class="form-control @error('country_id') is-invalid @enderror" required>
+                                    <option value="">Select Country</option>
+                                    @foreach($countries as $country)
+                                    <option value="{{ $country->country_id }}" {{ old('country_id') == $country->country_id ? 'selected' : '' }}>
+                                        {{ $country->country_name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                                @error('country_id')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label for="state_id" class="col-md-4 col-form-label text-md-right">{{ __('State / Province') }}</label>
+                            <div class="col-md-6">
+                                <select id="state_id" name="state_id" class="form-control @error('state_id') is-invalid @enderror" required disabled>
+                                    <option value="">Select Country First</option>
+                                </select>
+                                <div class="address-loading" id="state-loading">
+                                    <i class="fa fa-spinner fa-spin"></i> Loading...
+                                </div>
+                                @error('state_id')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label for="city_id" class="col-md-4 col-form-label text-md-right">{{ __('City') }}</label>
+                            <div class="col-md-6">
+                                <select id="city_id" name="city_id" class="form-control @error('city_id') is-invalid @enderror" required disabled>
+                                    <option value="">Select State First</option>
+                                </select>
+                                <div class="address-loading" id="city-loading">
+                                    <i class="fa fa-spinner fa-spin"></i> Loading...
+                                </div>
+                                @error('city_id')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label for="address" class="col-md-4 col-form-label text-md-right">{{ __('Street Address') }}</label>
+                            <div class="col-md-6">
+                                <input id="address" type="text" class="form-control @error('address') is-invalid @enderror" name="address" value="{{ old('address') }}" required autocomplete="address-line1" placeholder="House number, street">
+                                @error('address')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label for="postal_code" class="col-md-4 col-form-label text-md-right">{{ __('Postal Code') }}</label>
+                            <div class="col-md-6">
+                                <input id="postal_code" type="text" class="form-control @error('postal_code') is-invalid @enderror" name="postal_code" value="{{ old('postal_code') }}" required autocomplete="postal-code">
+                                @error('postal_code')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+
                         <!-- Additional Information Section -->
                         <h5 class="text-center mb-3">Additional Information</h5>
 
@@ -360,7 +462,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="form-group row mb-0 mt-4">
                             <div class="col-md-6 offset-md-4">
                                 <button type="submit" class="btn btn-primary btn-block">
@@ -384,192 +486,299 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    // Password show/hide functionality
-    $('.password-toggle').on('click', function(e) {
-        e.preventDefault();
-        const targetId = $(this).data('target');
-        const passwordField = $('#' + targetId);
-        const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
-        
-        passwordField.attr('type', type);
-        
-        // Toggle eye icon
-        const icon = $(this).find('i');
-        icon.toggleClass('fa-eye fa-eye-slash');
-        
-        // Change button color when password is visible
-        if (type === 'text') {
-            $(this).css('opacity', '0.8');
-        } else {
-            $(this).css('opacity', '1');
-        }
-    });
+    $(document).ready(function() {
+        // Password show/hide functionality
+        $('.password-toggle').on('click', function(e) {
+            e.preventDefault();
+            const targetId = $(this).data('target');
+            const passwordField = $('#' + targetId);
+            const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
 
-    // jQuery Validation
-    $('#registrationForm').validate({
-        rules: {
-            first_name: {
-                required: true,
-                maxlength: 255
-            },
-            last_name: {
-                required: true,
-                maxlength: 255
-            },
-            email: {
-                required: true,
-                email: true,
-                maxlength: 255,
-                remote: {
-                    url: "{{ route('check.email') }}",
-                    type: "post",
-                    data: {
-                        _token: "{{ csrf_token() }}",
-                        email: function() {
-                            return $('#email').val();
+            passwordField.attr('type', type);
+
+            // Toggle eye icon
+            const icon = $(this).find('i');
+            icon.toggleClass('fa-eye fa-eye-slash');
+
+            // Change button color when password is visible
+            if (type === 'text') {
+                $(this).css('opacity', '0.8');
+            } else {
+                $(this).css('opacity', '1');
+            }
+        });
+
+        // Country change - Load states
+        $('#country_id').on('change', function() {
+            const countryId = $(this).val();
+            const stateSelect = $('#state_id');
+            const citySelect = $('#city_id');
+
+            if (!countryId) {
+                stateSelect.html('<option value="">Select Country First</option>');
+                stateSelect.prop('disabled', true);
+                citySelect.html('<option value="">Select State First</option>');
+                citySelect.prop('disabled', true);
+                return;
+            }
+
+            // Show loading
+            $('#state-loading').show();
+            stateSelect.prop('disabled', true);
+            citySelect.prop('disabled', true);
+            citySelect.html('<option value="">Select State First</option>');
+
+            // AJAX call to get states
+            $.ajax({
+                url: '/get-states/' + countryId
+                , type: 'GET'
+                , success: function(states) {
+                    stateSelect.html('<option value="">Select State</option>');
+                    $.each(states, function(key, state) {
+                        stateSelect.append('<option value="' + state.id_state + '">' + state.state + '</option>');
+                    });
+                    stateSelect.prop('disabled', false);
+                    $('#state-loading').hide();
+                }
+                , error: function() {
+                    stateSelect.html('<option value="">Error loading states</option>');
+                    $('#state-loading').hide();
+                }
+            });
+        });
+
+        // State change - Load cities
+        $('#state_id').on('change', function() {
+            const stateId = $(this).val();
+            const citySelect = $('#city_id');
+
+            if (!stateId) {
+                citySelect.html('<option value="">Select State First</option>');
+                citySelect.prop('disabled', true);
+                return;
+            }
+
+            // Show loading
+            $('#city-loading').show();
+            citySelect.prop('disabled', true);
+
+            // AJAX call to get cities
+            $.ajax({
+                url: '/get-cities/' + stateId
+                , type: 'GET'
+                , success: function(cities) {
+                    citySelect.html('<option value="">Select City</option>');
+                    $.each(cities, function(key, city) {
+                        citySelect.append('<option value="' + city.id_city + '">' + city.city + '</option>');
+                    });
+                    citySelect.prop('disabled', false);
+                    $('#city-loading').hide();
+                }
+                , error: function() {
+                    citySelect.html('<option value="">Error loading cities</option>');
+                    $('#city-loading').hide();
+                }
+            });
+        });
+
+        // jQuery Validation
+        $('#registrationForm').validate({
+            rules: {
+                first_name: {
+                    required: true
+                    , maxlength: 255
+                }
+                , last_name: {
+                    required: true
+                    , maxlength: 255
+                }
+                , email: {
+                    required: true
+                    , email: true
+                    , maxlength: 255
+                    , remote: {
+                        url: "{{ route('check.email') }}"
+                        , type: "post"
+                        , data: {
+                            _token: "{{ csrf_token() }}"
+                            , email: function() {
+                                return $('#email').val();
+                            }
                         }
                     }
                 }
-            },
-            password: {
-                required: true,
-                minlength: 8
-            },
-            password_confirmation: {
-                required: true,
-                equalTo: "#password"
-            },
-            account_type: {
-                required: true
-            },
-            business_name: {
-                required: function() {
-                    return $('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT';
+                , password: {
+                    required: true
+                    , minlength: 8
+                }
+                , password_confirmation: {
+                    required: true
+                    , equalTo: "#password"
+                }
+                , account_type: {
+                    required: true
                 },
-                maxlength: 255
-            },
-            primary_contact_name: {
-                required: function() {
-                    return $('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT';
-                },
-                maxlength: 255
-            },
-            phone: {
-                required: true,
-                digits: true,
-                minlength: 8,
-                maxlength: 14
-            },
-            location: {
-                required: true,
-                maxlength: 255
-            },
-            website: {
-                url: true,
-                maxlength: 255
-            },
-            advocate_contact: {
-                digits: true,
-                minlength: 8,
-                maxlength: 14
+                // Address validation rules
+                country_id: {
+                    required: true
+                }
+                , state_id: {
+                    required: true
+                }
+                , city_id: {
+                    required: true
+                }
+                , address: {
+                    required: true
+                    , maxlength: 255
+                }
+                , postal_code: {
+                    required: true
+                    , maxlength: 20
+                }
+                , business_name: {
+                    required: function() {
+                        return $('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT';
+                    }
+                    , maxlength: 255
+                }
+                , primary_contact_name: {
+                    required: function() {
+                        return $('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT';
+                    }
+                    , maxlength: 255
+                }
+                , phone: {
+                    required: true
+                    , digits: true
+                    , minlength: 8
+                    , maxlength: 14
+                }
+                , location: {
+                    required: true
+                    , maxlength: 255
+                }
+                , website: {
+                    url: true
+                    , maxlength: 255
+                }
+                , advocate_contact: {
+                    digits: true
+                    , minlength: 8
+                    , maxlength: 14
+                }
             }
-        },
-        messages: {
-            phone: {
-                required: "Phone number is required",
-                digits: "Please enter a valid phone number",
-                minlength: "Please enter a valid phone number (8-14 digits)",
-                maxlength: "Please enter a valid phone number (8-14 digits)"
-            },
-            advocate_contact: {
-                digits: "Please enter a valid phone number",
-                minlength: "Please enter a valid phone number (8-14 digits)",
-                maxlength: "Please enter a valid phone number (8-14 digits)"
-            },
-            website: {
-                url: "Please enter a valid URL (e.g., https://example.com)"
-            },
-            password: {
-                minlength: "Password must be at least 8 characters"
+            , messages: {
+                phone: {
+                    required: "Phone number is required"
+                    , digits: "Please enter a valid phone number"
+                    , minlength: "Please enter a valid phone number (8-14 digits)"
+                    , maxlength: "Please enter a valid phone number (8-14 digits)"
+                }
+                , advocate_contact: {
+                    digits: "Please enter a valid phone number"
+                    , minlength: "Please enter a valid phone number (8-14 digits)"
+                    , maxlength: "Please enter a valid phone number (8-14 digits)"
+                }
+                , website: {
+                    url: "Please enter a valid URL (e.g., https://example.com)"
+                }
+                , password: {
+                    minlength: "Password must be at least 8 characters"
+                }
+                , address: {
+                    required: "Street address is required"
+                }
+                , country_id: {
+                    required: "Please select a country"
+                }
+                , state_id: {
+                    required: "Please select a state"
+                }
+                , city_id: {
+                    required: "Please select a city"
+                }
+                , postal_code: {
+                    required: "Postal code is required"
+                }
             }
-        },
-        errorElement: 'div',
-        errorClass: 'error-message',
-        highlight: function(element) {
-            $(element).addClass('is-invalid');
-        },
-        unhighlight: function(element) {
-            $(element).removeClass('is-invalid');
-        },
-        errorPlacement: function(error, element) {
-            if (element.attr('name') === 'account_type') {
-                error.insertAfter('.account-type-card:last');
-            } else if (element.parent().hasClass('password-wrapper')) {
-                error.insertAfter(element.parent());
-            } else {
-                error.insertAfter(element);
+            , errorElement: 'div'
+            , errorClass: 'error-message'
+            , highlight: function(element) {
+                $(element).addClass('is-invalid');
             }
-        },
-        submitHandler: function(form) {
-            form.submit();
-        }
-    });
+            , unhighlight: function(element) {
+                $(element).removeClass('is-invalid');
+            }
+            , errorPlacement: function(error, element) {
+                if (element.attr('name') === 'account_type') {
+                    error.insertAfter('.account-type-card:last');
+                } else if (element.parent().hasClass('password-wrapper')) {
+                    error.insertAfter(element.parent());
+                } else {
+                    error.insertAfter(element);
+                }
+            }
+            , submitHandler: function(form) {
+                form.submit();
+            }
+        });
 
-    // Update validation rules when account type changes
-    $('input[name="account_type"]').on('change', function() {
-        if ($(this).val() === 'TRADE_MERCHANT') {
+        // Update validation rules when account type changes
+        $('input[name="account_type"]').on('change', function() {
+            if ($(this).val() === 'TRADE_MERCHANT') {
+                $('#business_name').rules('add', {
+                    required: true
+                    , messages: {
+                        required: "Business name is required"
+                    }
+                });
+                $('#primary_contact_name').rules('add', {
+                    required: true
+                    , messages: {
+                        required: "Primary contact name is required"
+                    }
+                });
+            } else {
+                $('#business_name').rules('remove', 'required');
+                $('#primary_contact_name').rules('remove', 'required');
+            }
+        });
+
+        // Add real-time phone validation with custom message
+        $('#phone, #advocate_contact').on('input', function() {
+            const value = $(this).val();
+            const phoneRegex = /^\d{8,14}$/;
+
+            if (value && !phoneRegex.test(value)) {
+                $(this).addClass('is-invalid');
+                if ($(this).next('.error-message').length === 0 && !$(this).parent().find('.error-message').length) {
+                    const errorMsg = $('<div class="error-message">Please enter a valid phone number (8-14 digits)</div>');
+                    $(this).after(errorMsg);
+                }
+            } else {
+                $(this).removeClass('is-invalid');
+                $(this).next('.error-message').remove();
+                $(this).parent().find('.error-message').remove();
+            }
+        });
+
+        // Initialize validation for conditional fields based on account type
+        if ($('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT') {
             $('#business_name').rules('add', {
-                required: true,
-                messages: {
+                required: true
+                , messages: {
                     required: "Business name is required"
                 }
             });
             $('#primary_contact_name').rules('add', {
-                required: true,
-                messages: {
+                required: true
+                , messages: {
                     required: "Primary contact name is required"
                 }
             });
-        } else {
-            $('#business_name').rules('remove', 'required');
-            $('#primary_contact_name').rules('remove', 'required');
         }
     });
 
-    // Add real-time phone validation with custom message
-    $('#phone, #advocate_contact').on('input', function() {
-        const value = $(this).val();
-        const phoneRegex = /^\d{8,14}$/;
-        
-        if (value && !phoneRegex.test(value)) {
-            $(this).addClass('is-invalid');
-            if ($(this).next('.error-message').length === 0 && !$(this).parent().find('.error-message').length) {
-                const errorMsg = $('<div class="error-message">Please enter a valid phone number (8-14 digits)</div>');
-                $(this).after(errorMsg);
-            }
-        } else {
-            $(this).removeClass('is-invalid');
-            $(this).next('.error-message').remove();
-            $(this).parent().find('.error-message').remove();
-        }
-    });
-    
-    // Initialize validation for conditional fields based on account type
-    if ($('input[name="account_type"]:checked').val() === 'TRADE_MERCHANT') {
-        $('#business_name').rules('add', {
-            required: true,
-            messages: {
-                required: "Business name is required"
-            }
-        });
-        $('#primary_contact_name').rules('add', {
-            required: true,
-            messages: {
-                required: "Primary contact name is required"
-            }
-        });
-    }
-});
 </script>
 @endsection

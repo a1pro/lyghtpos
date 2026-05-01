@@ -64,6 +64,10 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'address'
+    ];
+
     public function isAdmin(): bool
     {
         return $this->role_id === 1;
@@ -190,5 +194,18 @@ class User extends Authenticatable
     public function getFullnameAttribute()
     {
         return $this->first_name.' '.$this->last_name;
+    }
+
+    /**
+     * Get the address for the user
+     */
+    public function address(): HasOne
+    {
+        return $this->hasOne(UserAddress::class);
+    }
+    
+    public function getAddressAttribute()
+    {
+        return $this->address()->first();
     }
 }

@@ -23,10 +23,10 @@
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     @yield('css')
     <script>
-        window.APP = < ? php echo json_encode([
+        window.APP = <?php echo json_encode([
             'currency_symbol' => config('settings.currency_symbol')
             , 'warning_quantity' => config('settings.warning_quantity')
-        ]) ? >
+        ]) ?>
 
     </script>
 
