@@ -25,6 +25,7 @@ use App\Http\Controllers\Merchant\WalletController;
 use App\Http\Controllers\Merchant\CategoryController;
 use App\Http\Controllers\Merchant\MerchantProfileController;
 use App\Http\Controllers\Merchant\MerchantManageSubscriptionController;
+use App\Http\Controllers\Merchant\MerchantSettingController;
 
 
 // Merchant Email Verification
@@ -111,6 +112,11 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
             Route::get('/get-cities/{stateId}', [MerchantProfileController::class, 'getCities'])
                 ->name('get-cities');
         });
+
+
+        /*  Merchant Setting Controller */
+   
+
 
     Route::prefix('representation')->name('representation.')->group(function (): void {
         Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
