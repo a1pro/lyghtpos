@@ -74,7 +74,7 @@ class PaxCustomersController extends Controller
 
             $data['merchant_id'] = $merchantId;
 
-            $this->merchantCustomerService->createCustomer($data);
+            $this->merchantCustomerService->createPaxCustomer($data);
 
             return response()->json([
                 'success' => true,

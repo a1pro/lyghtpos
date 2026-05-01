@@ -12,8 +12,8 @@ Route::prefix('pax')->group(function () {
     /** *************** Location Routes (Country, State, City) ***************** */
     Route::prefix('locations')->group(function () {
         Route::get('countries', [LocationController::class, 'getCountries']);
-        Route::get('countries/{countryId}/states', [LocationController::class, 'getStatesByCountry']);
-        Route::get('states/{stateId}/cities', [LocationController::class, 'getCitiesByState']);
+        Route::get('states', [LocationController::class, 'getStatesByCountry']);
+        Route::get('cities', [LocationController::class, 'getCitiesByState']);
     });
 
     Route::middleware('auth:sanctum')->group(function () {
