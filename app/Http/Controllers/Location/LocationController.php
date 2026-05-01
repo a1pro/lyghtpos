@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Location;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Location\GetCitiesRequest;
+use App\Http\Requests\Api\Location\GetStatesRequest;
 use App\Services\Location\LocationService;
 use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
-    protected $locationService;
+    protected LocationService $locationService;
 
     public function __construct(LocationService $locationService)
     {
@@ -32,8 +34,10 @@ class LocationController extends Controller
     /**
      * Get states by country ID
      */
-    public function getStatesByCountry($countryId)
+    public function getStatesByCountry(GetStatesRequest $request)
     {
+        $countryId = $request->query('country_id');
+
         $states = $this->locationService->getStatesByCountry($countryId);
 
         if ($states->isEmpty()) {
@@ -53,8 +57,9 @@ class LocationController extends Controller
     /**
      * Get cities by state ID
      */
-    public function getCitiesByState($stateId)
+    public function getCitiesByState(GetCitiesRequest $request)
     {
+        $stateId = $request->query('state_id');
         $cities = $this->locationService->getCitiesByState($stateId);
 
         if ($cities->isEmpty()) {
