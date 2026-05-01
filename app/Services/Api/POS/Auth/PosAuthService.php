@@ -10,8 +10,8 @@ use App\Models\UserAddress;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
-use Auth;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -243,12 +243,11 @@ class PosAuthService
      */
     public function userProfile()
     {
-        $user = auth()->user(0);
+        $user = User::select('id', 'first_name', 'last_name', 'email', 'phone')->with('address')
+            ->find(Auth::id());
 
         return [
-            'user' => collect($user->toArray())->only(['first_name', 'last_name', 'email', 'phone'])->map(function ($value, $key) {
-                return $value;
-            }),
+            'user' => $user,
         ];
     }
 
