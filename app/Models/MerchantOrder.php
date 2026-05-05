@@ -14,18 +14,29 @@ class MerchantOrder extends Model
         'merchant_id',
         'customer_id',
         'customer_cyclos_id',
+        'tax_amount',
+        'card_amount',
+        'token_amount',
         'total_amount',
         'payment_method',
+        'payment_type',
         'status',
         'payment_status',
         'notes',
         'transaction_id',
+        'card_transaction_id',
+        'cyclos_transaction_id',
         'paid_at',
-        'cyclos_order_id'
+        'cyclos_order_id',
+        'payment_metadata'
     ];
 
     protected $casts = [
+        'tax_amount' => 'decimal:2',
+        'card_amount' => 'decimal:2',
+        'token_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'payment_metadata' => 'array',
     ];
 
     /**
