@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Config;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Validation\ValidationException;
 
 class MerchantCyclosOrderService
 {
@@ -258,6 +259,12 @@ class MerchantCyclosOrderService
 
             $url = $this->baseUrl . "/api/{$cyclosUserId}/orders";
 
+            // By default the deliveryMethod will be PICKUP - so address will be merchant's
+            $merchantAddress = $merchant->address;
+            if (!$merchantAddress) {
+                throw ValidationException::withMessages(['address' => 'Merchant address not configured for order creation!']);
+            }
+
             $cyclosOrderData = [
                 'deliveryMethod' => [
                     'name' => "pickup",
@@ -267,14 +274,12 @@ class MerchantCyclosOrderService
                         "field" => "days"
                     ],
                 ],
-                "deliveryAddress" => $orderData['delivery_address'] ?? [
-                    "addressLine1" => "arizona 1158",
-                    "street" => "arizona main street",
-                    "buildingNumber" => "1158",
-                    "zip" => "85003",
-                    "city" => "Arizona",
-                    "region" => "Arizona",
-                    "country" => "US" // test address
+                "deliveryAddress" => [
+                    "addressLine1" => $merchantAddress->address ?? null,
+                    "zip" => $merchantAddress->postal_code ?? null,
+                    "city" => $merchantAddress->city ?? null,
+                    "region" => $merchantAddress->state ?? null,
+                    "country" => $merchantAddress->country ?? null,
                 ],
                 "draft" => false,
                 "items" => $orderData['items'],
@@ -338,7 +343,7 @@ class MerchantCyclosOrderService
 
             return [
                 'success' => false,
-                'message' => 'Exception: ' . $e->getMessage(),
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -416,7 +421,7 @@ class MerchantCyclosOrderService
 
             return [
                 'success' => false,
-                'message' => 'Exception: ' . $e->getMessage(),
+                'message' => $e->getMessage(),
             ];
         }
     }

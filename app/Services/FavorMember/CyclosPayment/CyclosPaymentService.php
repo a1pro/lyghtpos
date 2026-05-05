@@ -172,11 +172,6 @@ class CyclosPaymentService
      */
     public function getUserBalance(string $cyclosUserId): float
     {
-        // Check if mock mode is enabled
-        if ($this->mockMode) {
-            return $this->mockGetUserBalance($cyclosUserId);
-        }
-
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/accounts";
 
@@ -202,14 +197,6 @@ class CyclosPaymentService
                     'body' => $response->body(),
                 ]);
 
-                // If fallback to mock is enabled, return mock data
-                if ($this->fallbackToMock) {
-                    Log::warning('Falling back to mock balance data', [
-                        'cyclos_user_id' => $cyclosUserId
-                    ]);
-                    return $this->mockGetUserBalance($cyclosUserId);
-                }
-
                 return 0.00;
             }
 
@@ -230,11 +217,6 @@ class CyclosPaymentService
                 'cyclos_user_id' => $cyclosUserId
             ]);
 
-            // If fallback to mock is enabled, return mock data
-            if ($this->fallbackToMock) {
-                return $this->mockGetUserBalance($cyclosUserId);
-            }
-
             return 0.00;
         }
     }
@@ -244,11 +226,6 @@ class CyclosPaymentService
      */
     public function getUserTransactions(string $cyclosUserId, int $pageSize = 20, int $pageNumber = 0): array
     {
-        // Check if mock mode is enabled
-        if ($this->mockMode) {
-            return $this->mockGetUserTransactions($cyclosUserId, $pageSize, $pageNumber);
-        }
-
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/transactions";
 
@@ -286,11 +263,6 @@ class CyclosPaymentService
                     'body' => $response->body(),
                 ]);
 
-                // If fallback to mock is enabled, return mock data
-                if ($this->fallbackToMock) {
-                    return $this->mockGetUserTransactions($cyclosUserId, $pageSize, $pageNumber);
-                }
-
                 return [];
             }
 
@@ -308,11 +280,6 @@ class CyclosPaymentService
                 'error' => $e->getMessage(),
                 'cyclos_user_id' => $cyclosUserId
             ]);
-
-            // If fallback to mock is enabled, return mock data
-            if ($this->fallbackToMock) {
-                return $this->mockGetUserTransactions($cyclosUserId, $pageSize, $pageNumber);
-            }
 
             return [];
         }
@@ -375,11 +342,6 @@ class CyclosPaymentService
      */
     public function addFunds(string $userCyclosId, float $amount, string $description = ''): array
     {
-        // Check if mock mode is enabled
-        if ($this->mockMode) {
-            return $this->mockAddFunds($userCyclosId, $amount, $description);
-        }
-
         try {
             $paymentData = [
                 'subject' => $userCyclosId,
@@ -419,15 +381,6 @@ class CyclosPaymentService
                     'admin_user_id_used' => $this->adminUserId,
                 ]);
 
-                // If fallback to mock is enabled, return mock success
-                if ($this->fallbackToMock) {
-                    Log::warning('Falling back to mock add funds', [
-                        'user_id' => $userCyclosId,
-                        'amount' => $amount
-                    ]);
-                    return $this->mockAddFunds($userCyclosId, $amount, $description);
-                }
-
                 return [
                     'success' => false,
                     'message' => 'Payment failed: ' . json_encode($errorData),
@@ -454,11 +407,6 @@ class CyclosPaymentService
                 'amount' => $amount
             ]);
 
-            // If fallback to mock is enabled, return mock success
-            if ($this->fallbackToMock) {
-                return $this->mockAddFunds($userCyclosId, $amount, $description);
-            }
-
             return [
                 'success' => false,
                 'message' => 'Exception: ' . $e->getMessage(),
@@ -471,11 +419,6 @@ class CyclosPaymentService
      */
     public function addFundsFromCustomer(string $userCyclosId, float $amount, string $description = '', $customer): array
     {
-        // Check if mock mode is enabled
-        if ($this->mockMode) {
-            return $this->mockAddFunds($userCyclosId, $amount, $description);
-        }
-
         try {
             $paymentData = [
                 'subject' => $userCyclosId,
@@ -515,15 +458,6 @@ class CyclosPaymentService
                     'admin_user_id_used' => $this->adminUserId,
                 ]);
 
-                // If fallback to mock is enabled, return mock success
-                if ($this->fallbackToMock) {
-                    Log::warning('Falling back to mock add funds', [
-                        'user_id' => $userCyclosId,
-                        'amount' => $amount
-                    ]);
-                    return $this->mockAddFunds($userCyclosId, $amount, $description);
-                }
-
                 return [
                     'success' => false,
                     'message' => 'Payment failed: ' . json_encode($errorData),
@@ -550,11 +484,6 @@ class CyclosPaymentService
                 'amount' => $amount
             ]);
 
-            // If fallback to mock is enabled, return mock success
-            if ($this->fallbackToMock) {
-                return $this->mockAddFunds($userCyclosId, $amount, $description);
-            }
-
             return [
                 'success' => false,
                 'message' => 'Exception: ' . $e->getMessage(),
@@ -567,11 +496,6 @@ class CyclosPaymentService
      */
     public function getUserAccounts(string $cyclosUserId): array
     {
-        // Check if mock mode is enabled
-        if ($this->mockMode) {
-            return $this->mockGetUserAccounts($cyclosUserId);
-        }
-
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/accounts";
 
@@ -591,10 +515,6 @@ class CyclosPaymentService
                     'body' => $response->body(),
                 ]);
 
-                if ($this->fallbackToMock) {
-                    return $this->mockGetUserAccounts($cyclosUserId);
-                }
-
                 return [];
             }
 
@@ -607,110 +527,86 @@ class CyclosPaymentService
                 'cyclos_user_id' => $cyclosUserId
             ]);
 
-            if ($this->fallbackToMock) {
-                return $this->mockGetUserAccounts($cyclosUserId);
-            }
-
             return [];
         }
     }
 
     /**
-     * Debug method to check current configuration
+     * Deduct fund tokens from user account to system in cyclos
      */
-    public function debugConfig(): array
+    public function deductTokensToSystem(string $cyclosUserId,  float|int $amount, string $description = "")
     {
-        return [
-            'admin_user_id' => $this->adminUserId,
-            'payment_type_id' => $this->paymentTypeId,
-            'currency_code' => $this->currencyCode,
-            'currency_symbol' => $this->currencySymbol,
-            'currency_name' => $this->currencyName,
-            'base_url' => $this->baseUrl,
-            'username' => $this->username,
-            'channel' => $this->channel,
-            'mock_mode' => $this->mockMode,
-            'fallback_to_mock' => $this->fallbackToMock,
-            'use_api_password' => $this->useApiPassword,
-        ];
-    }
+        try {
+            // For user account to debit account
+            $paymentTypeId = config('services.cyclos.debit_payment_type_id');
 
-    /**
-     * Mock methods for testing
-     */
-    protected function mockGetUserBalance(string $cyclosUserId): float
-    {
-        Log::info('Mock: Getting user balance', ['cyclos_user_id' => $cyclosUserId]);
-        return 1000.00; // Mock balance
-    }
-
-    protected function mockGetUserTransactions(string $cyclosUserId, int $pageSize = 20, int $pageNumber = 0): array
-    {
-        Log::info('Mock: Getting user transactions', [
-            'cyclos_user_id' => $cyclosUserId,
-            'pageSize' => $pageSize,
-            'pageNumber' => $pageNumber
-        ]);
-
-        return [
-            [
-                'id' => 'mock-1',
-                'date' => now()->subDays(1)->toISOString(),
-                'amount' => 100.00,
-                'description' => 'Mock transaction 1',
-                'type' => ['name' => 'Payment'],
-                'status' => 'completed',
-                'to' => ['user' => ['id' => $cyclosUserId]],
-                'from' => ['user' => ['id' => $this->adminUserId]],
-                'transactionNumber' => 'MOCK-001'
-            ],
-            [
-                'id' => 'mock-2',
-                'date' => now()->subDays(2)->toISOString(),
-                'amount' => 50.00,
-                'description' => 'Mock transaction 2',
-                'type' => ['name' => 'Purchase'],
-                'status' => 'completed',
-                'to' => ['user' => ['id' => $this->adminUserId]],
-                'from' => ['user' => ['id' => $cyclosUserId]],
-                'transactionNumber' => 'MOCK-002'
-            ]
-        ];
-    }
-
-    protected function mockAddFunds(string $userCyclosId, float $amount, string $description = ''): array
-    {
-        Log::info('Mock: Adding funds', [
-            'user_id' => $userCyclosId,
-            'amount' => $amount,
-            'description' => $description
-        ]);
-
-        return [
-            'success' => true,
-            'transaction_id' => 'MOCK-TXN-' . uniqid(),
-            'data' => [
-                'id' => 'MOCK-TXN-' . uniqid(),
+            $paymentData = [
+                'subject' => 'system',
                 'amount' => $amount,
-                'status' => 'completed'
-            ]
-        ];
-    }
+                'type' => $paymentTypeId,
+                'description' => $description,
+                'currency' => $this->currencyCode,
+            ];
 
-    protected function mockGetUserAccounts(string $cyclosUserId): array
-    {
-        Log::info('Mock: Getting user accounts', ['cyclos_user_id' => $cyclosUserId]);
+            Log::info('Deducting token funds from wallet', [
+                'to_user' => 'system',
+                'amount' => $amount,
+                'payment_type' => $paymentTypeId,
+                'from' => $cyclosUserId,
+                'currency' => $this->currencyCode,
+            ]);
 
-        return [
-            [
-                'id' => 'mock-account-1',
-                'name' => 'Main Account',
-                'type' => 'primary',
-                'status' => [
-                    'balance' => 1000.00,
-                    'currency' => $this->currencyCode
-                ]
-            ]
-        ];
+            $paymentUrl = $this->baseUrl . "/api/{$cyclosUserId}/payments";
+
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($paymentUrl, $paymentData);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+
+                Log::error('Cyclos deduction payment failed', [
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                    'payment_type_used' => $paymentTypeId,
+                    'admin_user_id_used' => $this->adminUserId,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Deduction failed: ' . json_encode($errorData),
+                ];
+            }
+
+            $data = $response->json();
+
+            Log::info('Deduction Cyclos payment successful', [
+                'transaction_id' => $data['id'] ?? null,
+                'currency' => $this->currencyCode,
+            ]);
+
+            return [
+                'success' => true,
+                'transaction_id' => $data['id'] ?? null,
+                'data' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exception in deductTokensToSystem', [
+                'error' => $e->getMessage(),
+                'cyclos_user_id' => $cyclosUserId,
+                'amount' => $amount
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+            ];
+        }
     }
 }
