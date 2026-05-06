@@ -102,21 +102,16 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
 
     Route::prefix('profile')->name('profile.')->group(function () {
-            Route::get('/', [MerchantProfileController::class, 'index'])->name('index');
-            Route::post('/update', [MerchantProfileController::class, 'updateProfile'])->name('update');
-            Route::put('/address/update', [MerchantProfileController::class, 'updateAddress'])->name('address.update');
+        Route::get('/', [MerchantProfileController::class, 'index'])->name('index');
+        Route::post('/update', [MerchantProfileController::class, 'updateProfile'])->name('update');
+        Route::put('/address/update', [MerchantProfileController::class, 'updateAddress'])->name('address.update');
 
-            Route::get('/get-states/{countryId}', [MerchantProfileController::class, 'getStates'])
-                ->name('get-states');
+        Route::get('/get-states/{countryId}', [MerchantProfileController::class, 'getStates'])->name('get-states');
+        Route::get('/get-cities/{stateId}', [MerchantProfileController::class, 'getCities'])->name('get-cities');
 
-            Route::get('/get-cities/{stateId}', [MerchantProfileController::class, 'getCities'])
-                ->name('get-cities');
-        });
-
-
-        /*  Merchant Setting Controller */
-   
-
+        // Settings
+        Route::put('/settings', [MerchantProfileController::class, 'updateSettings'])->name('settings.update');
+    });
 
     Route::prefix('representation')->name('representation.')->group(function (): void {
         Route::get('/form', [MerchantRepresentationController::class, 'showForm'])->name('form');
@@ -127,7 +122,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Manage Subscription Routes
     */
 
-    Route::prefix('manage-subscriptions')->name('manage-subscriptions.')->group(function(){
+    Route::prefix('manage-subscriptions')->name('manage-subscriptions.')->group(function () {
         Route::get('/', [MerchantManageSubscriptionController::class, 'index'])->name('index');
         Route::get('/plan-details/{planId}', [MerchantManageSubscriptionController::class, 'getPlanDetails'])->name('plan.details');
         Route::post('/process-plan-change', [MerchantManageSubscriptionController::class, 'processPlanChange'])->name('process.plan.change');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Merchant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Merchant\UpdateSettingsRequest;
 use App\Models\City;
 use App\Models\Country;
 use App\Models\State;
@@ -205,6 +206,25 @@ class MerchantProfileController extends Controller
             return redirect()
                 ->route('merchant.profile.index')
                 ->with('error', 'Failed to update address: ' . $e->getMessage());
+        }
+    }
+
+    public function updateSettings(UpdateSettingsRequest $request)
+    {
+        try {
+            $user = Auth::user();
+
+            $result = $this->merchantProfileService->updateSettings($user, $request->validated());
+
+            return redirect()
+                ->route('merchant.profile.index')
+                ->with($result['success'] ? 'success' : 'error', $result['message']);
+        } catch (\Exception $e) {
+            Log::error('Settings update error: ' . $e->getMessage());
+
+            return redirect()
+                ->route('merchant.profile.index')
+                ->with('error', 'Failed to update settings');
         }
     }
 }
