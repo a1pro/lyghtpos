@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Merchant;
 
 use App\Models\User;
@@ -52,6 +53,50 @@ class MerchantProfileService
             return $address;
         } catch (\Exception $e) {
             return null;
+        }
+    }
+
+    /**
+     * Update merchant settings
+     */
+    public function updateSettings(User $user, array $data)
+    {
+        try {
+            $merchant = $user->merchant;
+
+            if (!$merchant) {
+                return [
+                    'success' => false,
+                    'message' => 'Merchant record not found'
+                ];
+            }
+
+            // Update VAT tax percentage
+            if (isset($data['vat_tax_percentage'])) {
+                $merchant->vat_tax_percentage = $data['vat_tax_percentage'];
+            }
+
+            // Update POS payment types
+            if (isset($data['pos_payment_types'])) {
+                // If it's already an array, encode to JSON
+                if (is_array($data['pos_payment_types'])) {
+                    $merchant->pos_payment_types = json_encode($data['pos_payment_types']);
+                } else {
+                    $merchant->pos_payment_types = $data['pos_payment_types'];
+                }
+            }
+
+            $merchant->save();
+
+            return [
+                'success' => true,
+                'message' => 'Settings updated successfully'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to update settings: ' . $e->getMessage()
+            ];
         }
     }
 }

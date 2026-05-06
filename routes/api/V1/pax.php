@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PAX\Auth\PaxAuthController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxCustomersController;
+use App\Http\Controllers\Api\V1\PAX\Merchant\PaxMerchantSettingsController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxOrderController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxProductsController;
 use App\Http\Controllers\Location\LocationController;
@@ -35,6 +36,11 @@ Route::prefix('pax')->group(function () {
             Route::prefix('orders')->name('orders.')->group(function () {
                 Route::post('/', [PaxOrderController::class, 'createCustomerOrder']);
                 Route::post('/complete', [PaxOrderController::class, 'completeCustomerOrder']);
+            });
+
+            /** ****************** Merchant Settings Routes ****************** */
+            Route::prefix('settings')->name('settings')->group(function () {
+                Route::get('/', [PaxMerchantSettingsController::class, 'getMerchantSettings']);
             });
         });
     });
