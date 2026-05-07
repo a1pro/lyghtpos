@@ -4,8 +4,10 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use App\Services\Cyclos\CyclosUserService;
+use Exception;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CheckCyclosAgreements
 {
@@ -68,31 +70,46 @@ class CheckCyclosAgreements
             return $next($request);
         }
 
-        // Get user's Cyclos credentials
-        $credentials = $this->cyclosUserService->getUserCredentials($user);
+        try {
+            // Get user's Cyclos credentials
+            $credentials = $this->cyclosUserService->getUserCredentials($user);
 
-        if (!$credentials) {
+            if (!$credentials) {
+                return $next($request);
+            }
+
+            // Fetch pending agreements
+            $agreements = $this->cyclosUserService->getUserAgreements(
+                $credentials['username'],
+                $credentials['password']
+            );
+
+            // Store agreements in session for later use
+            if ($agreements && count($agreements) > 0) {
+                $request->session()->put('pending_agreements', $agreements);
+                $request->session()->put('cyclos_credentials', $credentials);
+
+                // Redirect to agreements page
+                return redirect()->route('merchant.agreements.index');
+            }
+
+            // No pending agreements, mark as accepted
+            $request->session()->put('cyclos_agreements_accepted', true);
+
             return $next($request);
+        } catch (Exception $e) {
+            // Log the error
+            Log::error('Cyclos agreement check failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            // Logout user and redirect to login
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->with('error', 'System error occurred. Please login again.');
         }
-
-        // Fetch pending agreements
-        $agreements = $this->cyclosUserService->getUserAgreements(
-            $credentials['username'],
-            $credentials['password']
-        );
-
-        // Store agreements in session for later use
-        if ($agreements && count($agreements) > 0) {
-            $request->session()->put('pending_agreements', $agreements);
-            $request->session()->put('cyclos_credentials', $credentials);
-
-            // Redirect to agreements page
-            return redirect()->route('merchant.agreements.index');
-        }
-
-        // No pending agreements, mark as accepted
-        $request->session()->put('cyclos_agreements_accepted', true);
-
-        return $next($request);
     }
 }
