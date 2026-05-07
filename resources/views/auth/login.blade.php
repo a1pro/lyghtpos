@@ -6,19 +6,28 @@
     .invalid-feedback {
         display: block
     }
+
 </style>
 @endsection
 
 @section('content')
 <p class="login-box-msg">Sign in to start your session</p>
 
+@if (Session::has('error'))
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{Session::get('error')}}
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+@endif
+
 <form action="{{ route('login') }}" method="post">
     @csrf
     <div class="form-group">
 
         <div class="input-group">
-            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                placeholder="Email" value="{{ old('email') }}" required autocomplete="email" autofocus>
+            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="Email" value="{{ old('email') }}" required autocomplete="email" autofocus>
             <div class="input-group-append">
                 <div class="input-group-text">
                     <span class="fas fa-envelope"></span>
@@ -34,8 +43,7 @@
     <div class="form-group">
 
         <div class="input-group">
-            <input type="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password"
-                name="password" required autocomplete="current-password">
+            <input type="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password" name="password" required autocomplete="current-password">
             <div class="input-group-append">
                 <div class="input-group-text">
                     <span class="fas fa-lock"></span>
