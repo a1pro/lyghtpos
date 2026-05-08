@@ -20,6 +20,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use App\Services\Cyclos\CyclosUserService;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\Country;
+use App\Models\State;
 use Log;
 
 class RegisterController extends Controller
@@ -126,42 +128,50 @@ class RegisterController extends Controller
      */
     protected function createUserAddress(User $user, array $data)
     {
-        $cityName = '';
-        $stateName = '';
-        $countryName = '';
+        $cityId = '';
+        $stateId = '';
+        $countryId = '';
         
         // Get city details with relationships
         if (isset($data['city_id']) && !empty($data['city_id'])) {
-            $city = City::with('state.country')->find($data['city_id']);
+            $city = City::find($data['city_id']);
             
             if ($city) {
-                $cityName = $city->city;
-                
-                if ($city->state) {
-                    $stateName = $city->state->state;
-                }
-                
-                if ($city->state && $city->state->country) {
-                    $countryName = $city->state->country->country_name;
-                }
+                $cityId = $city->id;
+            }
+        }
+
+        if (isset($data['state_id']) && !empty($data['state_id'])) {
+            $state = State::find($data['state_id']);
+
+            if ($state) {
+                $stateId = $state->id;
+            }
+        }
+
+        if (isset($data['country_id']) && !empty($data['country_id'])) {
+            $country = Country::find($data['country_id']);
+
+            if ($country) {
+                $countryId = $country->id;
             }
         }
 
         UserAddress::create([
             'user_id' => $user->id,
             'address' => $data['address'] ?? '',
-            'city' => $cityName,
-            'state' => $stateName,
+            'city' => $cityId,
+            'state' => $stateId,
             'postal_code' => $data['postal_code'] ?? '',
-            'country' => $countryName,
+            'country' => $countryId,
             'is_active' => true,
         ]);
         
         Log::info('Address created for user', [
             'user_id' => $user->id,
-            'city' => $cityName,
-            'state' => $stateName,
-            'country' => $countryName,
+            'city' => $cityId,
+            'state' => $stateId,
+            'country' => $countryId,
             'postal_code' => $data['postal_code'] ?? ''
         ]);
     }
