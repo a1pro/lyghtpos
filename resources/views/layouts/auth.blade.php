@@ -8,6 +8,8 @@
     <!-- Tell the browser to be responsive to screen width -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+
     <!-- Ionicons -->
     <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
     <!-- <link rel="stylesheet" href="{{ asset('css/app.css') }}"> -->
@@ -18,9 +20,6 @@
 
 <body class="hold-transition login-page">
     <div class="login-box">
-        <div class="login-logo">
-            <a href="../../index2.html">{{ config('app.name') }}</a>
-        </div>
         <!-- /.login-logo -->
         <div class="card">
             <div class="card-body login-card-body">
