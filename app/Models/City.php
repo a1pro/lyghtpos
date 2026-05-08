@@ -8,30 +8,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class City extends Model
 {
     protected $table = 'cities';
-
-    protected $primaryKey = 'id_city';
+    protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
-
     public $timestamps = false;
 
     protected $fillable = [
-        'city',
-        'state_id',
-        'is_default',
-        'is_active',
-        'sort_order',
-        'lang',
-        'created_at',
-        'updated_at'
+        'name',
+        'state_id'
     ];
 
     protected $casts = [
-        'id_city' => 'integer',
+        'id' => 'integer',
         'state_id' => 'integer',
-        'is_default' => 'boolean',
-        'is_active' => 'boolean',
-        'sort_order' => 'integer',
     ];
 
     /**
@@ -39,14 +28,14 @@ class City extends Model
      */
     public function state(): BelongsTo
     {
-        return $this->belongsTo(State::class, 'state_id', 'id_state');
+        return $this->belongsTo(State::class, 'state_id', 'id');
     }
 
     /**
-     * Scope ordered by sort order then city name.
+     * Scope ordered by name.
      */
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order', 'asc')->orderBy('city', 'asc');
+        return $query->orderBy('name', 'asc');
     }
 }
