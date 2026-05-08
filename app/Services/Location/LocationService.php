@@ -13,8 +13,9 @@ class LocationService
      */
     public function getAllCountries()
     {
-        return Country::select('country_id', 'country_name', 'country_code')
-            ->orderBy('country_name')->get();
+        return Country::select('id', 'name', 'shortname')
+            ->orderBy('name')
+            ->get();
     }
 
     /**
@@ -22,9 +23,9 @@ class LocationService
      */
     public function getStatesByCountry($countryId)
     {
-        return State::select('id_state', 'state', 'country_id', 'sort_order')->where('country_id', $countryId)
-            ->orderBy('sort_order', 'asc')
-            ->orderBy('state', 'asc')
+        return State::select('id', 'name', 'country_id')
+            ->where('country_id', $countryId)
+            ->orderBy('name')
             ->get();
     }
 
@@ -33,9 +34,9 @@ class LocationService
      */
     public function getCitiesByState($stateId)
     {
-        return City::select('id_city', 'city', 'state_id', 'sort_order')->where('state_id', $stateId)
-            ->orderBy('sort_order', 'asc')
-            ->orderBy('city', 'asc')
+        return City::select('id', 'name', 'state_id')
+            ->where('state_id', $stateId)
+            ->orderBy('name')
             ->get();
     }
 }

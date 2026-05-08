@@ -277,9 +277,9 @@ class MerchantCyclosOrderService
                 "deliveryAddress" => [
                     "addressLine1" => $merchantAddress->address ?? null,
                     "zip" => $merchantAddress->postal_code ?? null,
-                    "city" => $merchantAddress->city ?? null,
-                    "region" => $merchantAddress->state ?? null,
-                    "country" => $merchantAddress->country ?? null,
+                    "city" => $merchantAddress->city_name ?? null,
+                    "region" => $merchantAddress->state_name ?? null,
+                    "country" => $merchantAddress->country_name ?? null,
                 ],
                 "draft" => false,
                 "items" => $orderData['items'],

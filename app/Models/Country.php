@@ -8,24 +8,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Country extends Model
 {
     protected $table = 'countries';
-
-    protected $primaryKey = 'country_id';
+    protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
-
-    public $timestamps = false; // Since table doesn't have timestamps columns
+    public $timestamps = false;
 
     protected $fillable = [
-        'country_name',
-        'country_code',
-        'currency_name',
-        'currency_symbol',
-        'currency_code'
+        'shortname',
+        'name',
+        'phonecode'
     ];
 
-    // Add casts for proper data types
     protected $casts = [
-        'country_id' => 'integer',
+        'id' => 'integer',
+        'phonecode' => 'integer',
     ];
 
     /**
@@ -33,15 +29,15 @@ class Country extends Model
      */
     public function states(): HasMany
     {
-        return $this->hasMany(State::class, 'country_id', 'country_id');
+        return $this->hasMany(State::class, 'country_id', 'id');
     }
 
     /**
-     * Get country by country code.
+     * Get country by shortname (country code).
      */
-    public function scopeByCode($query, $code)
+    public function scopeByShortname($query, $code)
     {
-        return $query->where('country_code', strtoupper($code));
+        return $query->where('shortname', strtoupper($code));
     }
 
     /**
@@ -49,13 +45,6 @@ class Country extends Model
      */
     public function scopeByName($query, $name)
     {
-        return $query->where('country_name', 'like', "%{$name}%");
+        return $query->where('name', 'like', "%{$name}%");
     }
-
-    public function create()
-{
-    $countries = Country::orderBy('country_name', 'asc')->get();
-
-    return view('merchant.customers.create', compact('countries'));
-}
 }

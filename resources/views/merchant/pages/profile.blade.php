@@ -330,12 +330,12 @@
 
                                     <div class="address-line">
                                         <i class="fas fa-city"></i>
-                                        <span><strong>City:</strong> {{ $address->city ?? 'Not provided' }}</span>
+                                        <span><strong>City:</strong> {{ $address->city_name ?? 'Not provided' }}</span>
                                     </div>
 
                                     <div class="address-line">
                                         <i class="fas fa-building"></i>
-                                        <span><strong>State/Province:</strong> {{ $address->state ?? 'Not provided' }}</span>
+                                        <span><strong>State/Province:</strong> {{ $address->state_name ?? 'Not provided' }}</span>
                                     </div>
 
                                     <div class="address-line">
@@ -345,7 +345,7 @@
 
                                     <div class="address-line">
                                         <i class="fas fa-globe"></i>
-                                        <span><strong>Country:</strong> {{ $address->country ?? 'Not provided' }}</span>
+                                        <span><strong>Country:</strong> {{ $address->country_name ?? 'Not provided' }}</span>
                                     </div>
 
                                     @if(isset($address->is_active) && $address->is_active)
@@ -502,10 +502,10 @@
 
                             @foreach($countries as $country)
                                 <option
-                                    value="{{ $country->country_id }}"
-                                    {{ (string) ($selectedCountryId ?? '') === (string) $country->country_id ? 'selected' : '' }}
+                                    value="{{ $country->id }}"
+                                    {{ (string) ($selectedCountryId ?? '') === (string) $country->id ? 'selected' : '' }}
                                 >
-                                    {{ $country->country_name }}
+                                    {{ $country->name }}
                                 </option>
                             @endforeach
                         </select>
@@ -770,8 +770,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             states.forEach(function (state) {
                 const option = document.createElement('option');
-                option.value = state.id_state;
-                option.textContent = state.state;
+                option.value = state.id;
+                option.textContent = state.name;
                 stateSelect.appendChild(option);
             });
 
@@ -822,8 +822,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             cities.forEach(function (city) {
                 const option = document.createElement('option');
-                option.value = city.id_city;
-                option.textContent = city.city;
+                option.value = city.id;
+                option.textContent = city.name;
                 citySelect.appendChild(option);
             });
 

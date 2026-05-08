@@ -28,31 +28,31 @@ class MerchantProfileController extends Controller
 
         $profileData = $this->merchantProfileService->getProfileData($user);
         $address = $this->merchantProfileService->getUserAddress($user);
-        $countries = Country::orderBy('country_name', 'asc')->get();
+        $countries = Country::orderBy('name', 'asc')->get();
 
         $selectedCountryId = null;
         $selectedStateId = null;
         $selectedCityId = null;
 
         if ($address) {
-            $country = Country::where('country_name', $address->country)->first();
+            $country = Country::find($address->country);
 
             if ($country) {
-                $selectedCountryId = $country->country_id;
+                $selectedCountryId = $country->id;
 
-                $state = State::where('country_id', $country->country_id)
-                    ->where('state', $address->state)
+                $state = State::where('country_id', $country->id)
+                    ->where('id', $address->state)
                     ->first();
 
                 if ($state) {
-                    $selectedStateId = $state->id_state;
+                    $selectedStateId = $state->id;
 
-                    $city = City::where('state_id', $state->id_state)
-                        ->where('city', $address->city)
+                    $city = City::where('state_id', $state->id)
+                        ->where('id', $address->city)
                         ->first();
 
                     if ($city) {
-                        $selectedCityId = $city->id_city;
+                        $selectedCityId = $city->id;
                     }
                 }
             }
@@ -99,12 +99,10 @@ class MerchantProfileController extends Controller
     {
         try {
             $states = State::where('country_id', $countryId)
-                ->where('is_active', 1)
-                ->orderBy('sort_order', 'asc')
-                ->orderBy('state', 'asc')
+                ->orderBy('name', 'asc')
                 ->get([
-                    'id_state',
-                    'state',
+                    'id',
+                    'name',
                     'country_id',
                 ]);
 
@@ -122,12 +120,10 @@ class MerchantProfileController extends Controller
     {
         try {
             $cities = City::where('state_id', $stateId)
-                ->where('is_active', 1)
-                ->orderBy('sort_order', 'asc')
-                ->orderBy('city', 'asc')
+                ->orderBy('name', 'asc')
                 ->get([
-                    'id_city',
-                    'city',
+                    'id',
+                    'name',
                     'state_id',
                 ]);
 
@@ -145,9 +141,9 @@ class MerchantProfileController extends Controller
     {
         $request->validate([
             'address_id' => 'required|exists:user_addresses,id',
-            'country_id' => 'required|exists:countries,country_id',
-            'state_id' => 'required|exists:states,id_state',
-            'city_id' => 'required|exists:cities,id_city',
+            'country_id' => 'required|exists:countries,id',
+            'state_id' => 'required|exists:states,id',
+            'city_id' => 'required|exists:cities,id',
             'address' => 'required|string|max:255',
             'postal_code' => 'required|string|max:20',
             'is_active' => 'nullable|boolean',
@@ -166,13 +162,13 @@ class MerchantProfileController extends Controller
                     ->with('error', 'Address not found!');
             }
 
-            $country = Country::where('country_id', $request->country_id)->first();
+            $country = Country::where('id', $request->country_id)->first();
 
-            $state = State::where('id_state', $request->state_id)
+            $state = State::where('id', $request->state_id)
                 ->where('country_id', $request->country_id)
                 ->first();
 
-            $city = City::where('id_city', $request->city_id)
+            $city = City::where('id', $request->city_id)
                 ->where('state_id', $request->state_id)
                 ->first();
 
@@ -190,10 +186,10 @@ class MerchantProfileController extends Controller
 
             $address->update([
                 'address' => $request->address,
-                'city' => $city->city,
-                'state' => $state->state,
+                'city' => $city->id,
+                'state' => $state->id,
                 'postal_code' => $request->postal_code,
-                'country' => $country->country_name,
+                'country' => $country->id,
                 'is_active' => $request->boolean('is_active'),
             ]);
 
