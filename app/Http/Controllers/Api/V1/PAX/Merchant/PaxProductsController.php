@@ -61,4 +61,37 @@ class PaxProductsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get all categories for authenticated merchant
+     */
+    public function getCategories(Request $request)
+    {
+        try {
+            $merchantUser = Auth::user();
+
+            if (!$merchantUser) {
+                throw new \Exception("User not found.");
+            }
+
+            if (!$merchantUser->cyclos_user_id) {
+                throw new \Exception("Cyclos ID not found.");
+            }
+
+            $data = $this->productService->getMinimalCategories($merchantUser->cyclos_user_id);
+
+            return response()->json([
+                'success' => true,
+                'status_code' => 200,
+                'message' => 'Product categories retrieved successfully',
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'An error occurred while processing your request: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
