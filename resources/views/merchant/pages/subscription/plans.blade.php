@@ -1,292 +1,395 @@
 @extends('merchant.layouts.main-single-page')
 
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <!-- Header Section -->
-                    <div class="text-center mb-5">
-                        <h3 class="fw-bold">Choose your plan</h3>
-                        <p class="text-muted">Select the perfect plan for your business needs</p>
-                    </div>
 
-                    <!-- Pricing Toggle (Monthly/Yearly) -->
-                    <div class="d-flex justify-content-center mb-5">
-                        <div class="btn-group" role="group" aria-label="Billing period">
-                            <button type="button" class="btn btn-primary active" id="monthlyBtn" data-billing="monthly">Monthly</button>
-                            <button type="button" class="btn btn-outline-primary" id="yearlyBtn" data-billing="yearly">Yearly</button>
+<div class="pricing-wrapper">
+    <div class="container">
+        <div class="pricing-card-main">
+
+            <!-- Header -->
+            <div class="pricing-header text-center mb-2">
+                <h2>Choose Your Perfect Plan</h2>
+                <p>Select the ideal subscription plan for your business growth</p>
+            </div>
+
+            <!-- Toggle -->
+            <div class="text-center mb-3 d-flex justify-content-center gap-2">
+
+
+                <div class="billing-toggle">
+                    <button type="button" class="btn active" id="monthlyBtn" data-billing="monthly">
+                        Monthly
+                    </button>
+
+                    <button type="button" class="btn" id="yearlyBtn" data-billing="yearly">
+                        Yearly
+                    </button>
+                </div>
+
+                @php
+                $firstPlan = $plans->first();
+                @endphp
+
+                @if($firstPlan && $firstPlan->yearly_savings > 0)
+                <div class="mt-3">
+                    <span class="yearly-savings-badge">
+                        Save {{ $firstPlan->yearly_savings }}% with yearly billing
+                    </span>
+                </div>
+                @endif
+            </div>
+
+            <!-- Plans -->
+            <div class="row">
+
+                @foreach($plans as $plan)
+
+                <div class="col-xl-4 col-lg-4 col-md-6 mb-4">
+
+                    <div class="plan-card {{ $plan->is_popular ? 'popular' : '' }}">
+
+                        @if($plan->is_popular)
+                        <div class="popular-tag">
+                            MOST POPULAR
                         </div>
-                        @php
-                        $firstPlan = $plans->first();
-                        @endphp
-                        @if($firstPlan && $firstPlan->yearly_savings > 0)
-                        <span class="badge bg-success ms-3 align-self-center yearly-savings-badge">Save {{ $firstPlan->yearly_savings }}% with yearly</span>
                         @endif
-                    </div>
 
-                    <!-- Plans Row -->
-                    <div class="row">
-                        @foreach($plans as $plan)
-                        <div class="col-md-4 mb-4">
-                            <div class="card h-100 shadow-sm {{ $plan->is_popular ? 'border-primary' : '' }}">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <span class="badge bg-{{ $plan->badge_color }}">{{ strtoupper($plan->name) }}</span>
-                                        @if($plan->badge_text)
-                                        <span class="badge bg-warning text-dark ms-1">{{ $plan->badge_text }}</span>
-                                        @endif
-                                    </div>
+                        <div class="plan-body text-center">
 
-                                    <h4 class="card-title fw-bold">{{ $plan->name }} Plan</h4>
-                                    <p class="card-text text-muted">{{ $plan->short_description }}</p>
+                            <div class="mb-3">
 
-                                    <!-- Monthly Price -->
-                                    <div class="monthly-price">
-                                        <h2 class="display-4 fw-bold">${{ number_format($plan->monthly_price, 0) }}</h2>
-                                        <p class="text-muted">per month</p>
-                                    </div>
+                                <span class="plan-badge bg-{{ $plan->badge_color }} text-white">
+                                    {{ strtoupper($plan->name) }}
+                                </span>
 
-                                    <!-- Yearly Price (Hidden by default) -->
-                                    <div class="yearly-price d-none">
-                                        <h2 class="display-4 fw-bold">${{ number_format($plan->yearly_price, 0) }}</h2>
-                                        <p class="text-muted">per month, billed annually (${{ number_format($plan->yearly_total ?? ($plan->yearly_price * 12), 0) }}/yr)</p>
-                                    </div>
-
-                                    <!-- Monthly Limits (Visible by default) -->
-                                    <div class="monthly-limits mt-3">
-                                        <div class="border-top pt-3">
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <span><i class="fas fa-box me-2"></i>Products Upload:</span>
-                                                <strong>{{ $plan->products_limit == -1 ? 'Unlimited' : number_format($plan->products_limit) }}</strong>
-                                            </div>
-                                            <div class="d-flex justify-content-between">
-                                                <span><i class="fas fa-users me-2"></i>Customers:</span>
-                                                <strong>{{ $plan->customer_limit == -1 ? 'Unlimited' : number_format($plan->customer_limit) }}</strong>
-                                            </div>
-                                            <small class="text-muted d-block mt-2">per month</small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Yearly Limits (Hidden by default) -->
-                                    <div class="yearly-limits d-none mt-3">
-                                        <div class="border-top pt-3">
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <span><i class="fas fa-box me-2"></i>Products Upload:</span>
-                                                <strong>{{ $plan->yearly_products_limit == -1 ? 'Unlimited' : number_format($plan->yearly_products_limit) }}</strong>
-                                            </div>
-                                            <div class="d-flex justify-content-between">
-                                                <span><i class="fas fa-users me-2"></i>Customers:</span>
-                                                <strong>{{ $plan->yearly_customer_limit == -1 ? 'Unlimited' : number_format($plan->yearly_customer_limit) }}</strong>
-                                            </div>
-                                            <small class="text-muted d-block mt-2">per year</small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Features -->
-                                    <ul class="list-unstyled mt-4 mb-4">
-                                        @foreach($plan->features as $feature)
-                                        <li class="mb-2"><i class="fas fa-check text-success"></i> {{ $feature }}</li>
-                                        @endforeach
-                                    </ul>
-
-                                    <!-- Choose Plan Button -->
-                                    <button type="button" 
-                                            class="btn {{ $plan->is_popular ? 'btn-primary' : 'btn-outline-' . $plan->badge_color }} w-100 choose-plan-btn" 
-                                            data-plan-id="{{ $plan->id }}"
-                                            data-plan-name="{{ $plan->name }}"
-                                            data-plan-monthly-price="${{ number_format($plan->monthly_price, 0) }}"
-                                            data-plan-yearly-price="${{ number_format($plan->yearly_price, 0) }}"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#paypalModal">
-                                        <i class="fab fa-paypal me-2"></i>Choose {{ $plan->name }}
-                                    </button>
-                                </div>
+                                @if($plan->badge_text)
+                                <span class="badge bg-warning text-dark ms-2">
+                                    {{ $plan->badge_text }}
+                                </span>
+                                @endif
                             </div>
+
+                            <h3 class="fw-bold mb-2">
+                                {{ $plan->name }} Plan
+                            </h3>
+
+                            <p class="text-muted">
+                                {{ $plan->short_description }}
+                            </p>
+
+                            <!-- Monthly -->
+                            <div class="monthly-price price-box">
+
+                                <h2>
+                                    <span>$</span>{{ number_format($plan->monthly_price,0) }}
+                                </h2>
+
+                                <p>Per Month</p>
+                            </div>
+
+                            <!-- Yearly -->
+                            <div class="yearly-price price-box d-none">
+
+                                <h2>
+                                    <span>$</span>{{ number_format($plan->yearly_price,0) }}
+                                </h2>
+
+                                <p>
+                                    Per Month <br>
+                                    Billed Annually (${{ number_format($plan->yearly_total ?? ($plan->yearly_price * 12),0) }}/year)
+                                </p>
+                            </div>
+
+                            <!-- Monthly Limits -->
+                            <div class="monthly-limits limits-box">
+
+                                <div class="limit-row">
+                                    <span>
+                                        <i class="fas fa-box me-2"></i>
+                                        Products Upload
+                                    </span>
+
+                                    <strong>
+                                        {{ $plan->products_limit == -1 ? 'Unlimited' : number_format($plan->products_limit) }}
+                                    </strong>
+                                </div>
+
+                                <div class="limit-row">
+                                    <span>
+                                        <i class="fas fa-users me-2"></i>
+                                        Customers
+                                    </span>
+
+                                    <strong>
+                                        {{ $plan->customer_limit == -1 ? 'Unlimited' : number_format($plan->customer_limit) }}
+                                    </strong>
+                                </div>
+
+                                <small class="text-muted d-block mt-2">
+                                    Per Month
+                                </small>
+                            </div>
+
+                            <!-- Yearly Limits -->
+                            <div class="yearly-limits limits-box d-none">
+
+                                <div class="limit-row">
+                                    <span>
+                                        <i class="fas fa-box me-2"></i>
+                                        Products Upload
+                                    </span>
+
+                                    <strong>
+                                        {{ $plan->yearly_products_limit == -1 ? 'Unlimited' : number_format($plan->yearly_products_limit) }}
+                                    </strong>
+                                </div>
+
+                                <div class="limit-row">
+                                    <span>
+                                        <i class="fas fa-users me-2"></i>
+                                        Customers
+                                    </span>
+
+                                    <strong>
+                                        {{ $plan->yearly_customer_limit == -1 ? 'Unlimited' : number_format($plan->yearly_customer_limit) }}
+                                    </strong>
+                                </div>
+
+                                <small class="text-muted d-block mt-2">
+                                    Per Year
+                                </small>
+                            </div>
+
+                            <!-- Features -->
+                            <ul class="features-list text-start">
+
+                                @foreach($plan->features as $feature)
+
+                                <li>
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>{{ $feature }}</span>
+                                </li>
+
+                                @endforeach
+
+                            </ul>
+
+                            <!-- Button -->
+                            <button type="button" class="choose-plan-btn w-100 {{ $plan->is_popular ? 'btn-primary-custom' : 'btn-outline-custom' }}" data-plan-id="{{ $plan->id }}" data-plan-name="{{ $plan->name }}" data-plan-monthly-price="${{ number_format($plan->monthly_price,0) }}" data-plan-yearly-price="${{ number_format($plan->yearly_price,0) }}" data-bs-toggle="modal" data-bs-target="#paypalModal">
+
+                                <i class="fab fa-paypal me-2"></i>
+                                Choose {{ $plan->name }}
+                            </button>
+
                         </div>
-                        @endforeach
-                    </div>
-                    
-                    <!-- Footer Note -->
-                    <div class="text-center mt-4">
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle"></i>
-                            All plans include a 14-day free trial. Secure payments powered by PayPal.
-                        </small>
-                    </div>
-
-                    <!-- Terms and Conditions -->
-                    <div class="text-center mt-3">
-                        <small class="text-muted">
-                            By selecting a plan, you agree to our
-                            <a href="#">Terms of Service</a> and
-                            <a href="#">Privacy Policy</a>
-                        </small>
-                    </div>
-
-                    <!-- PayPal Trust Badge -->
-                    <div class="text-center mt-4">
-                        <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" alt="PayPal" class="me-2" style="height: 30px;">
-                        <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_SbyPP_mc_vs_dc_ae.jpg" alt="Payment Methods" style="height: 30px;">
                     </div>
                 </div>
+
+                @endforeach
+
             </div>
+
+            <!-- Footer -->
+            <div class="pricing-footer text-center">
+
+                <div class="mb-3">
+                    <small>
+                        <i class="fas fa-shield-alt text-success me-1"></i>
+                        All plans include a 14-day free trial.
+                        Secure payments powered by PayPal.
+                    </small>
+                </div>
+
+                <div class="mb-4">
+                    <small>
+                        By selecting a plan, you agree to our
+                        <a href="#">Terms of Service</a>
+                        and
+                        <a href="#">Privacy Policy</a>
+                    </small>
+                </div>
+
+                <div class="trust-images">
+                    <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" alt="">
+                    <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_SbyPP_mc_vs_dc_ae.jpg" alt="">
+                </div>
+
+            </div>
+
         </div>
     </div>
 </div>
 
-<!-- PayPal Payment Modal -->
-<div class="modal fade" id="paypalModal" tabindex="-1" aria-labelledby="paypalModalLabel" aria-hidden="true">
+<!-- PayPal Modal -->
+<div class="modal fade" id="paypalModal" tabindex="-1">
+
     <div class="modal-dialog modal-dialog-centered">
+
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="paypalModalLabel">
-                    <i class="fab fa-paypal me-2"></i>Complete Your Subscription
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fab fa-paypal me-2"></i>
+                    Complete Subscription
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
+
             <div class="modal-body">
-                <!-- Selected Plan Summary -->
-                <div class="alert alert-info mb-4" id="selectedPlanSummary" style="display: none;">
+
+                <!-- Selected Plan -->
+                <div class="alert alert-primary rounded-4 border-0 mb-4" id="selectedPlanSummary" style="display:none;">
+
                     <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-check-circle fa-2x text-info"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h6 class="alert-heading mb-1" id="selectedPlanName"></h6>
-                            <p class="mb-0" id="selectedPlanPrice"></p>
-                            <small id="selectedPlanDuration" class="text-muted"></small>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Limits Summary -->
-                <div class="alert alert-secondary mb-4" id="limitsSummary" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+
                         <div>
-                            <i class="fas fa-chart-line me-2"></i>
-                            <strong>Your Limits:</strong>
+                            <h6 class="mb-1 fw-bold" id="selectedPlanName"></h6>
+                            <div id="selectedPlanPrice"></div>
+                            <small id="selectedPlanDuration"></small>
                         </div>
-                        <div class="text-end">
-                            <div id="productsLimitText" class="small"></div>
-                            <div id="customersLimitText" class="small"></div>
-                        </div>
+
                     </div>
                 </div>
 
-                <!-- PayPal Payment Section -->
-                <div class="text-center py-4">
-                    <!-- PayPal Logo -->
-                    <div class="mb-4">
-                        <img src="https://www.paypalobjects.com/webstatic/icon/pp258.png" alt="PayPal" style="height: 60px;">
+                <!-- Summary -->
+                <div class="summary-card mb-4">
+
+                    <h5 class="fw-bold mb-4">
+                        Payment Summary
+                    </h5>
+
+                    <div class="summary-row">
+                        <span>Plan</span>
+                        <strong id="summaryPlanName">-</strong>
                     </div>
 
-                    <!-- Payment Summary -->
-                    <div class="payment-summary bg-light p-4 rounded mb-4">
-                        <h5 class="mb-3">Payment Summary</h5>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Plan:</span>
-                            <strong id="summaryPlanName">-</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Billing:</span>
-                            <strong id="summaryBillingType">-</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Amount:</span>
-                            <strong class="text-primary" id="summaryAmount">-</strong>
-                        </div>
-                        <hr>
-                        <div class="d-flex justify-content-between">
-                            <span>Total:</span>
-                            <strong class="text-success h5 mb-0" id="summaryTotal">-</strong>
-                        </div>
+                    <div class="summary-row">
+                        <span>Billing</span>
+                        <strong id="summaryBillingType">-</strong>
                     </div>
 
-                    <!-- PayPal Benefits -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-6">
-                            <div class="text-center">
-                                <i class="fas fa-shield-alt fa-2x text-primary mb-2"></i>
-                                <small class="d-block">Buyer Protection</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-center">
-                                <i class="fas fa-lock fa-2x text-primary mb-2"></i>
-                                <small class="d-block">Secure Payment</small>
-                            </div>
-                        </div>
+                    <div class="summary-row">
+                        <span>Amount</span>
+                        <strong class="text-primary" id="summaryAmount">-</strong>
                     </div>
 
-                    <!-- PayPal Button -->
-                    <button type="button" class="btn btn-primary btn-lg w-100" id="paypalBtn">
-                        <i class="fab fa-paypal me-2"></i>
-                        <span class="button-text">Pay with PayPal</span>
-                        <span class="spinner-border spinner-border-sm d-none ms-2" role="status" aria-hidden="true"></span>
-                    </button>
+                    <hr>
 
-                    <!-- Security Note -->
-                    <p class="text-muted small mt-3 mb-0">
-                        <i class="fas fa-lock me-1"></i>
-                        You'll be redirected to PayPal's secure payment page
-                    </p>
+                    <div class="summary-row">
+                        <span class="fw-bold">Total</span>
+                        <strong class="text-success fs-5" id="summaryTotal">-</strong>
+                    </div>
+
                 </div>
+
+                <!-- Benefits -->
+                <div class="row g-3 mb-4">
+
+                    <div class="col-6">
+                        <div class="benefit-box">
+                            <i class="fas fa-shield-alt"></i>
+                            <div class="fw-semibold">Buyer Protection</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="benefit-box">
+                            <i class="fas fa-lock"></i>
+                            <div class="fw-semibold">Secure Payment</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- PayPal Button -->
+                <button type="button" class="paypal-btn" id="paypalBtn">
+
+                    <i class="fab fa-paypal me-2"></i>
+
+                    <span class="button-text">
+                        Pay with PayPal
+                    </span>
+
+                    <span class="spinner-border spinner-border-sm d-none ms-2"></span>
+                </button>
+
+                <p class="text-center text-muted small mt-3 mb-0">
+                    <i class="fas fa-lock me-1"></i>
+                    You will be redirected securely to PayPal
+                </p>
+
             </div>
-            <div class="modal-footer bg-light">
-                <div class="w-100 text-center">
-                    <small class="text-muted">
-                        <i class="fas fa-credit-card me-1"></i>
-                        We accept all major credit cards via PayPal
-                    </small>
-                </div>
-            </div>
+
         </div>
     </div>
 </div>
 
 <!-- Success Modal -->
-<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+<div class="modal fade" id="successModal" tabindex="-1">
+
     <div class="modal-dialog modal-dialog-centered">
+
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="successModalLabel">
-                    <i class="fas fa-check-circle me-2"></i>Payment Successful!
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <div class="mb-4">
-                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+
+            <div class="modal-body text-center p-5">
+
+                <div class="success-icon mb-4">
+                    <i class="fas fa-check"></i>
                 </div>
-                <h4 class="mb-3" id="successMessage">Subscription started successfully!</h4>
-                <p class="text-muted mb-2" id="transactionIdDisplay"></p>
-                <p class="text-muted mb-0">You will be redirected to your dashboard in a few seconds...</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary w-100" id="redirectToDashboard">
-                    Go to Dashboard Now
+
+                <h3 class="fw-bold mb-3">
+                    Payment Successful!
+                </h3>
+
+                <p class="text-muted mb-2" id="transactionIdDisplay">
+                </p>
+
+                <p class="text-muted mb-4">
+                    Your subscription has been activated successfully.
+                </p>
+
+                <button type="button" class="btn btn-primary btn-lg rounded-pill px-5" id="redirectToDashboard">
+
+                    Go To Dashboard
                 </button>
+
             </div>
+
         </div>
     </div>
 </div>
 
 <!-- Processing Modal -->
-<div class="modal fade" id="processingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="processingModalLabel" aria-hidden="true">
+<div class="modal fade" id="processingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+
     <div class="modal-dialog modal-dialog-centered modal-sm">
+
         <div class="modal-content">
-            <div class="modal-body text-center py-4">
-                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
-                    <span class="visually-hidden">Loading...</span>
+
+            <div class="processing-box text-center">
+
+                <div class="spinner-border text-primary mb-4" style="width:4rem;height:4rem;">
                 </div>
-                <h5 class="mb-2" id="processingMessage">Processing Payment...</h5>
-                <p class="text-muted small mb-0">Please wait while we confirm your payment</p>
+
+                <h5 class="fw-bold mb-2">
+                    Processing Payment...
+                </h5>
+
+                <p class="text-muted small mb-0">
+                    Please wait while we confirm your transaction
+                </p>
+
             </div>
+
         </div>
     </div>
 </div>
+
 @endsection
 
 @section('js')

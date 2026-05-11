@@ -14,6 +14,8 @@ class Merchant extends Model
         'phone',
         'location',
         'website',
+        'vat_tax_percentage',
+        'pos_payment_types',
         'consent_language_authorizing',
         'communyti_enrollment',
         'advocate_contact'

@@ -4,30 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class State extends Model
 {
     protected $table = 'states';
-
-    protected $primaryKey = 'id_state';
+    protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
-
-    public $timestamps = false; // Since table doesn't have timestamps
+    public $timestamps = false;
 
     protected $fillable = [
-        'state',
-        'country_id',
-        'is_active',
-        'sort_order',
-        'lang'
+        'name',
+        'country_id'
     ];
 
     protected $casts = [
-        'id_state' => 'integer',
+        'id' => 'integer',
         'country_id' => 'integer',
-        'is_active' => 'integer',
-        'sort_order' => 'integer',
     ];
 
     /**
@@ -35,22 +29,22 @@ class State extends Model
      */
     public function country(): BelongsTo
     {
-        return $this->belongsTo(Country::class, 'country_id', 'country_id');
+        return $this->belongsTo(Country::class, 'country_id', 'id');
     }
 
     /**
      * Get cities for this state.
      */
-    public function cities()
+    public function cities(): HasMany
     {
-        return $this->hasMany(City::class, 'state_id', 'id_state');
+        return $this->hasMany(City::class, 'state_id', 'id');
     }
 
     /**
-     * Scope ordered by sort order then name.
+     * Scope ordered by name.
      */
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order', 'asc')->orderBy('state', 'asc');
+        return $query->orderBy('name', 'asc');
     }
 }

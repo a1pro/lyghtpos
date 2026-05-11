@@ -152,6 +152,102 @@
         border: 0;
         border-top: 1px solid rgba(0, 0, 0, 0.1);
     }
+
+     /* Payment Checkbox Group Styling */
+     .payment-checkbox-group {
+     display: flex;
+     flex-direction: column;
+     gap: 0.75rem;
+     padding: 0.5rem 0;
+     }
+
+     .payment-checkbox-item {
+     display: flex;
+     align-items: center;
+     cursor: pointer;
+     margin: 0;
+     padding: 0.5rem 0.75rem;
+     border: 1px solid #e9ecef;
+     border-radius: 0.375rem;
+     transition: all 0.2s ease;
+     background-color: #ffffff;
+     }
+
+     .payment-checkbox-item:hover {
+     background-color: #f8f9fa;
+     border-color: #007bff;
+     transform: translateX(5px);
+     }
+
+     .payment-checkbox-item input[type="checkbox"] {
+     margin-right: 0.75rem;
+     width: 1.1rem;
+     height: 1.1rem;
+     cursor: pointer;
+     accent-color: #007bff;
+     }
+
+     .payment-checkbox-label {
+     flex: 1;
+     cursor: pointer;
+     font-weight: 500;
+     color: #495057;
+     display: flex;
+     align-items: center;
+     gap: 0.5rem;
+     }
+
+     .payment-checkbox-label i {
+     width: 25px;
+     color: #6c757d;
+     font-size: 1.1rem;
+     }
+
+     .payment-checkbox-item input[type="checkbox"]:checked + .payment-checkbox-label {
+     color: #212529;
+     }
+
+     .payment-checkbox-item input[type="checkbox"]:checked + .payment-checkbox-label i {
+     color: #212529;
+     }
+
+     .payment-checkbox-item:has(input:checked) {
+     background-color: #f8fbff;
+     border-color: #212529;
+     }
+
+     /* Input group styling */
+     .input-group .input-group-text {
+     background-color: #e9ecef;
+     border-color: #ced4da;
+     }
+
+     /* Form control focus state */
+     .form-control:focus {
+     border-color: #80bdff;
+     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+     }
+
+     /* Invalid feedback */
+     .invalid-feedback {
+     display: block;
+     }
+
+     /* Responsive */
+     @media (max-width: 576px) {
+     .payment-checkbox-item {
+     padding: 0.4rem 0.6rem;
+     }
+
+     .payment-checkbox-label {
+     font-size: 0.9rem;
+     }
+
+     .payment-checkbox-label i {
+     font-size: 1rem;
+     }
+     }
+
 </style>
 @endsection
 
@@ -192,7 +288,6 @@
                 </div>
 
                 <div class="col-md-8">
-
                     <div class="info-card">
                         <div class="info-card-header">
                             <h5><i class="fas fa-address-card"></i> Personal Details</h5>
@@ -235,12 +330,12 @@
 
                                     <div class="address-line">
                                         <i class="fas fa-city"></i>
-                                        <span><strong>City:</strong> {{ $address->city ?? 'Not provided' }}</span>
+                                        <span><strong>City:</strong> {{ $address->city_name ?? 'Not provided' }}</span>
                                     </div>
 
                                     <div class="address-line">
                                         <i class="fas fa-building"></i>
-                                        <span><strong>State/Province:</strong> {{ $address->state ?? 'Not provided' }}</span>
+                                        <span><strong>State/Province:</strong> {{ $address->state_name ?? 'Not provided' }}</span>
                                     </div>
 
                                     <div class="address-line">
@@ -250,7 +345,7 @@
 
                                     <div class="address-line">
                                         <i class="fas fa-globe"></i>
-                                        <span><strong>Country:</strong> {{ $address->country ?? 'Not provided' }}</span>
+                                        <span><strong>Country:</strong> {{ $address->country_name ?? 'Not provided' }}</span>
                                     </div>
 
                                     @if(isset($address->is_active) && $address->is_active)
@@ -272,6 +367,56 @@
                                     <small>Please contact support to add an address.</small>
                                 </div>
                             @endif
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <h5><i class="fas fa-gear"></i> Settings</h5>
+                        </div>
+
+                        <div class="info-card-body">
+                            <div class="info-row">
+                                <div class="info-label">VAT Tax (%):</div>
+                                <div class="info-value">{{ $merchant->vat_tax_percentage ?? 10 }}%</div>
+                            </div>
+
+                            <div class="info-row">
+                                <div class="info-label">POS Payment Types:</div>
+                                <div class="info-value">
+                                    @php
+                                    $paymentTypes = $merchant->pos_payment_types ?? ['card', 'tokens', 'hybrid'];
+                                    if (is_string($paymentTypes)) {
+                                    $paymentTypes = json_decode($paymentTypes, true);
+                                    if (json_last_error() !== JSON_ERROR_NONE) {
+                                    $paymentTypes = explode(',', $paymentTypes);
+                                    }
+                                    }
+                                    @endphp
+
+                                    @if(is_array($paymentTypes) && count($paymentTypes) > 0)
+                                    @foreach($paymentTypes as $type)
+                                    <span class="payment-type-badge">
+                                        @if($type == 'card')
+                                        <i class="fas fa-credit-card"></i> Card
+                                        @elseif($type == 'tokens')
+                                        <i class="fas fa-coins"></i> Tokens
+                                        @elseif($type == 'hybrid')
+                                        <i class="fas fa-exchange-alt"></i> Hybrid
+                                        @else
+                                        {{ ucfirst($type) }}
+                                        @endif
+                                    </span>
+                                    @endforeach
+                                    @else
+                                    All Payment Types
+                                    @endif
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-sm mt-3" data-toggle="modal" data-target="#editSettingsModal">
+                                <i class="fas fa-edit"></i> Edit Settings
+                            </button>
                         </div>
                     </div>
 
@@ -357,10 +502,10 @@
 
                             @foreach($countries as $country)
                                 <option
-                                    value="{{ $country->country_id }}"
-                                    {{ (string) ($selectedCountryId ?? '') === (string) $country->country_id ? 'selected' : '' }}
+                                    value="{{ $country->id }}"
+                                    {{ (string) ($selectedCountryId ?? '') === (string) $country->id ? 'selected' : '' }}
                                 >
-                                    {{ $country->country_name }}
+                                    {{ $country->name }}
                                 </option>
                             @endforeach
                         </select>
@@ -450,6 +595,115 @@
 </div>
 @endif
 
+<div class="modal fade" id="editSettingsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-gear"></i> Edit Settings
+                </h5>
+
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <form action="{{ route('merchant.profile.settings.update') }}" method="POST" id="settingsForm">
+                @csrf
+                @method('PUT')
+
+                <div class="modal-body">
+                    <!-- VAT Tax Percentage -->
+                    <div class="form-group">
+                        <label for="vat_tax_percentage">VAT Tax (%) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control @error('vat_tax_percentage') is-invalid @enderror" name="vat_tax_percentage" id="vat_tax_percentage" value="{{ old('vat_tax_percentage', $merchant->vat_tax_percentage ?? 10.00) }}" min="0" max="100" required>
+                            <div class="input-group-append">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Set the VAT/GST percentage (0-100%)</small>
+                        @error('vat_tax_percentage')
+                        <span class="invalid-feedback" role="alert">
+                            <strong>{{ $message }}</strong>
+                        </span>
+                        @enderror
+                    </div>
+
+                    <!-- POS Payment Types - Multiple Checkbox Group -->
+                    <div class="form-group">
+                        <label>POS Payment Types <span class="text-danger">*</span></label>
+                        <div class="payment-checkbox-group">
+                            @php
+                            // Get current payment types
+                            $currentPayments = $merchant->pos_payment_types ?? ['card', 'tokens', 'hybrid'];
+
+                            // Decode if it's JSON string
+                            if (is_string($currentPayments)) {
+                            $decoded = json_decode($currentPayments, true);
+                            if (json_last_error() === JSON_ERROR_NONE) {
+                            $currentPayments = $decoded;
+                            } else {
+                            $currentPayments = explode(',', $currentPayments);
+                            }
+                            }
+
+                            // Ensure it's an array
+                            if (!is_array($currentPayments)) {
+                            $currentPayments = ['card', 'tokens', 'hybrid'];
+                            }
+
+                            $selectedPayments = old('pos_payment_types', $currentPayments);
+                            @endphp
+
+                            <label class="payment-checkbox-item">
+                                <input type="checkbox" name="pos_payment_types[]" value="card" {{ in_array('card', $selectedPayments) ? 'checked' : '' }} class="payment-checkbox">
+                                <span class="payment-checkbox-label">
+                                    <i class="fas fa-credit-card"></i> Card Payments
+                                </span>
+                            </label>
+
+                            <label class="payment-checkbox-item">
+                                <input type="checkbox" name="pos_payment_types[]" value="tokens" {{ in_array('tokens', $selectedPayments) ? 'checked' : '' }} class="payment-checkbox">
+                                <span class="payment-checkbox-label">
+                                    <i class="fas fa-coins"></i> Trade Tokens
+                                </span>
+                            </label>
+
+                            <label class="payment-checkbox-item">
+                                <input type="checkbox" name="pos_payment_types[]" value="hybrid" {{ in_array('hybrid', $selectedPayments) ? 'checked' : '' }} class="payment-checkbox">
+                                <span class="payment-checkbox-label">
+                                    <i class="fas fa-exchange-alt"></i> Hybrid Payments
+                                </span>
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">Select one or more payment methods to accept at your POS</small>
+                        <div id="payment-error" class="invalid-feedback" style="display: none;">
+                            Please select at least one payment type.
+                        </div>
+                        @error('pos_payment_types')
+                        <span class="invalid-feedback" role="alert">
+                            <strong>{{ $message }}</strong>
+                        </span>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        Cancel
+                    </button>
+
+                    <button type="submit" class="btn btn-primary">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 @if($address && $address->address)
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -516,8 +770,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             states.forEach(function (state) {
                 const option = document.createElement('option');
-                option.value = state.id_state;
-                option.textContent = state.state;
+                option.value = state.id;
+                option.textContent = state.name;
                 stateSelect.appendChild(option);
             });
 
@@ -568,8 +822,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             cities.forEach(function (city) {
                 const option = document.createElement('option');
-                option.value = city.id_city;
-                option.textContent = city.city;
+                option.value = city.id;
+                option.textContent = city.name;
                 citySelect.appendChild(option);
             });
 

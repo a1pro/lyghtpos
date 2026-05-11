@@ -20,7 +20,7 @@ class GetStatesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'country_id' => 'required|integer|exists:countries,country_id'
+            'country_id' => 'required|integer|exists:countries,id'
         ];
     }
 

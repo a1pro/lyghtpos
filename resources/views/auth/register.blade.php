@@ -1,485 +1,459 @@
-@extends('layouts.app')
-@section('css')
-
-<style>
-    .account-type-card {
-        width: 100%;
-        cursor: pointer;
-    }
-
-    .account-type-card input {
-        display: none;
-    }
-
-    .account-type-card .card {
-        border: 2px solid #dee2e6;
-        transition: all 0.2s ease-in-out;
-    }
-
-    .account-type-card:hover .card {
-        border-color: #80bdff;
-        box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, .25);
-    }
-
-    .account-type-card input:checked+.card {
-        border-color: #007bff;
-        background-color: #f8fbff;
-    }
-
-    /* Password wrapper styles */
-    .password-wrapper {
-        position: relative;
-        width: 100%;
-    }
-
-    .password-wrapper input {
-        padding-right: 40px;
-        width: 100%;
-    }
-
-    .password-toggle {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        cursor: pointer;
-        z-index: 10;
-        background: transparent;
-        border: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .password-toggle i {
-        font-size: 18px;
-        color: #6c757d;
-        pointer-events: none;
-    }
-
-    .password-toggle:hover i {
-        color: #007bff;
-    }
-
-    .error-message {
-        color: #dc3545;
-        font-size: 12px;
-        margin-top: 4px;
-    }
-
-    .is-invalid {
-        border-color: #dc3545 !important;
-    }
-
-    /* Fix for validation messages */
-    .invalid-feedback {
-        display: block;
-    }
-
-    /* Ensure proper spacing for password fields */
-    .form-group .col-md-6 {
-        position: relative;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .password-toggle i {
-            font-size: 16px;
-        }
-
-        .password-wrapper input {
-            padding-right: 35px;
-        }
-    }
-
-    /* Address dropdown styles */
-    .address-loading {
-        display: none;
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 12px;
-        color: #007bff;
-    }
-
-    .form-group {
-        position: relative;
-    }
-
-    select.form-control:disabled {
-        background-color: #e9ecef;
-        cursor: not-allowed;
-    }
-
-</style>
-@endsection
+@extends('layouts.auth')
 
 @section('content')
-<div class="container">
+
+<div class="container register-wrapper">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>{{ __('Register') }}</span>
-                    </div>
+        <div class="col-lg-10">
+
+            <div class="card register-card">
+
+                <div class="register-header text-center">
+                    <h3>{{ __('Create Your Account') }}</h3>
+                    <p class="mb-0 mt-2">Fill in all required information to register</p>
                 </div>
 
-                <div class="card-body">
+                <div class="register-body">
+
                     <form method="POST" action="{{ route('register') }}" id="registrationForm">
                         @csrf
-                        <!-- Personal Information Section -->
-                        <h5 class="text-center mb-3">Personal Information</h5>
 
-                        <div class="form-group row">
-                            <label for="first_name" class="col-md-4 col-form-label text-md-right">{{ __('First Name') }}</label>
-                            <div class="col-md-6">
-                                <input id="first_name" type="text" class="form-control @error('first_name') is-invalid @enderror" name="first_name" value="{{ old('first_name') }}" required autocomplete="first_name" autofocus>
-                                @error('first_name')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
+                        <!-- PERSONAL INFORMATION -->
+                        <div class="section-title">
+                            Personal Information
                         </div>
 
-                        <div class="form-group row">
-                            <label for="last_name" class="col-md-4 col-form-label text-md-right">{{ __('Last Name') }}</label>
+                        <div class="row">
+
                             <div class="col-md-6">
-                                <input id="last_name" type="text" class="form-control @error('last_name') is-invalid @enderror" name="last_name" value="{{ old('last_name') }}" required autocomplete="last_name">
-                                @error('last_name')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
+                                <div class="form-group">
+                                    <label class="form-label">First Name</label>
 
-                        <div class="form-group row">
-                            <label for="email" class="col-md-4 col-form-label text-md-right">{{ __('E-Mail Address') }}</label>
-                            <div class="col-md-6">
-                                <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email">
-                                @error('email')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
+                                    <input id="first_name" type="text" class="form-control @error('first_name') is-invalid @enderror" name="first_name" value="{{ old('first_name') }}" required>
 
-                        <!-- Business Information Section -->
-                        <h5 class="text-center mb-3 mt-4">Business Information</h5>
-
-                        <div class="form-group row">
-                            <label for="business_name" class="col-md-4 col-form-label text-md-right">{{ __('Business Name') }}</label>
-                            <div class="col-md-6">
-                                <input id="business_name" type="text" class="form-control @error('business_name') is-invalid @enderror" name="business_name" value="{{ old('business_name') }}" autocomplete="business_name">
-                                @error('business_name')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <label for="primary_contact_name" class="col-md-4 col-form-label text-md-right">{{ __('Primary Contact Name') }}</label>
-                            <div class="col-md-6">
-                                <input id="primary_contact_name" type="text" class="form-control @error('primary_contact_name') is-invalid @enderror" name="primary_contact_name" value="{{ old('primary_contact_name') }}" autocomplete="name">
-                                @error('primary_contact_name')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <label for="phone" class="col-md-4 col-form-label text-md-right">{{ __('Phone') }}</label>
-                            <div class="col-md-6">
-                                <input id="phone" type="text" class="form-control @error('phone') is-invalid @enderror" name="phone" value="{{ old('phone') }}" required autocomplete="tel">
-                                @error('phone')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <label for="location" class="col-md-4 col-form-label text-md-right">{{ __('Location') }}</label>
-                            <div class="col-md-6">
-                                <input id="location" type="text" class="form-control @error('location') is-invalid @enderror" name="location" value="{{ old('location') }}" required autocomplete="address-level2">
-                                <small class="form-text text-muted">City/Town name for general location</small>
-                                @error('location')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <label for="website" class="col-md-4 col-form-label text-md-right">{{ __('Website') }}</label>
-                            <div class="col-md-6">
-                                <input id="website" type="url" class="form-control @error('website') is-invalid @enderror" name="website" value="{{ old('website') }}" autocomplete="url" placeholder="https://example.com">
-                                @error('website')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <!-- Address Information Section -->
-                        <h5 class="text-center mb-3 mt-4">Address Information</h5>
-
-                        <div class="form-group row">
-                            <label for="country_id" class="col-md-4 col-form-label text-md-right">{{ __('Country') }}</label>
-                            <div class="col-md-6">
-                                <select id="country_id" name="country_id" class="form-control @error('country_id') is-invalid @enderror" required>
-                                    <option value="">Select Country</option>
-                                    @foreach($countries as $country)
-                                    <option value="{{ $country->country_id }}" {{ old('country_id') == $country->country_id ? 'selected' : '' }}>
-                                        {{ $country->country_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                                @error('country_id')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <label for="state_id" class="col-md-4 col-form-label text-md-right">{{ __('State / Province') }}</label>
-                            <div class="col-md-6">
-                                <select id="state_id" name="state_id" class="form-control @error('state_id') is-invalid @enderror" required disabled>
-                                    <option value="">Select Country First</option>
-                                </select>
-                                <div class="address-loading" id="state-loading">
-                                    <i class="fa fa-spinner fa-spin"></i> Loading...
+                                    @error('first_name')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
                                 </div>
-                                @error('state_id')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
                             </div>
-                        </div>
 
-                        <div class="form-group row">
-                            <label for="city_id" class="col-md-4 col-form-label text-md-right">{{ __('City') }}</label>
                             <div class="col-md-6">
-                                <select id="city_id" name="city_id" class="form-control @error('city_id') is-invalid @enderror" required disabled>
-                                    <option value="">Select State First</option>
-                                </select>
-                                <div class="address-loading" id="city-loading">
-                                    <i class="fa fa-spinner fa-spin"></i> Loading...
+                                <div class="form-group">
+                                    <label class="form-label">Last Name</label>
+
+                                    <input id="last_name" type="text" class="form-control @error('last_name') is-invalid @enderror" name="last_name" value="{{ old('last_name') }}" required>
+
+                                    @error('last_name')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
                                 </div>
-                                @error('city_id')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
                             </div>
-                        </div>
 
-                        <div class="form-group row">
-                            <label for="address" class="col-md-4 col-form-label text-md-right">{{ __('Street Address') }}</label>
                             <div class="col-md-6">
-                                <input id="address" type="text" class="form-control @error('address') is-invalid @enderror" name="address" value="{{ old('address') }}" required autocomplete="address-line1" placeholder="House number, street">
-                                @error('address')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email Address</label>
 
-                        <div class="form-group row">
-                            <label for="postal_code" class="col-md-4 col-form-label text-md-right">{{ __('Postal Code') }}</label>
+                                    <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required>
+
+                                    @error('email')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
                             <div class="col-md-6">
-                                <input id="postal_code" type="text" class="form-control @error('postal_code') is-invalid @enderror" name="postal_code" value="{{ old('postal_code') }}" required autocomplete="postal-code">
-                                @error('postal_code')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
+                                <div class="form-group">
+                                    <label class="form-label">Phone Number</label>
+
+                                    <input id="phone" type="text" class="form-control @error('phone') is-invalid @enderror" name="phone" value="{{ old('phone') }}" required>
+
+                                    @error('phone')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
                             </div>
+
                         </div>
 
-                        <!-- Additional Information Section -->
-                        <h5 class="text-center mb-3">Additional Information</h5>
+                        <!-- BUSINESS INFORMATION -->
+                        <div class="section-title mt-4">
+                            Business Information
+                        </div>
 
-                        <div class="form-group row">
-                            <label for="consent_language_authorizing" class="col-md-4 col-form-label text-md-right">{{ __('Consent Language Authorizing') }}</label>
+                        <div class="row">
+
                             <div class="col-md-6">
-                                <input id="consent_language_authorizing" type="text" class="form-control @error('consent_language_authorizing') is-invalid @enderror" name="consent_language_authorizing" value="{{ old('consent_language_authorizing') }}">
-                                @error('consent_language_authorizing')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
+                                <div class="form-group">
+                                    <label class="form-label">Business Name</label>
 
-                        <div class="form-group row">
-                            <label for="communyti_enrollment" class="col-md-4 col-form-label text-md-right">{{ __('Communyti Enrollment') }}</label>
+                                    <input id="business_name" type="text" class="form-control @error('business_name') is-invalid @enderror" name="business_name" value="{{ old('business_name') }}">
+
+                                    @error('business_name')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
                             <div class="col-md-6">
-                                <input id="communyti_enrollment" type="text" class="form-control @error('communyti_enrollment') is-invalid @enderror" name="communyti_enrollment" value="{{ old('communyti_enrollment') }}">
-                                @error('communyti_enrollment')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
+                                <div class="form-group">
+                                    <label class="form-label">Primary Contact Name</label>
 
-                        <div class="form-group row">
-                            <label for="advocate_contact" class="col-md-4 col-form-label text-md-right">{{ __('Advocate Contact') }}</label>
+                                    <input id="primary_contact_name" type="text" class="form-control @error('primary_contact_name') is-invalid @enderror" name="primary_contact_name" value="{{ old('primary_contact_name') }}">
+
+                                    @error('primary_contact_name')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
                             <div class="col-md-6">
-                                <input id="advocate_contact" type="text" class="form-control @error('advocate_contact') is-invalid @enderror" name="advocate_contact" value="{{ old('advocate_contact') }}" autocomplete="tel">
-                                @error('advocate_contact')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
+                                <div class="form-group">
+                                    <label class="form-label">Location</label>
+
+                                    <input id="location" type="text" class="form-control @error('location') is-invalid @enderror" name="location" value="{{ old('location') }}" required>
+
+                                    <small class="form-text text-muted">
+                                        City/Town name for general location
+                                    </small>
+
+                                    @error('location')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
                             </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Website</label>
+
+                                    <input id="website" type="url" class="form-control @error('website') is-invalid @enderror" name="website" value="{{ old('website') }}" placeholder="https://example.com">
+
+                                    @error('website')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
                         </div>
 
-                        <!-- Account Type Selection -->
-                        <h5 class="text-center mb-3">Account Type</h5>
+                        <!-- ADDRESS INFORMATION -->
+                        <div class="section-title mt-4">
+                            Address Information
+                        </div>
 
-                        <div class="form-group row">
-                            <div class="col-md-10 offset-md-1">
-                                <div class="row">
+                        <div class="row">
 
-                                    <!-- Trade Merchant -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="account-type-card">
-                                            <input type="radio" name="account_type" value="TRADE_MERCHANT" {{ old('account_type') === 'TRADE_MERCHANT' ? 'checked' : '' }} required>
-                                            <div class="card h-100">
-                                                <div class="card-body">
-                                                    <h6 class="card-title mb-1">Trade Merchant</h6>
-                                                    <p class="card-text text-muted small">
-                                                        I run a business and want to accept TradeTokens and vouchers at my POS
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </label>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">Country</label>
+
+                                    <select id="country_id" name="country_id" class="form-control @error('country_id') is-invalid @enderror" required>
+
+                                        <option value="">Select Country</option>
+
+                                        @foreach($countries as $country)
+                                        <option value="{{ $country->id }}" {{ old('country_id')==$country->id ?
+                                            'selected' : '' }}>
+                                            {{ $country->name }}
+                                        </option>
+                                        @endforeach
+
+                                    </select>
+
+                                    @error('country_id')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">State / Province</label>
+
+                                    <select id="state_id" name="state_id" class="form-control @error('state_id') is-invalid @enderror" required disabled>
+                                        <option value="">Select Country First</option>
+                                    </select>
+
+                                    <div class="address-loading" id="state-loading">
+                                        <i class="fa fa-spinner fa-spin"></i>
                                     </div>
 
-                                    <!-- Trade Member -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="account-type-card">
-                                            <input type="radio" name="account_type" value="TRADE_MEMBER" {{ old('account_type') === 'TRADE_MEMBER' ? 'checked' : '' }}>
-                                            <div class="card h-100">
-                                                <div class="card-body">
-                                                    <h6 class="card-title mb-1">Trade Member</h6>
-                                                    <p class="card-text text-muted small">
-                                                        I want to trade with other members but do not run a POS
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    <!-- Organization -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="account-type-card">
-                                            <input type="radio" name="account_type" value="ORGANIZATION" {{ old('account_type') === 'ORGANIZATION' ? 'checked' : '' }}>
-                                            <div class="card h-100">
-                                                <div class="card-body">
-                                                    <h6 class="card-title mb-1">Organization</h6>
-                                                    <p class="card-text text-muted small">
-                                                        I represent a nonprofit or community organization
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    <!-- Favor Member -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="account-type-card">
-                                            <input type="radio" name="account_type" value="FAVOR_MEMBER" {{ old('account_type') === 'FAVOR_MEMBER' ? 'checked' : '' }}>
-                                            <div class="card h-100">
-                                                <div class="card-body">
-                                                    <h6 class="card-title mb-1">Favor Member</h6>
-                                                    <p class="card-text text-muted small">
-                                                        I am a consumer who wants to shop using TradeTokens or vouchers
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </label>
-                                    </div>
-
+                                    @error('state_id')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
                                 </div>
-
-                                @error('account_type')
-                                <span class="text-danger small d-block mt-2">
-                                    {{ $message }}
-                                </span>
-                                @enderror
                             </div>
+
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">City</label>
+
+                                    <select id="city_id" name="city_id" class="form-control @error('city_id') is-invalid @enderror" required disabled>
+
+                                        <option value="">Select State First</option>
+                                    </select>
+
+                                    <div class="address-loading" id="city-loading">
+                                        <i class="fa fa-spinner fa-spin"></i>
+                                    </div>
+
+                                    @error('city_id')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label class="form-label">Street Address</label>
+
+                                    <input id="address" type="text" class="form-control @error('address') is-invalid @enderror" name="address" value="{{ old('address') }}" required>
+
+                                    @error('address')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">Postal Code</label>
+
+                                    <input id="postal_code" type="text" class="form-control @error('postal_code') is-invalid @enderror" name="postal_code" value="{{ old('postal_code') }}" required>
+
+                                    @error('postal_code')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+                                </div>
+                            </div>
+
                         </div>
 
-                        <!-- Password Section -->
-                        <h5 class="text-center mb-3 mt-4">Account Security</h5>
+                        <!-- ADDITIONAL INFORMATION -->
+                        <div class="section-title mt-4">
+                            Additional Information
+                        </div>
 
-                        <div class="form-group row">
-                            <label for="password" class="col-md-4 col-form-label text-md-right">{{ __('Password') }}</label>
+                        <div class="row">
+
                             <div class="col-md-6">
-                                <div class="password-wrapper">
-                                    <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password">
-                                    <button type="button" class="password-toggle" data-target="password">
-                                        <i class="fa fa-eye"></i>
-                                    </button>
-                                </div>
-                                <small class="form-text text-muted">Minimum 8 characters</small>
-                                @error('password')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                                @enderror
-                            </div>
-                        </div>
+                                <div class="form-group">
+                                    <label class="form-label">Consent Language Authorizing</label>
 
-                        <div class="form-group row">
-                            <label for="password-confirm" class="col-md-4 col-form-label text-md-right">{{ __('Confirm Password') }}</label>
+                                    <input id="consent_language_authorizing" type="text" class="form-control" name="consent_language_authorizing" value="{{ old('consent_language_authorizing') }}">
+                                </div>
+                            </div>
+
                             <div class="col-md-6">
-                                <div class="password-wrapper">
-                                    <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password">
-                                    <button type="button" class="password-toggle" data-target="password-confirm">
-                                        <i class="fa fa-eye"></i>
-                                    </button>
+                                <div class="form-group">
+                                    <label class="form-label">Communyti Enrollment</label>
+
+                                    <input id="communyti_enrollment" type="text" class="form-control" name="communyti_enrollment" value="{{ old('communyti_enrollment') }}">
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="form-group row mb-0 mt-4">
-                            <div class="col-md-6 offset-md-4">
-                                <button type="submit" class="btn btn-primary btn-block">
-                                    {{ __('Register') }} &rarr;
-                                </button>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Advocate Contact</label>
 
-                                <div class="text-center mt-3">
-                                    <small class="text-muted">Already have an account? <a href="{{ route('login') }}">Login here</a></small>
+                                    <input id="advocate_contact" type="text" class="form-control" name="advocate_contact" value="{{ old('advocate_contact') }}">
                                 </div>
                             </div>
+
                         </div>
+
+                        <!-- ACCOUNT TYPE -->
+                        <div class="section-title mt-4">
+                            Account Type
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-4">
+                                <label class="account-type-card">
+
+                                    <input type="radio" name="account_type" value="TRADE_MERCHANT" {{
+                                        old('account_type')=='TRADE_MERCHANT' ? 'checked' : '' }} required>
+
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6>Trade Merchant</h6>
+                                            <p class="text-muted mb-0">
+                                                I run a business and want to accept
+                                                TradeTokens and vouchers at my POS
+                                            </p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="col-md-6 mb-4">
+                                <label class="account-type-card">
+
+                                    <input type="radio" name="account_type" value="TRADE_MEMBER" {{
+                                        old('account_type')=='TRADE_MEMBER' ? 'checked' : '' }}>
+
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6>Trade Member</h6>
+                                            <p class="text-muted mb-0">
+                                                I want to trade with other members
+                                                but do not run a POS
+                                            </p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="col-md-6 mb-4">
+                                <label class="account-type-card">
+
+                                    <input type="radio" name="account_type" value="ORGANIZATION" {{
+                                        old('account_type')=='ORGANIZATION' ? 'checked' : '' }}>
+
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6>Organization</h6>
+                                            <p class="text-muted mb-0">
+                                                I represent a nonprofit or community organization
+                                            </p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="col-md-6 mb-4">
+                                <label class="account-type-card">
+
+                                    <input type="radio" name="account_type" value="FAVOR_MEMBER" {{
+                                        old('account_type')=='FAVOR_MEMBER' ? 'checked' : '' }}>
+
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6>Favor Member</h6>
+                                            <p class="text-muted mb-0">
+                                                I am a consumer who wants to shop
+                                                using TradeTokens or vouchers
+                                            </p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                        </div>
+
+                        <!-- ACCOUNT SECURITY -->
+                        <div class="section-title mt-4">
+                            Account Security
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+
+                                    <label class="form-label">Password</label>
+
+                                    <div class="password-wrapper">
+
+                                        <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required>
+
+                                        <button type="button" class="password-toggle" data-target="password">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+
+                                    </div>
+
+                                    <small class="form-text text-muted">
+                                        Minimum 8 characters
+                                    </small>
+
+                                    @error('password')
+                                    <span class="invalid-feedback">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                    @enderror
+
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+
+                                    <label class="form-label">
+                                        Confirm Password
+                                    </label>
+
+                                    <div class="password-wrapper">
+
+                                        <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required>
+
+                                        <button type="button" class="password-toggle" data-target="password-confirm">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- SUBMIT -->
+                        <div class="text-center mt-4">
+
+                            <button type="submit" class="btn btn-primary btn-register px-5">
+                                Register Account →
+                            </button>
+
+                            <div class="login-link">
+                                <small class="text-muted">
+                                    Already have an account ?
+                                    <a href="{{ route('login') }}">
+                                        Login Here
+                                    </a>
+                                </small>
+                            </div>
+
+                        </div>
+
                     </form>
+
                 </div>
+
             </div>
+
         </div>
     </div>
 </div>
+
+
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
@@ -535,7 +509,7 @@
                 , success: function(states) {
                     stateSelect.html('<option value="">Select State</option>');
                     $.each(states, function(key, state) {
-                        stateSelect.append('<option value="' + state.id_state + '">' + state.state + '</option>');
+                        stateSelect.append('<option value="' + state.id + '">' + state.name + '</option>');
                     });
                     stateSelect.prop('disabled', false);
                     $('#state-loading').hide();
@@ -569,7 +543,7 @@
                 , success: function(cities) {
                     citySelect.html('<option value="">Select City</option>');
                     $.each(cities, function(key, city) {
-                        citySelect.append('<option value="' + city.id_city + '">' + city.city + '</option>');
+                        citySelect.append('<option value="' + city.id + '">' + city.name + '</option>');
                     });
                     citySelect.prop('disabled', false);
                     $('#city-loading').hide();
@@ -781,4 +755,5 @@
     });
 
 </script>
+
 @endsection
