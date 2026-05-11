@@ -24,6 +24,7 @@ Route::prefix('pax')->group(function () {
             /** ****************** Product Routes ****************** */
             Route::prefix('products')->name('products.')->group(function () {
                 Route::get('/', [PaxProductsController::class, 'getMerchantProducts']);
+                Route::get('/categories', [PaxProductsController::class, 'getCategories']);
             });
 
             /** ****************** Customer Routes ****************** */

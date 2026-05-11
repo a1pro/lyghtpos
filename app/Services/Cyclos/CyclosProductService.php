@@ -477,4 +477,105 @@ class CyclosProductService
 
         return true;
     }
+
+    /**
+     * Get minimal categories data (only id, name, and children with their ids)
+     */
+    public function getMinimalCategories(string $cyclosUserId): array
+    {
+        try {
+            // Build URL with the correct endpoint
+            $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace/data-for-search?kind=webshop";
+
+            Log::info('Fetching categories from Cyclos', [
+                'cyclos_user_id' => $cyclosUserId,
+                'url' => $url,
+            ]);
+
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->get($url);
+
+            if ($response->failed()) {
+                Log::error('Failed to fetch categories from Cyclos', [
+                    'cyclos_user_id' => $cyclosUserId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return [];
+            }
+
+            $responseData = $response->json();
+
+            // Extract and transform only the needed data
+            if (!isset($responseData['categories']) || !is_array($responseData['categories'])) {
+                return [];
+            }
+
+            return $this->transformCategories($responseData['categories']);
+        } catch (Exception $e) {
+            Log::error('Exception in getMinimalCategories', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Transform categories to minimal format (only id, name, and children)
+     */
+    private function transformCategories(array $categories): array
+    {
+        $transformed = [];
+
+        foreach ($categories as $category) {
+            $transformedCategory = [
+                'id' => $category['id'],
+                'name' => $category['name'],
+            ];
+
+            // Add children if they exist
+            if (isset($category['children']) && is_array($category['children']) && !empty($category['children'])) {
+                $transformedCategory['children'] = $this->transformChildren($category['children']);
+            } else {
+                $transformedCategory['children'] = [];
+            }
+
+            $transformed[] = $transformedCategory;
+        }
+
+        return $transformed;
+    }
+
+    /**
+     * Transform children categories recursively
+     */
+    private function transformChildren(array $children): array
+    {
+        $transformed = [];
+
+        foreach ($children as $child) {
+            $transformedChild = [
+                'id' => $child['id'],
+                'name' => $child['name'],
+            ];
+
+            // Recursively handle nested children if any
+            if (isset($child['children']) && is_array($child['children']) && !empty($child['children'])) {
+                $transformedChild['children'] = $this->transformChildren($child['children']);
+            } else {
+                $transformedChild['children'] = [];
+            }
+
+            $transformed[] = $transformedChild;
+        }
+
+        return $transformed;
+    }
 }
