@@ -23,6 +23,7 @@ use App\Http\Controllers\Merchant\MerchantProductController;
 use App\Http\Controllers\Merchant\MerchantProductImportController;
 use App\Http\Controllers\Merchant\WalletController;
 use App\Http\Controllers\Merchant\CategoryController;
+use App\Http\Controllers\Merchant\MerchantAdvertisementController;
 use App\Http\Controllers\Merchant\MerchantProfileController;
 use App\Http\Controllers\Merchant\MerchantManageSubscriptionController;
 use App\Http\Controllers\Merchant\MerchantSettingController;
@@ -156,6 +157,16 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
             Route::post('/retry/{cyclosImportId}', [MerchantProductImportController::class, 'retryFailed'])->name('retry');
             Route::get('/download-errors/{cyclosImportId}', [MerchantProductImportController::class, 'downloadErrors'])->name('download-errors');
         });
+    });
+
+    // *********************** Advertisements (simple) Routes ***********************
+    Route::prefix('advertisements')->name('advertisements.')->group(function () {
+        Route::get('/', [MerchantAdvertisementController::class, 'index'])->name('index');
+        Route::get('create', [MerchantAdvertisementController::class, 'create'])->name('create');
+        Route::post('/', [MerchantAdvertisementController::class, 'store'])->name('store');
+        Route::get('{advertisement}/edit', [MerchantAdvertisementController::class, 'edit'])->name('edit');
+        Route::put('{product}', [MerchantAdvertisementController::class, 'update'])->name('update');
+        Route::delete('{advertisement}', [MerchantAdvertisementController::class, 'destroy'])->name('destroy');
     });
 
     // *********************** Categories Routes ***********************

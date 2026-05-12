@@ -569,7 +569,7 @@ class MerchantProductService
     /**
      * Create a product in Cyclos marketplace
      */
-    public function createProduct(string $cyclosUserId, array $productData, ?UploadedFile $image = null): array
+    public function createProduct(string $cyclosUserId, array $productData, ?UploadedFile $image = null, ?string $kind = 'webshop'): array
     {
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/marketplace";
@@ -643,22 +643,40 @@ class MerchantProductService
             }
 
             // Prepare the product data for Cyclos API
-            $cyclosProductData = [
-                'name' => $productData['name'],
-                'description' => $productData['description'] ?? '',
-                'publicationPeriod' => [
-                    'begin' => $beginDate->toIso8601String(),
-                    'end' => $endDate ? $endDate->toIso8601String() : null,
-                ],
-                'categories' => [$categoryId],
-                'currency' => $this->currencyCode,
-                'price' => (float) $productData['price'],
-                'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
-                'stockQuantity' => (int) ($productData['quantity'] ?? 1),
-                'allowDecimalQuantity' => false,
-                'kind' => 'webshop',
-                'customValues' => $customValues,
-            ];
+            if ($kind == 'simple') {
+                $cyclosProductData = [
+                    'name' => $productData['name'],
+                    'description' => $productData['description'] ?? '',
+                    'publicationPeriod' => [
+                        'begin' => $beginDate->toIso8601String(),
+                        'end' => $endDate ? $endDate->toIso8601String() : null,
+                    ],
+                    'categories' => [$categoryId],
+                    'kind' => $kind,
+                    'customValues' => $customValues,
+                ];
+                if ($productData['price'] && $productData['price'] > 0) {
+                    $cyclosProductData['currency'] =  $this->currencyCode;
+                    $cyclosProductData['price'] =  (float) $productData['price'];
+                }
+            } else {
+                $cyclosProductData = [
+                    'name' => $productData['name'],
+                    'description' => $productData['description'] ?? '',
+                    'publicationPeriod' => [
+                        'begin' => $beginDate->toIso8601String(),
+                        'end' => $endDate ? $endDate->toIso8601String() : null,
+                    ],
+                    'categories' => [$categoryId],
+                    'currency' => $this->currencyCode,
+                    'price' => (float) $productData['price'],
+                    'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
+                    'stockQuantity' => (int) ($productData['quantity'] ?? 1),
+                    'allowDecimalQuantity' => false,
+                    'kind' => $kind,
+                    'customValues' => $customValues,
+                ];
+            }
 
             // Add barcode as a separate field if it's a standard field (not custom)
             // Some Cyclos versions have barcode as a separate field
@@ -872,7 +890,7 @@ class MerchantProductService
      * Update a product in Cyclos marketplace
      * PUT /api/marketplace/{productId}
      */
-    public function updateProduct(string $cyclosUserId, string $productId, array $productData): array
+    public function updateProduct(string $cyclosUserId, string $productId, array $productData, ?string $kind = 'webshop'): array
     {
         try {
             // First get the version of ad for edit
@@ -933,22 +951,41 @@ class MerchantProductService
             ];
 
             // Prepare the product data for Cyclos API
-            $cyclosProductData = [
-                'name' => $productData['name'],
-                'description' => $productData['description'] ?? '',
-                'price' => (float) $productData['price'],
-                'stockQuantity' => (int) ($productData['quantity'] ?? 1),
-                'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
-                'hidden' => false,
-                'currency' => $this->currencyCode,
-                'customValues' => $customValues,
-                'publicationPeriod' => [
-                    'begin' => now()->toIso8601String(),
-                    'end' => now()->addYear()->toIso8601String(),
-                ],
-                'categories' =>  $categoryId,
-                'version' => $version
-            ];
+            if ($kind == 'simple') {
+                $cyclosProductData = [
+                    'name' => $productData['name'],
+                    'description' => $productData['description'] ?? '',
+                    'hidden' => false,
+                    'customValues' => $customValues,
+                    'publicationPeriod' => [
+                        'begin' => now()->toIso8601String(),
+                        'end' => now()->addYear()->toIso8601String(),
+                    ],
+                    'categories' =>  $categoryId,
+                    'version' => $version
+                ];
+                if ($productData['price'] && $productData['price'] > 0) {
+                    $cyclosProductData['currency'] =  $this->currencyCode;
+                    $cyclosProductData['price'] =  (float) $productData['price'];
+                }
+            } else {
+                $cyclosProductData = [
+                    'name' => $productData['name'],
+                    'description' => $productData['description'] ?? '',
+                    'price' => (float) $productData['price'],
+                    'stockQuantity' => (int) ($productData['quantity'] ?? 1),
+                    'unlimitedStock' => isset($productData['unlimited_stock']) ? (bool) $productData['unlimited_stock'] : false,
+                    'hidden' => false,
+                    'currency' => $this->currencyCode,
+                    'customValues' => $customValues,
+                    'publicationPeriod' => [
+                        'begin' => now()->toIso8601String(),
+                        'end' => now()->addYear()->toIso8601String(),
+                    ],
+                    'categories' =>  $categoryId,
+                    'version' => $version
+                ];
+            }
 
             Log::info('Updating product in Cyclos', [
                 'cyclos_user_id' => $cyclosUserId,
@@ -1186,7 +1223,7 @@ class MerchantProductService
         $updatedAt = $rawProduct['lastModifiedDate'] ?? $rawProduct['updatedAt'] ?? $rawProduct['publicationPeriod']['end'] ?? null;
 
         // Get currency symbol
-        $currencySymbol = $this->getCurrencySymbol($rawProduct['currency'] ?? 'unit');
+        $currencySymbol = $this->getCurrencySymbol($rawProduct['currency'] ?? 'N/A');
 
         return [
             'id' => $rawProduct['id'] ?? $rawProduct['_id'] ?? null,
@@ -1238,7 +1275,7 @@ class MerchantProductService
             elseif (!empty($currency)) {
                 $currencyCode = $currency[0];
             } else {
-                $currencyCode = 'unit'; // default fallback
+                $currencyCode = 'N/A'; // default fallback
             }
         }
         // If it's a string, use it directly
@@ -1318,6 +1355,11 @@ class MerchantProductService
             if ($end && $now > $end) {
                 return false;
             }
+        }
+
+        // Check for ad kind
+        if ($product['kind'] == 'simple') {
+            return true;
         }
 
         // Check stock
