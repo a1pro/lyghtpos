@@ -169,19 +169,16 @@
                                 <div class="custom-control custom-radio custom-control-inline">
                                     <input type="radio" id="tradeTypeOffer" name="trade_type" value="tradeTypeOffer" class="custom-control-input" {{ old('trade_type', 'tradeTypeOffer') == 'tradeTypeOffer' ? 'checked' : '' }}>
                                     <label class="custom-control-label" for="tradeTypeOffer">
-                                        <strong>Offer</strong> - I want to sell this product
+                                        <strong>Offer</strong>
                                     </label>
                                 </div>
                                 <div class="custom-control custom-radio custom-control-inline">
                                     <input type="radio" id="tradeTypeDemand" name="trade_type" value="tradeTypeDemand" class="custom-control-input" {{ old('trade_type') == 'tradeTypeDemand' ? 'checked' : '' }}>
                                     <label class="custom-control-label" for="tradeTypeDemand">
-                                        <strong>Demand</strong> - I want to buy this product
+                                        <strong>Demand</strong>
                                     </label>
                                 </div>
                             </div>
-                            <small class="form-text text-muted">
-                                Specify whether you're offering this product for sale or requesting to buy it
-                            </small>
                         </div>
                     </div>
                 </div>

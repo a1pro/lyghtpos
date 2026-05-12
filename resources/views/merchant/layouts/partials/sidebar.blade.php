@@ -27,7 +27,7 @@
                 <!-- POS -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.team-members.index') }}" class="nav-link {{ request()->routeIs('merchant.team-members.index') ? 'active' : '' }}">
-                        <i class="fa-solid fa-people-group"></i>
+                        <i class="nav-icon fas fa-people-group"></i>
                         <p>Team Members</p>
                     </a>
                 </li>
@@ -52,7 +52,7 @@
                 <!-- External links -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.external-links') }}" class="nav-link {{ request()->routeIs('merchant.external-links') ? 'active' : '' }}">
-                        <i class="fa-solid fa-link"></i>
+                        <i class="nav-icon fas fa-link"></i>
                         <p>{{ __('External Links') }}</p>
                     </a>
                 </li>
@@ -60,8 +60,17 @@
                 <!-- Products -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.products.index') }}" class="nav-link {{ activeSegment('products') ? 'active' : '' }}">
-                        <i class="fa-solid fa-bag-shopping"></i>
+                        <i class="nav-icon fas fa-bag-shopping"></i>
                         <p>{{ __('product.title') }}</p>
+                    </a>
+                </li>
+
+                <!-- Advertisements -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.advertisements.index') }}" class="nav-link {{ activeSegment('advertisements') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-bullhorn"></i>
+
+                        <p>{{ 'Advertisements' }}</p>
                     </a>
                 </li>
 
