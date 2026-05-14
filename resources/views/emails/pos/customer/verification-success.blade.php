@@ -81,7 +81,6 @@
             <div class="details">
                 <p><strong>Verification Details:</strong></p>
                 <p>📧 Email: {{ $user->email }}</p>
-                <p>🕐 Verified on: {{ \Carbon\Carbon::parse($verificationTime)->format('F j, Y g:i A') }}</p>
             </div>
 
             <p>You can now enjoy all the features and services offered by {{ $appName }}.</p>

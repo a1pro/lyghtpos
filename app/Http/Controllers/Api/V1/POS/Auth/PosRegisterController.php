@@ -106,7 +106,7 @@ class PosRegisterController extends Controller
                     'success' => false,
                     'status_code' => 400,
                     'message' => $verification['message']
-                ]);
+                ],400);
             }
 
             Mail::to($user->email)->send(new CustomerVerificationSuccessMail($user, now()));
