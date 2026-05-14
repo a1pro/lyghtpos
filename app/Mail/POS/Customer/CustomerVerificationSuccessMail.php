@@ -3,7 +3,6 @@
 namespace App\Mail\POS\Customer;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -48,7 +47,14 @@ class CustomerVerificationSuccessMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.pos.customer.verification-success',
+            view: 'emails.pos.customer.verification-success',
+            with: [
+                'user' => $this->user,
+                'verificationTime' => $this->verificationTime,
+                'appName' => $this->appName,
+                'appUrl' => $this->appUrl,
+                'currentYear' => $this->currentYear
+            ]
         );
     }
 
