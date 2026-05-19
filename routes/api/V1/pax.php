@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PAX\Auth\PaxAuthController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxCustomersController;
+use App\Http\Controllers\Api\V1\PAX\Merchant\PaxMerchantProfileController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxMerchantSettingsController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxOrderController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxProductsController;
@@ -42,6 +43,12 @@ Route::prefix('pax')->group(function () {
             /** ****************** Merchant Settings Routes ****************** */
             Route::prefix('settings')->name('settings')->group(function () {
                 Route::get('/', [PaxMerchantSettingsController::class, 'getMerchantSettings']);
+            });
+
+            /** ****************** Merchant Profile Routes ****************** */
+            Route::prefix('profile')->name('profile')->group(function () {
+                Route::get('/', [PaxMerchantProfileController::class, 'userProfile']);
+                Route::post('/update-address', [PaxMerchantProfileController::class, 'updateMerchantAddress']);
             });
         });
     });
