@@ -279,7 +279,7 @@ class MerchantCyclosOrderService
                     "zip" => $merchantAddress->postal_code ?? null,
                     "city" => $merchantAddress->city_name ?? null,
                     "region" => $merchantAddress->state_name ?? null,
-                    "country" => $merchantAddress->country_name ?? null,
+                    "country" => $merchantAddress->countryRelation->shortname ?? null,
                 ],
                 "draft" => false,
                 "items" => $orderData['items'],
