@@ -272,6 +272,10 @@
                                 <i class="fas fa-envelope"></i> {{ $user->email }}
                             </p>
 
+                            <p class="text-muted mb-2">
+                                Merchant ID: {{ $merchant->merchant_id ?? '' }}
+                            </p>
+
                             <div class="mb-3">
                                 @if($user->subscribed)
                                     <span class="badge-subscribed">
@@ -403,6 +407,10 @@
                                         <i class="fas fa-coins"></i> Tokens
                                         @elseif($type == 'hybrid')
                                         <i class="fas fa-exchange-alt"></i> Hybrid
+                                        @elseif($type == 'pos_mobile')
+                                        <i class="fas fa-mobile-alt"></i> Lyght App
+                                        @elseif($type == 'cash')
+                                        <i class="fas fa-money-bill"></i> Cash
                                         @else
                                         {{ ucfirst($type) }}
                                         @endif
@@ -674,6 +682,20 @@
                                 <input type="checkbox" name="pos_payment_types[]" value="hybrid" {{ in_array('hybrid', $selectedPayments) ? 'checked' : '' }} class="payment-checkbox">
                                 <span class="payment-checkbox-label">
                                     <i class="fas fa-exchange-alt"></i> Hybrid Payments
+                                </span>
+                            </label>
+
+                            <label class="payment-checkbox-item">
+                                <input type="checkbox" name="pos_payment_types[]" value="pos_mobile" {{ in_array('pos_mobile', $selectedPayments) ? 'checked' : '' }} class="payment-checkbox">
+                                <span class="payment-checkbox-label">
+                                    <i class="fas fa-mobile-alt"></i> Lyght App
+                                </span>
+                            </label>
+
+                            <label class="payment-checkbox-item">
+                                <input type="checkbox" name="pos_payment_types[]" value="cash" {{ in_array('cash', $selectedPayments) ? 'checked' : '' }} class="payment-checkbox">
+                                <span class="payment-checkbox-label">
+                                    <i class="fas fa-money-bill"></i> Cash
                                 </span>
                             </label>
                         </div>

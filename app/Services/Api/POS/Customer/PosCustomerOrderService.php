@@ -5,6 +5,7 @@ namespace App\Services\Api\POS\Customer;
 use App\Models\Customer;
 use App\Models\MerchantOrder;
 use App\Models\User;
+use App\Services\Api\PAX\Merchant\PaxMerchantOrderService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Auth;
@@ -18,15 +19,18 @@ class PosCustomerOrderService
     protected $customerWallet;
     protected $cyclosPayment;
     protected $merchantCyclosOrderService;
+    protected PaxMerchantOrderService $paxMerchantOrderService;
 
     public function __construct(
         PosCustomerWalletService $customerWallet,
         CyclosPaymentService $cyclosPayment,
-        MerchantCyclosOrderService $merchantCyclosOrderService
+        MerchantCyclosOrderService $merchantCyclosOrderService,
+        PaxMerchantOrderService $paxMerchantOrderService
     ) {
         $this->customerWallet = $customerWallet;
         $this->cyclosPayment =  $cyclosPayment;
         $this->merchantCyclosOrderService =  $merchantCyclosOrderService;
+        $this->paxMerchantOrderService = $paxMerchantOrderService;
     }
 
     /**
@@ -120,8 +124,28 @@ class PosCustomerOrderService
                 'status' => 'completed',
                 'payment_status' => 'paid',
                 'paid_at' => now(),
-                'notes' => "Order marked as accepted from buyer."
+                'notes' => "Order marked as accepted from buyer.",
             ]);
+
+            if ($orderDetail->tax_amount > 0) {
+                // Process tax as separate transfer
+                $taxResult = $this->paxMerchantOrderService->processTaxPayment(
+                    $orderDetail,
+                    $orderDetail->tax_amount,
+                    "Tax payment for lyght app order completion trigger #{$orderDetail->order_number} - Amount: {$orderDetail->tax_amount}"
+                );
+
+                if (!$taxResult['success']) {
+                    throw new \Exception('Tax payment failed: ' . ($taxResult['message'] ?? 'Unknown error'));
+                }
+
+                $result['tax_transaction_id'] = $taxResult['transaction_id'] ?? null;
+                MerchantOrder::where('id', $orderId)->update([
+                    'payment_metadata' => array_merge($orderDetail->payment_metadata ?? [], [
+                        'tax_transaction_id' => $taxResult['transaction_id'] ?? null,
+                    ])
+                ]);
+            }
 
             Log::info('Order completed - Buyer accepted order', [
                 'order_id' => $orderId,

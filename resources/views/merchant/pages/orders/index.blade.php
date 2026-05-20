@@ -47,7 +47,10 @@
                             'cash' => 'Cash',
                             'unyti' => 'Unyti Credits',
                             'pax' => 'PAX',
-                            'pos_mobile' => 'POS Mobile'
+                            'pos_mobile' => 'POS Mobile',
+                            'cyclos_tokens' => 'Cyclos Tokens',
+                            'card' => 'Card',
+                            'hybrid' => 'Hybrid (Card + Tokens)',
                             ];
                             @endphp
                             {{ $methodLabels[$order->payment_method] ?? ucfirst($order->payment_method) }}

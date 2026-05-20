@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class MerchantOrderService
 {
-    protected $customerWallet;
-    protected $cyclosPayment;
-    protected $merchantCyclosOrderService;
+    protected MerchantCyclosOrderService $merchantCyclosOrderService;
 
     public function __construct(
         MerchantCyclosOrderService $merchantCyclosOrderService
@@ -29,9 +27,10 @@ class MerchantOrderService
         array $cartItems,
         string $paymentMethod,
         float $totalAmount,
-        ?string $notes = null
+        ?string $notes = null,
+        ?float $taxAmount = null
     ): MerchantOrder {
-        return DB::transaction(function () use ($customerCyclosId, $cartItems, $paymentMethod, $totalAmount, $notes) {
+        return DB::transaction(function () use ($customerCyclosId, $cartItems, $paymentMethod, $totalAmount, $notes, $taxAmount) {
             $merchant = Auth::user();
             $merchantId = $merchant->id;
 
@@ -49,6 +48,7 @@ class MerchantOrderService
                 'merchant_id' => $merchantId,
                 'customer_cyclos_id' => $customerCyclosId,
                 'total_amount' => $totalAmount,
+                'tax_amount' => $taxAmount,
                 'payment_method' => $paymentMethod,
                 'status' => $status,
                 'payment_status' => $paymentStatus,
@@ -57,7 +57,7 @@ class MerchantOrderService
 
             // Create order items
             foreach ($cartItems as $item) {
-                $quantity = $item['pivot']['quantity'] ?? 1;
+                $quantity = $item['pivot']['quantity'] ?? $item['quantity'] ?? 1;
                 $price = floatval($item['price'] ?? 0);
 
                 MerchantOrderItem::create([

@@ -20,11 +20,11 @@ class CustomerStoreRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],
             'avatar' => ['nullable', 'image', 'max:2048'],
-            'country_id' => 'required|exists:countries,country_id',
-'state_id' => 'required|exists:states,id_state',
-'city_id' => 'required|exists:cities,id_city',
-'address' => 'required|string|max:255',
-'postal_code' => 'required|string|max:20',
+            'country_id' => 'required|exists:countries,id',
+            'state_id' => 'required|exists:states,id',
+            'city_id' => 'required|exists:cities,id',
+            'address' => 'required|string|max:255',
+            'postal_code' => 'required|string|max:20',
         ];
     }
 
@@ -41,10 +41,10 @@ class CustomerStoreRequest extends FormRequest
             'avatar.image' => __('Avatar must be an image file'),
             'avatar.max' => __('Avatar may not be greater than 2048 kilobytes'),
             'country_id' => 'required|exists:countries,country_id',
-        'state_id' => 'required|exists:states,id_state',
-        'city_id' => 'required|exists:cities,id_city',
-        'address' => 'required|string|max:255',
-        'postal_code' => 'required|string|max:20',
+            'state_id' => 'required|exists:states,id_state',
+            'city_id' => 'required|exists:cities,id_city',
+            'address' => 'required|string|max:255',
+            'postal_code' => 'required|string|max:20',
         ];
     }
 }

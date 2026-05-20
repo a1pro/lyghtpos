@@ -8,6 +8,7 @@ use App\Http\Requests\Api\PAX\Merchant\PaxCustomerCreateOrderRequest;
 use App\Models\MerchantOrder;
 use App\Models\User;
 use App\Services\Api\PAX\Merchant\PaxMerchantOrderService;
+use App\Services\Merchant\MerchantOrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -58,10 +59,13 @@ class PaxOrderController extends Controller
             $products = $request->products;
             $notes = $request->notes ?? null;
 
-            if ($paymentMethod === 'card') {
+            if ($paymentMethod == 'card') {
                 $tokenAmount = null;
-            } elseif ($paymentMethod === 'cyclos_tokens') {
+            } elseif ($paymentMethod == 'cyclos_tokens') {
                 $cardAmount = null;
+            } elseif ($paymentMethod == 'pos_mobile' && $paymentMethod == 'cash') {
+                $cardAmount = null;
+                $tokenAmount = null;
             }
 
             // Create pending order

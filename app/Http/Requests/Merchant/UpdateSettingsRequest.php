@@ -36,7 +36,7 @@ class UpdateSettingsRequest extends FormRequest
             ],
             'pos_payment_types.*' => [
                 'string',
-                'in:card,tokens,hybrid'
+                'in:card,tokens,hybrid,pos_mobile,cash'
             ]
         ];
     }
@@ -56,7 +56,7 @@ class UpdateSettingsRequest extends FormRequest
             'pos_payment_types.required' => 'At least one payment type must be selected.',
             'pos_payment_types.array' => 'The payment types must be submitted as an array.',
             'pos_payment_types.min' => 'Please select at least one payment type.',
-            'pos_payment_types.*.in' => 'The selected payment type is invalid. Allowed types: card, tokens, hybrid.'
+            'pos_payment_types.*.in' => 'The selected payment type is invalid. Allowed types: card, tokens, hybrid, pos_mobile, cash.'
         ];
     }
 
