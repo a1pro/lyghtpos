@@ -29,7 +29,7 @@ class PaxCustomerCreateOrderRequest extends FormRequest
 
             'payment_method' => [
                 'required',
-                Rule::in(['card', 'cyclos_tokens', 'hybrid'])
+                Rule::in(['card', 'cyclos_tokens', 'hybrid', 'pos_mobile', 'cash']),
             ],
 
             // Payment amounts based on method
@@ -93,7 +93,7 @@ class PaxCustomerCreateOrderRequest extends FormRequest
             'total_amount.required' => 'Total amount is required',
 
             'payment_method.required' => 'Payment method is required',
-            'payment_method.in' => 'Payment method must be either card, cyclos_tokens, or hybrid',
+            'payment_method.in' => 'Payment method must be either card, cyclos_tokens, hybrid, pos_mobile, or cash',
 
             'token_amount.required_if' => 'Token amount is required for token or hybrid payment',
             'card_amount.required_if' => 'Card amount is required for card or hybrid payment',

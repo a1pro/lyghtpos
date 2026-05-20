@@ -36,12 +36,6 @@
                             </tr>
                             @endforeach
                         </tbody>
-                        <tfoot>
-                            <tr class="table-active">
-                                <th colspan="3" class="text-end">Total:</th>
-                                <th>{{ config('settings.currency_symbol', '$') }} {{ number_format($order->total_amount, 2) }}</th>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -57,6 +51,9 @@
                 <dl class="row mb-0">
                     <dt class="col-sm-5">Order Number:</dt>
                     <dd class="col-sm-7"><code>{{ $order->order_number }}</code></dd>
+
+                    <dt class="col-sm-5">Tax Amount:</dt>
+                    <dd class="col-sm-7"><code>{{ $order->tax_amount }}</code></dd>
 
                     <dt class="col-sm-5">Status:</dt>
                     <dd class="col-sm-7">
@@ -78,7 +75,10 @@
                         'cash' => 'Cash',
                         'unyti' => 'Unyti Credits',
                         'pax' => 'PAX',
-                        'pos_mobile' => 'POS Mobile'
+                        'pos_mobile' => 'POS Mobile',
+                        'cyclos_tokens' => 'Cyclos Tokens',
+                        'card' => 'Card',
+                        'hybrid' => 'Hybrid (Card + Tokens)',
                         ];
                         @endphp
                         {{ $methodLabels[$order->payment_method] ?? ucfirst($order->payment_method) }}

@@ -2,13 +2,13 @@
 
 namespace App\Services\Api\PAX\Merchant;
 
-use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use App\Models\MerchantOrder;
 use App\Models\MerchantOrderItem;
 use App\Models\User;
 use App\Services\Api\POS\Customer\PosCustomerWalletService;
 use App\Services\Cyclos\MerchantCyclosOrderService;
 use App\Services\FavorMember\CyclosPayment\CyclosPaymentService;
+use App\Services\Merchant\MerchantOrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -18,15 +18,18 @@ class PaxMerchantOrderService
     protected MerchantCyclosOrderService $merchantCyclosOrderService;
     protected PosCustomerWalletService $customerWallet;
     protected CyclosPaymentService $cyclosPaymentService;
+    protected MerchantOrderService $merchantOrderService;
 
     public function __construct(
         MerchantCyclosOrderService $merchantCyclosOrderService,
         PosCustomerWalletService $customerWallet,
-        CyclosPaymentService $cyclosPaymentService
+        CyclosPaymentService $cyclosPaymentService,
+        MerchantOrderService $merchantOrderService
     ) {
         $this->merchantCyclosOrderService =  $merchantCyclosOrderService;
         $this->customerWallet =  $customerWallet;
         $this->cyclosPaymentService =  $cyclosPaymentService;
+        $this->merchantOrderService = $merchantOrderService;
     }
 
     /**
@@ -55,32 +58,74 @@ class PaxMerchantOrderService
             $cardPortion = null;
 
             if ($paymentMethod === 'card') {
+                /** For card-only, the entire grand total is paid with card (including tax)
+                 * We will credit tokens for the total and cyclos will settle order amount (excluding tax)
+                 * we will not crediting the tax amount as we will not be deducting tax in cyclos (tax is paid externally with card and not handled in Cyclos)
+                 * Only we will make credit with token which required for settling the cyclos order
+                 */
                 $cardPortion = $grandTotal;
                 $tokenPortion = 0;
             } elseif ($paymentMethod === 'cyclos_tokens') {
+                /** For token-only, the entire grand total is paid with tokens (including tax)
+                 * Cyclos will settle the order amount (excluding tax) and we will handle tax as part of separate token deduction
+                 */
                 $tokenPortion = $grandTotal;
                 $cardPortion = 0;
 
-                // Verify token balance for token-only payment (products + tax)
                 $balance = $this->customerWallet->getCustomerWalletBalance($customerCyclosId);
                 if ($balance < (float) $tokenPortion) {
                     throw new \Exception("Customer does not have enough tokens! Available: {$balance}, Required: {$tokenPortion}");
                 }
             } elseif ($paymentMethod === 'hybrid') {
+                /** For hybrid, we expect both cardAmount and tokenAmount to be provided (excluding tax)
+                 * The grand total is split between card and token portions, but tax is applied to card only and will be handled separately
+                 */
                 $tokenPortion = $tokenAmount;
                 $cardPortion = $cardAmount;
 
-                // Verify token portion doesn't exceed total
                 if ($tokenPortion > $grandTotal) {
                     throw new \Exception("Token portion ({$tokenPortion}) cannot exceed grand total ({$grandTotal})");
                 }
 
-                // Verify token balance for hybrid payment (only token portion needed)
                 if ($tokenPortion > 0) {
                     $balance = $this->customerWallet->getCustomerWalletBalance($customerCyclosId);
                     if ($balance < (float) $tokenPortion) {
                         throw new \Exception("Customer does not have enough tokens! Available: {$balance}, Required: {$tokenPortion}");
                     }
+                }
+            } elseif ($paymentMethod === 'cash') {
+                /** For Cash, we will create order with pending status and complete it immediately
+                 * with cash payment method, we won't have card or token portions
+                 * We assume that this method is called after successful cash payment is confirmed on the client side
+                 * We will credit the total amount to the customer's Cyclos account (exluding tax) 
+                 * as tax credit is not required as we will not be deducting tax (tax is paid in cash and not handled in Cyclos)
+                 * By cyclos setteling the amount (excluding tax)
+                 */
+                $cardPortion = null;
+                $tokenPortion = null;
+            } elseif ($paymentMethod === 'pos_mobile') {
+                /** For POS Mobile, we will create order with pending status and complete it after successful payment confirmation from POS Lyght Mobile App
+                 * We won't have card or token portions as the payment is handled externally via POS Lyght Mobile App
+                 * We will handle this with another already built service method and return from here
+                 */
+                $cardPortion = null;
+                $tokenPortion = null;
+                try {
+                    $order = $this->merchantOrderService->createOrder(
+                        $customerCyclosId,
+                        $cartItems,
+                        $paymentMethod,
+                        $productsTotal,
+                        $notes,
+                        $taxAmount
+                    );
+
+                    return $order;
+                } catch (\Exception $e) {
+                    Log::error('Error processing POS Mobile order', [
+                        'error' => $e->getMessage()
+                    ]);
+                    throw new \Exception("Error processing POS Mobile order: " . $e->getMessage());
                 }
             }
 
@@ -147,12 +192,13 @@ class PaxMerchantOrderService
                 ])
             ]);
 
-            // For token-only payments - Auto-complete immediately (no handpoint needed)
-            if ($paymentMethod === 'cyclos_tokens') {
-                Log::info('Auto-completing token-only order', [
+            // For token-only & cash payments - Auto-complete immediately (no handpoint needed) (no completeOrder call needed)
+            if ($paymentMethod === 'cyclos_tokens' || $paymentMethod === 'cash') {
+                Log::info('Auto-completing token-only or cash order', [
                     'order_id' => $order->id,
                     'products_amount' => $productsTotal,
                     'tax_amount' => $taxAmount,
+                    'grand_total' => $grandTotal,
                     'token_amount' => $tokenPortion
                 ]);
 
@@ -236,7 +282,7 @@ class PaxMerchantOrderService
     /**
      * Process tax as a separate direct token transaction
      */
-    protected function processTaxPayment(MerchantOrder $order, float $taxAmount, string $description): array
+    public function processTaxPayment(MerchantOrder $order, float $taxAmount, string $description): array
     {
         if ($taxAmount <= 0) {
             return ['success' => true, 'message' => 'No tax to process'];
@@ -310,14 +356,14 @@ class PaxMerchantOrderService
                         'products_amount' => $productsAmount,
                         'tax_amount' => $taxAmount,
                         'grand_total' => $grandTotal,
-                        'total_to_credit' => $grandTotal
+                        'total_to_credit' => $productsAmount
                     ]);
 
                     // Credit tokens for FULL grand total (products + tax)
                     $creditResult = $this->cyclosPaymentService->addFunds(
                         $order->customer_cyclos_id,
-                        $grandTotal,
-                        "Token credit for card payment - Order #{$order->order_number} (Total: {$grandTotal})"
+                        $productsAmount,
+                        "Token credit for card payment - Order #{$order->order_number} (Total: {$productsAmount})"
                     );
 
                     if (!$creditResult['success']) {
@@ -339,24 +385,9 @@ class PaxMerchantOrderService
 
                     $result['cyclos_transaction_id'] = $cyclosPayment['transaction_id'] ?? null;
 
-                    // Process tax as separate transfer
-                    $taxResult = $this->processTaxPayment(
-                        $order,
-                        $taxAmount,
-                        "Tax payment for card order #{$order->order_number} - Amount: {$taxAmount}"
-                    );
-
-                    if (!$taxResult['success']) {
-                        throw new \Exception('Tax payment failed: ' . ($taxResult['message'] ?? 'Unknown error'));
-                    }
-
-                    $result['tax_transaction_id'] = $taxResult['transaction_id'] ?? null;
-
                     Log::info('Card payment completed successfully', [
                         'order_id' => $order->id,
-                        'total_credited' => $grandTotal,
                         'products_deducted' => $productsAmount,
-                        'tax_deducted' => $taxAmount,
                         'net_effect' => 'Customer paid with card, net token change: 0'
                     ]);
                     break;
@@ -467,6 +498,48 @@ class PaxMerchantOrderService
                         'tax_deducted' => $taxAmount,
                         'total_deducted' => $grandTotal,
                         'net_effect' => "Customer lost {$order->token_amount} tokens (net change: {$netTokenChange}) and paid {$order->card_amount} via card"
+                    ]);
+                    break;
+                case 'cash':
+                    Log::info('Processing cash payment', [
+                        'order_id' => $order->id,
+                        'products_amount' => $productsAmount,
+                        'tax_amount' => $taxAmount,
+                        'grand_total' => $grandTotal,
+                        'total_to_credit' => $productsAmount
+                    ]);
+
+                    // Credit tokens for FULL grand total (products + tax)
+                    $creditResult = $this->cyclosPaymentService->addFunds(
+                        $order->customer_cyclos_id,
+                        $productsAmount,
+                        "Token credit for cash payment - Order #{$order->order_number} (Total: {$productsAmount})"
+                    );
+
+                    if (!$creditResult['success']) {
+                        throw new \Exception('Failed to credit tokens: ' . ($creditResult['message'] ?? 'Unknown error'));
+                    }
+
+                    $result['credit_transaction_id'] = $creditResult['transaction_id'] ?? null;
+
+                    // Accept order as buyer for products only
+                    $cyclosPayment = $this->merchantCyclosOrderService->acceptOrderAsBuyer(
+                        $customer,
+                        $order->cyclos_order_id,
+                        $data
+                    );
+
+                    if (!$cyclosPayment['success']) {
+                        throw new \Exception('Order acceptance failed: ' . ($cyclosPayment['message'] ?? 'Unknown error'));
+                    }
+
+                    $result['cyclos_transaction_id'] = $cyclosPayment['transaction_id'] ?? null;
+
+                    Log::info('Cash payment completed successfully', [
+                        'order_id' => $order->id,
+                        'total_credited' => $productsAmount,
+                        'products_deducted' => $productsAmount,
+                        'net_effect' => 'Customer paid with cash, net token change: 0'
                     ]);
                     break;
             }

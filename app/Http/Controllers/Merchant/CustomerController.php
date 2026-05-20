@@ -23,7 +23,9 @@ class CustomerController extends Controller
     protected MerchantCustomerService $merchantCustomerService;
     protected MerchantPlansConditionService $merchantPlanCondition;
 
-    public function __construct(MerchantCustomerService $merchantCustomerService , MerchantPlansConditionService $merchantPlanCondition
+    public function __construct(
+        MerchantCustomerService $merchantCustomerService,
+        MerchantPlansConditionService $merchantPlanCondition
     ) {
         $this->merchantCustomerService = $merchantCustomerService;
         $this->merchantPlanCondition  = $merchantPlanCondition;
@@ -43,12 +45,12 @@ class CustomerController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-      public function create(): View|Factory
-{
-    $countries = Country::orderBy('country_name', 'asc')->get();
+    public function create(): View|Factory
+    {
+        $countries = Country::orderBy('name', 'asc')->get();
 
-    return view('merchant.pages.customers.create', compact('countries'));
-}
+        return view('merchant.pages.customers.create', compact('countries'));
+    }
 
     /**
      * Store a newly created resource in storage.
@@ -56,39 +58,39 @@ class CustomerController extends Controller
      * @return RedirectResponse
      */
     public function store(CustomerStoreRequest $request)
-{
-    try {
-        $data = $request->validated();
-        $userId = Auth::id();
-        $customerAdd = $this->merchantPlanCondition->canAddCustomer($userId);
-        
-        // Check using 'can_add' key (or 'success' key)
-        if (!$customerAdd['can_add']) {  // Or use if (!$customerAdd['success'])
+    {
+        try {
+            $data = $request->validated();
+            $userId = Auth::id();
+            $customerAdd = $this->merchantPlanCondition->canAddCustomer($userId);
+
+            // Check using 'can_add' key (or 'success' key)
+            if (!$customerAdd['can_add']) {  // Or use if (!$customerAdd['success'])
+                return back()
+                    ->withInput()
+                    ->with('error', $customerAdd['message']);
+            }
+
+            if ($request->hasFile('avatar')) {
+                $data['avatar'] = $request->file('avatar')->store('customers', 'public');
+            }
+
+            $data['merchant_id'] = Auth::id();
+
+            $this->merchantCustomerService->createCustomer($data);
+
+            return redirect()->route('merchant.customers.index')
+                ->with('success', 'Customer created successfully.');
+        } catch (\Throwable $e) {
+            Log::error('Customer creation failed', [
+                'error' => $e->getMessage()
+            ]);
+
             return back()
                 ->withInput()
-                ->with('error', $customerAdd['message']);
-        }       
-
-        if ($request->hasFile('avatar')) {
-            $data['avatar'] = $request->file('avatar')->store('customers', 'public');
+                ->with('error', 'Something went wrong while creating customer.');
         }
-
-        $data['merchant_id'] = Auth::id();
-
-        $this->merchantCustomerService->createCustomer($data);
-
-        return redirect()->route('merchant.customers.index')
-            ->with('success', 'Customer created successfully.');
-    } catch (\Throwable $e) {
-        Log::error('Customer creation failed', [
-            'error' => $e->getMessage()
-        ]);
-
-        return back()
-            ->withInput()
-            ->with('error', 'Something went wrong while creating customer.');
     }
-}
 
     /**
      * Show the form for editing the specified resource.
