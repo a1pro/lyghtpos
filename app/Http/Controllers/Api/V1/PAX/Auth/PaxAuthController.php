@@ -39,4 +39,33 @@ class PaxAuthController extends Controller
 			], 500);
 		}
 	}
+
+	/**
+	 * Logout user by revoking access token
+	 */
+	public function logout(Request $request)
+	{
+		try {
+			DB::beginTransaction();
+
+			$result = $this->authService->logout($request->user());
+
+			DB::commit();
+
+			return response()->json([
+				'success' => true,
+				'status_code' => 200,
+				'message' => 'Logout successful',
+				'data' => $result
+			], 200);
+		} catch (\Exception $e) {
+			DB::rollback();
+
+			return response()->json([
+				'success' => false,
+				'status_code' => 500,
+				'message' => 'An error occurred while processing your request' . $e->getMessage()
+			], 500);
+		}
+	}
 }

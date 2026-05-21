@@ -21,6 +21,7 @@ Route::prefix('pax')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('user')->group(function () {
+            Route::post('logout', [PaxAuthController::class, 'logout']);
 
             /** ****************** Product Routes ****************** */
             Route::prefix('products')->name('products.')->group(function () {

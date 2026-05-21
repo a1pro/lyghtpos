@@ -60,4 +60,15 @@ class PaxAuthService
             }),
         ];
     }
+
+    /**
+     * Logout user by deleting current access token
+     */
+    public function logout(User $user): bool
+    {
+        // Delete current access token
+        $user->currentAccessToken()->delete();
+
+        return true;
+    }
 }
