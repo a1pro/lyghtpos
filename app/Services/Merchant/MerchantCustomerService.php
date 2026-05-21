@@ -82,12 +82,12 @@ class MerchantCustomerService
         try {
             $plainPassword = Str::random(12);
 
-            $country = Country::where('country_id', $data['country_id'])->first();
-            $state = State::where('id_state', $data['state_id'])
+            $country = Country::where('id', $data['country_id'])->first();
+            $state = State::where('id', $data['state_id'])
                 ->where('country_id', $data['country_id'])
                 ->first();
 
-            $city = City::where('id_city', $data['city_id'])
+            $city = City::where('id', $data['city_id'])
                 ->where('state_id', $data['state_id'])
                 ->first();
 
@@ -150,10 +150,10 @@ class MerchantCustomerService
             UserAddress::create([
                 'user_id' => $user->id,
                 'address' => $data['address'] ?? '',
-                'city' => $city->city,
-                'state' => $state->state,
+                'city' => $city->id,
+                'state' => $state->id,
                 'postal_code' => $data['postal_code'] ?? '',
-                'country' => $country->country_name,
+                'country' => $country->id,
                 'is_active' => true,
             ]);
 

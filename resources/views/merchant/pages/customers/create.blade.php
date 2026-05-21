@@ -55,8 +55,8 @@
                 <select name="country_id" id="country_id" class="form-control @error('country_id') is-invalid @enderror" required>
                     <option value="">Select Country</option>
                     @foreach($countries as $country)
-                        <option value="{{ $country->country_id }}" {{ old('country_id') == $country->country_id ? 'selected' : '' }}>
-                            {{ $country->country_name }}
+                        <option value="{{ $country->id }}" {{ old('country_id') == $country->id ? 'selected' : '' }}>
+                            {{ $country->name }}
                         </option>
                     @endforeach
                 </select>
@@ -187,8 +187,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             states.forEach(function (state) {
                 const option = document.createElement('option');
-                option.value = state.id_state;
-                option.textContent = state.state;
+                option.value = state.id;
+                option.textContent = state.name;
                 stateSelect.appendChild(option);
             });
 
@@ -234,8 +234,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             cities.forEach(function (city) {
                 const option = document.createElement('option');
-                option.value = city.id_city;
-                option.textContent = city.city;
+                option.value = city.id;
+                option.textContent = city.name;
                 citySelect.appendChild(option);
             });
 
