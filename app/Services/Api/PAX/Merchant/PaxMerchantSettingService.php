@@ -13,7 +13,7 @@ class PaxMerchantSettingService
     public function fetchMerchantSettings()
     {
         // Default values
-        $defaultPaymentTypes = ['card', 'tokens', 'hybrid'];
+        $defaultPaymentTypes = ['card', 'tokens', 'hybrid', 'cash', 'pos_mobile'];
         $defaultVatTax = 10.00;
 
         $user = Auth::user();
