@@ -48,7 +48,7 @@ class MerchantOrderService
                 'merchant_id' => $merchantId,
                 'customer_cyclos_id' => $customerCyclosId,
                 'total_amount' => $totalAmount,
-                'tax_amount' => $taxAmount,
+                'tax_amount' => $taxAmount ?? 0,
                 'payment_method' => $paymentMethod,
                 'status' => $status,
                 'payment_status' => $paymentStatus,
