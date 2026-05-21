@@ -389,7 +389,7 @@
                                 <div class="info-label">POS Payment Types:</div>
                                 <div class="info-value">
                                     @php
-                                    $paymentTypes = $merchant->pos_payment_types ?? ['card', 'tokens', 'hybrid'];
+                                    $paymentTypes = $merchant->pos_payment_types ?? ['card', 'tokens', 'hybrid', 'pos_mobile', 'cash'];
                                     if (is_string($paymentTypes)) {
                                     $paymentTypes = json_decode($paymentTypes, true);
                                     if (json_last_error() !== JSON_ERROR_NONE) {
@@ -644,7 +644,7 @@
                         <div class="payment-checkbox-group">
                             @php
                             // Get current payment types
-                            $currentPayments = $merchant->pos_payment_types ?? ['card', 'tokens', 'hybrid'];
+                            $currentPayments = $merchant->pos_payment_types ?? ['card', 'tokens', 'hybrid', 'pos_mobile', 'cash'];
 
                             // Decode if it's JSON string
                             if (is_string($currentPayments)) {
