@@ -193,7 +193,7 @@ class PaxMerchantOrderService
             ]);
 
             // For token-only & cash payments - Auto-complete immediately (no handpoint needed) (no completeOrder call needed)
-            if ($paymentMethod === 'cyclos_tokens' || $paymentMethod === 'cash') {
+            if ($paymentMethod == 'cyclos_tokens' || $paymentMethod == 'cash') {
                 Log::info('Auto-completing token-only or cash order', [
                     'order_id' => $order->id,
                     'products_amount' => $productsTotal,

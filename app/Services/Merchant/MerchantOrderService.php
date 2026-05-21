@@ -97,6 +97,12 @@ class MerchantOrderService
                 ]);
             }
 
+            if($paymentMethod == 'cash'){
+                $order->update([
+                    'paid_at' => now()
+                ]);
+            }
+
             Log::info('Merchant order created', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
