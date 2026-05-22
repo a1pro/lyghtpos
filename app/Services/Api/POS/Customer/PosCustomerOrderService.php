@@ -111,6 +111,13 @@ class PosCustomerOrderService
                 throw new \Exception("Customer configuration error");
             }
 
+            $taxAmount = $orderDetail->tax_amount ?? 0;
+            $totalAmountWithTax = $orderDetail->total_amount + $taxAmount;
+
+            if($balance < $totalAmountWithTax) {
+                throw new \Exception("Insufficient wallet balance. Required: {$totalAmountWithTax}, Available: {$balance}");
+            }
+
             $acceptData = [
                 'remarks' => 'Order accepted by buyer with pos id:' . $customer->id
             ];

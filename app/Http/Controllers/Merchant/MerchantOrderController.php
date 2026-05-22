@@ -46,8 +46,10 @@ class MerchantOrderController extends Controller
         }
 
         // Load items relationship
-        $order->load('items');
+        $order->load(['items']);
 
-        return view('merchant.pages.orders.view', compact('order'));
+        $customer = $order->customer();
+
+        return view('merchant.pages.orders.view', compact('order', 'customer'));
     }
 }

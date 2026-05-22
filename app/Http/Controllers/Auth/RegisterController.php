@@ -102,6 +102,7 @@ class RegisterController extends Controller
             'password' => Hash::make($data['password']),
             'role_id' => $role->id ?? 2,
             'account_type' => $data['account_type'],
+            'phone' => $data['phone'],
         ]);
 
         // Create merchant record for TRADE_MERCHANT
