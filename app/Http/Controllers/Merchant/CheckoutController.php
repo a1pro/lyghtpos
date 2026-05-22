@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Merchant\Checkout\MerchantCheckoutRequest;
 use App\Services\Merchant\MerchantCartService;
 use App\Services\Merchant\MerchantOrderService;
+use App\Services\Merchant\MerchantProfileService;
 use App\Services\Merchant\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,6 @@ class CheckoutController extends Controller
 {
     public function __construct(
         private MerchantCartService $cartService,
-        private PaymentService $paymentService,
         private MerchantOrderService $orderService
     ) {}
 
@@ -26,6 +26,7 @@ class CheckoutController extends Controller
     public function processCheckout(Request $request)
     {
         try {
+            $merchant = Auth::user();
             $customerCyclosId = $request->customer_id;
 
             if (!$customerCyclosId) {
@@ -62,13 +63,17 @@ class CheckoutController extends Controller
                 $notes = "Sent to POS mobile app – pending approval";
             }
 
+            $taxPercentage = $merchant->merchant->vat_tax_percentage ?? 0;
+            $taxAmount = $total * ($taxPercentage / 100);
+
             // Create local order
             $order = $this->orderService->createOrder(
                 $customerCyclosId,
                 $cart,
                 $paymentMethod,
                 $total,
-                $notes
+                $notes,
+                $taxAmount
             );
 
             // Clear cart after successful order creation
@@ -113,16 +118,19 @@ class CheckoutController extends Controller
     public function getCheckoutData(MerchantCheckoutRequest $request)
     {
         try {
+            $user = Auth::user();
             $cyclosCustomerId = decryptVal($request->cid);
 
+            $merchantSettings = $user->merchant->only(['vat_tax_percentage']);
             $cart = $this->cartService->getCart();
-            $total = $this->calculateTotal($cart);
+            $total = $this->calculateTotal($cart, $merchantSettings['vat_tax_percentage'] ?? 0);
 
             return response()->json([
                 'success' => true,
                 'cart' => $cart,
                 'customerid' => $cyclosCustomerId,
-                'total' => $total
+                'total' => $total,
+                'vat_tax_percentage' => $merchantSettings['vat_tax_percentage'] ?? 0,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -133,14 +141,18 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Calculate cart total
+     * Calculate cart total with optional tax percentage
      */
-    private function calculateTotal($cart)
+    private function calculateTotal($cart, $taxPercentage = 0)
     {
+        Log::info('Calculating total for cart', ['cart' => $cart, 'taxPercentage' => $taxPercentage]);
         if (empty($cart)) return 0;
 
-        return array_reduce($cart, function ($sum, $item) {
+        $total = array_reduce($cart, function ($sum, $item) {
             return $sum + (($item['price'] ?? 0) * ($item['pivot']['quantity'] ?? 1));
         }, 0);
+
+        Log::info('Total before tax', ['total' => $total + ($total * $taxPercentage / 100)]);
+        return $total + ($total * $taxPercentage / 100);
     }
 }

@@ -15,10 +15,11 @@
                     <tr>
                         <th>#</th>
                         <th>{{ __('Order Number') }}</th>
-                        <th>{{ __('Customer ID') }}</th>
+                        <th>{{ __('Customer Name') }}</th>
+                        <th>{{ __('Tax Amount') }}</th>
                         <th>{{ __('Total') }}</th>
-                        <th>{{ __('Status') }}</th>
                         <th>{{ __('Payment Method') }}</th>
+                        <th>{{ __('Status') }}</th>
                         <th>{{ __('Created At') }}</th>
                         <th>{{ __('Actions') }}</th>
                     </tr>
@@ -28,19 +29,9 @@
                     <tr>
                         <td>{{ $orders->firstItem() + $loop->index }}</td>
                         <td><code>{{ $order->order_number }}</code></td>
-                        <td>{{ $order->customer_cyclos_id ?? 'N/A' }}</td>
+                        <td>{{ $order->customer()->first_name ?? 'N/A' }} {{ $order->customer()->last_name ?? 'N/A' }}</td>
+                        <td><strong>{{ config('settings.currency_symbol', '$') }} {{ number_format($order->tax_amount, 2) }}</strong></td>
                         <td><strong>{{ config('settings.currency_symbol', '$') }} {{ number_format($order->total_amount, 2) }}</strong></td>
-                        <td>
-                            @php
-                            $statusClass = match($order->status) {
-                            'completed' => 'badge-success',
-                            'pending' => 'badge-warning',
-                            'cancelled' => 'badge-danger',
-                            default => 'badge-secondary'
-                            };
-                            @endphp
-                            <span class="badge {{ $statusClass }}">{{ ucfirst($order->status) }}</span>
-                        </td>
                         <td>
                             @php
                             $methodLabels = [
@@ -54,6 +45,17 @@
                             ];
                             @endphp
                             {{ $methodLabels[$order->payment_method] ?? ucfirst($order->payment_method) }}
+                        </td>
+                        <td>
+                            @php
+                            $statusClass = match($order->status) {
+                            'completed' => 'badge-success',
+                            'pending' => 'badge-warning',
+                            'cancelled' => 'badge-danger',
+                            default => 'badge-secondary'
+                            };
+                            @endphp
+                            <span class="badge {{ $statusClass }}">{{ ucfirst($order->status) }}</span>
                         </td>
                         <td>{{ $order->created_at->format('Y-m-d H:i') }}</td>
                         <td>

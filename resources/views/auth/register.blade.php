@@ -297,9 +297,7 @@
 
                             <div class="col-md-6 mb-4">
                                 <label class="account-type-card">
-
-                                    <input type="radio" name="account_type" value="TRADE_MERCHANT" {{
-                                        old('account_type')=='TRADE_MERCHANT' ? 'checked' : '' }} required>
+                                    <input type="radio" name="account_type" value="TRADE_MERCHANT" checked required>
 
                                     <div class="card">
                                         <div class="card-body">
@@ -313,7 +311,7 @@
                                 </label>
                             </div>
 
-                            <div class="col-md-6 mb-4">
+                            {{-- <div class="col-md-6 mb-4">
                                 <label class="account-type-card">
 
                                     <input type="radio" name="account_type" value="TRADE_MEMBER" {{
@@ -329,9 +327,9 @@
                                         </div>
                                     </div>
                                 </label>
-                            </div>
+                            </div> --}}
 
-                            <div class="col-md-6 mb-4">
+                            {{-- <div class="col-md-6 mb-4">
                                 <label class="account-type-card">
 
                                     <input type="radio" name="account_type" value="ORGANIZATION" {{
@@ -346,9 +344,9 @@
                                         </div>
                                     </div>
                                 </label>
-                            </div>
+                            </div> --}}
 
-                            <div class="col-md-6 mb-4">
+                            {{-- <div class="col-md-6 mb-4">
                                 <label class="account-type-card">
 
                                     <input type="radio" name="account_type" value="FAVOR_MEMBER" {{
@@ -364,7 +362,7 @@
                                         </div>
                                     </div>
                                 </label>
-                            </div>
+                            </div> --}}
 
                         </div>
 

@@ -49,11 +49,14 @@
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
+                    <dt class="col-sm-5">Customer name:</dt>
+                    <dd class="col-sm-7"><code>{{ $customer->first_name }} {{ $customer->last_name }}</code></dd>
+
                     <dt class="col-sm-5">Order Number:</dt>
                     <dd class="col-sm-7"><code>{{ $order->order_number }}</code></dd>
 
                     <dt class="col-sm-5">Tax Amount:</dt>
-                    <dd class="col-sm-7"><code>{{ $order->tax_amount }}</code></dd>
+                    <dd class="col-sm-7">{{ $order->tax_amount }}</dd>
 
                     <dt class="col-sm-5">Status:</dt>
                     <dd class="col-sm-7">
