@@ -11,6 +11,7 @@ class MerchantCheckout extends Component {
             cart: [],
             amountDue: 0,
             customerId: "",
+            merchantTaxPercentage: 0,
             selectedPayment: "pos_mobile",
             loading: false,
             loadingCart: false,
@@ -41,6 +42,7 @@ class MerchantCheckout extends Component {
             });
     }
 
+    // Load cart data based on encrypted customer ID from URL
     loadCart() {
         const urlParams = new URLSearchParams(window.location.search);
         const encryptedCustomerId = urlParams.get('cid');
@@ -84,7 +86,8 @@ class MerchantCheckout extends Component {
                 this.setState({
                     cart: cart,
                     amountDue: total,
-                    customerId: customerid
+                    customerId: customerid,
+                    merchantTaxPercentage: res.data.vat_tax_percentage || 0
                 });
             }
         }).catch((error) => {
@@ -498,6 +501,10 @@ class MerchantCheckout extends Component {
                                     )}
                                 </div>
                                 <hr />
+                                <div className="d-flex justify-content-between mb-2">
+                                    <span>VAT ({this.state.merchantTaxPercentage}%)</span>
+                                    <span>{window.APP.currency_symbol} {(amountDue - (amountDue / (1 + this.state.merchantTaxPercentage / 100))).toFixed(2)}</span>
+                                </div>
                                 <div className="d-flex justify-content-between mb-2">
                                     <span>Subtotal</span>
                                     <span>{window.APP.currency_symbol} {amountDue.toFixed(2)}</span>
