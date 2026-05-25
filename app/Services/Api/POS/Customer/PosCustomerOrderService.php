@@ -2,14 +2,10 @@
 
 namespace App\Services\Api\POS\Customer;
 
-use App\Models\Customer;
 use App\Models\MerchantOrder;
-use App\Models\User;
 use App\Services\Api\PAX\Merchant\PaxMerchantOrderService;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Auth;
-use Illuminate\Validation\ValidationException;
 use App\Services\Api\POS\Customer\PosCustomerWalletService;
 use App\Services\Cyclos\MerchantCyclosOrderService;
 use App\Services\FavorMember\CyclosPayment\CyclosPaymentService;
@@ -39,7 +35,7 @@ class PosCustomerOrderService
     public function fetchPendingOrders(string $cyclosUserId)
     {
         try {
-            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'payment_status' => 'pending'])
+            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'payment_status' => 'pending', 'payment_method'=> 'pos_mobile'])
                 ->with('items:id,merchant_order_id,product_name,quantity,price')
                 ->orderBy('created_at', 'desc')
                 ->get()->toArray();
