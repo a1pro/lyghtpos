@@ -55,8 +55,18 @@
                     <dt class="col-sm-5">Order Number:</dt>
                     <dd class="col-sm-7"><code>{{ $order->order_number }}</code></dd>
 
+                    <dt class="col-sm-5">Card Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->card_amount + $order->tax_amount ?? 'N/A' }}</dd>
+
+                    <dt class="col-sm-5">Token Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->token_amount ?? 'N/A' }}</dd>
+
                     <dt class="col-sm-5">Tax Amount:</dt>
-                    <dd class="col-sm-7">{{ $order->tax_amount }}</dd>
+                    <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
+
+                    <dt class="col-sm-5">Grand Total:</dt>
+                    <dd class="col-sm-7">{{ $order->card_amount + $order->tax_amount + $order->token_amount ?? 'N/A' }}</dd>
+
 
                     <dt class="col-sm-5">Status:</dt>
                     <dd class="col-sm-7">
