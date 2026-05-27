@@ -73,7 +73,7 @@
                     <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
 
                     <dt class="col-sm-5">Grand Total:</dt>
-                    <dd class="col-sm-7">{{ $order->total_amount + $order->token_amount ?? 'N/A' }} (incl. tax)</dd>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
 
                     @elseif($order->payment_method == 'card')
                     <dt class="col-sm-5">Tax Amount:</dt>
