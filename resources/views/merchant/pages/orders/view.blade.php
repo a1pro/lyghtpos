@@ -55,18 +55,47 @@
                     <dt class="col-sm-5">Order Number:</dt>
                     <dd class="col-sm-7"><code>{{ $order->order_number }}</code></dd>
 
+                    @if($order->payment_method == 'pos_mobile')
+                    <dt class="col-sm-5">Tax Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
+
+                    <dt class="col-sm-5">Grand Total:</dt>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+
+                    @elseif($order->payment_method == 'hybrid')
                     <dt class="col-sm-5">Card Amount:</dt>
-                    <dd class="col-sm-7">{{ $order->card_amount + $order->tax_amount ?? 'N/A' }}</dd>
+                    <dd class="col-sm-7">{{ $order->card_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
 
                     <dt class="col-sm-5">Token Amount:</dt>
-                    <dd class="col-sm-7">{{ $order->token_amount ?? 'N/A' }}</dd>
+                    <dd class="col-sm-7">{{ $order->token_amount ?? 'N/A' }} (excl. tax)</dd>
 
                     <dt class="col-sm-5">Tax Amount:</dt>
                     <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
 
                     <dt class="col-sm-5">Grand Total:</dt>
-                    <dd class="col-sm-7">{{ $order->card_amount + $order->tax_amount + $order->token_amount ?? 'N/A' }}</dd>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->token_amount ?? 'N/A' }} (incl. tax)</dd>
 
+                    @elseif($order->payment_method == 'card')
+                    <dt class="col-sm-5">Tax Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
+
+                    <dt class="col-sm-5">Grand Total:</dt>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+
+                    @elseif($order->payment_method == 'cash')
+                    <dt class="col-sm-5">Tax Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
+
+                    <dt class="col-sm-5">Grand Total:</dt>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+
+                    @elseif($order->payment_method == 'cyclos_tokens')
+                    <dt class="col-sm-5">Tax Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
+
+                    <dt class="col-sm-5">Grand Total:</dt>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+                    @endif
 
                     <dt class="col-sm-5">Status:</dt>
                     <dd class="col-sm-7">
