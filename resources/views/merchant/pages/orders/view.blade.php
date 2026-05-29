@@ -3,6 +3,12 @@
 @section('title', 'Order #' . $order->order_number)
 @section('content-header', 'Order Details')
 @section('content-actions')
+@if($order->status == 'completed')
+<a href="{{ route('merchant.orders.receipt', $order->id) }}" target="_blank" class="btn btn-info">
+    <i class="fas fa-receipt"></i> View Receipt
+</a>
+@endif
+
 <a href="{{ route('merchant.orders.index') }}" class="btn btn-secondary">
     <i class="fas fa-arrow-left"></i> Back to Orders
 </a>

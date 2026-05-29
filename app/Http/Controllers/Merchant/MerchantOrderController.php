@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Merchant;
 use App\Http\Controllers\Controller;
 use App\Models\MerchantOrder;
 use App\Services\Merchant\MerchantOrderService;
+use App\Services\Merchant\Order\MerchantOrderReceiptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -12,6 +13,13 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class MerchantOrderController extends Controller
 {
+    protected MerchantOrderReceiptService $receiptService;
+
+    public function __construct(MerchantOrderReceiptService $receiptService)
+    {
+        $this->receiptService = $receiptService;
+    }
+
     /**
      * Display a listing of orders for the authenticated merchant.
      */
@@ -51,5 +59,31 @@ class MerchantOrderController extends Controller
         $customer = $order->customer();
 
         return view('merchant.pages.orders.view', compact('order', 'customer'));
+    }
+
+    /**
+     * Get order receipt
+     */
+    public function getReceipt(Request $request, $orderId)
+    {
+        try {
+            $order = MerchantOrder::find($orderId);
+
+            if (!$order) {
+                return redirect()->route('merchant.orders.index')
+                    ->with('error', 'Order not found');
+            }
+
+            // Only allow completed orders
+            if ($order->status !== 'completed') {
+                return redirect()->route('merchant.orders.index')
+                    ->with('error', 'Receipt only available for completed orders');
+            }
+
+            return $this->receiptService->generateReceiptHtml($order);
+        } catch (\Exception $e) {
+            return redirect()->route('merchant.orders.index')
+                ->with('error', 'Error generating receipt: ' . $e->getMessage());
+        }
     }
 }
