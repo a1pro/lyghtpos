@@ -285,6 +285,8 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/', [MerchantOrderController::class, 'index'])->name('index');
         Route::get('/{order}', [MerchantOrderController::class, 'show'])->name('show');
+
+        Route::get('/{orderId}/receipt', [MerchantOrderController::class, 'getReceipt'])->name('receipt');
     });
 });
 

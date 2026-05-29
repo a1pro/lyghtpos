@@ -5,20 +5,24 @@ namespace App\Http\Controllers\Api\V1\PAX\Merchant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PAX\Merchant\PaxCustomerCompleteOrderRequest;
 use App\Http\Requests\Api\PAX\Merchant\PaxCustomerCreateOrderRequest;
+use App\Services\Merchant\Order\MerchantOrderReceiptService;
 use App\Models\MerchantOrder;
 use App\Models\User;
 use App\Services\Api\PAX\Merchant\PaxMerchantOrderService;
 use App\Services\Merchant\MerchantOrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Request;
 
 class PaxOrderController extends Controller
 {
     protected PaxMerchantOrderService $paxMerchantOrderService;
+    protected MerchantOrderReceiptService $receiptService;
 
-    public function __construct(PaxMerchantOrderService $paxMerchantOrderService)
+    public function __construct(PaxMerchantOrderService $paxMerchantOrderService, MerchantOrderReceiptService $receiptService)
     {
         $this->paxMerchantOrderService =  $paxMerchantOrderService;
+        $this->receiptService = $receiptService;
     }
 
     /**
@@ -167,6 +171,46 @@ class PaxOrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get order receipt HTML - For testing (no auth required)
+     */
+    public function getReceipt(Request $request, $orderId)
+    {
+        try {
+            $order = MerchantOrder::find($orderId);
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found'
+                ], 404);
+            }
+
+            // Only allow completed orders
+            if ($order->status !== 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Receipt only available for completed orders',
+                    'order_status' => $order->status
+                ], 400);
+            }
+
+            return $this->receiptService->generateReceiptHtml($order);
+
+            // return response()->json([
+            //     'success' => true,
+            //     'receipt_html' => $html,
+            //     'order_id' => $order->id,
+            //     'order_number' => $order->order_number
+            // ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating receipt: ' . $e->getMessage()
             ], 500);
         }
     }
