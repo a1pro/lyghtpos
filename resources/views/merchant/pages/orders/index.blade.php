@@ -62,11 +62,6 @@
                             <a href="{{ route('merchant.orders.show', $order) }}" class="btn btn-sm btn-info">
                                 <i class="fas fa-eye"></i> View
                             </a>
-                            @if($order->status == 'completed')
-                            <a href="{{ route('merchant.orders.receipt', $order->id) }}" target="_blank" class="btn btn-sm btn-info mt-1">
-                                <i class="fas fa-receipt"></i> View Receipt
-                            </a>
-                            @endif
                         </td>
                     </tr>
                     @empty
