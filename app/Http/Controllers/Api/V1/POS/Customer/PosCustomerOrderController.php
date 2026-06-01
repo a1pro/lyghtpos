@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\V1\POS\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\POS\Customer\PosGetReceiptRequest;
 use App\Services\Api\POS\Auth\PosAuthService;
 use App\Services\Api\POS\Customer\PosCustomerOrderService;
 use App\Http\Requests\Api\POS\Customer\PosPurchaseOrderRequest;
+use App\Models\MerchantOrder;
+use App\Services\Merchant\Order\MerchantOrderReceiptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,13 +16,15 @@ use Illuminate\Support\Facades\DB;
 class PosCustomerOrderController extends Controller
 {
     protected $customerOrderService;
+    protected MerchantOrderReceiptService $receiptService;
 
     /**
      * Inject customer order service dependency
      */
-    public function __construct(PosCustomerOrderService $customerOrderService)
+    public function __construct(PosCustomerOrderService $customerOrderService, MerchantOrderReceiptService $receiptService)
     {
         $this->customerOrderService = $customerOrderService;
+        $this->receiptService = $receiptService;
     }
 
     /**
@@ -112,6 +117,64 @@ class PosCustomerOrderController extends Controller
                 'success' => false,
                 'status_code' => 500,
                 'message' => 'Something went wrong: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get order receipt HTML     
+     */
+    public function getReceipt(PosGetReceiptRequest $request)
+    {
+        try {
+            $orderId = $request->order_id;
+
+            if (!$orderId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order ID is required'
+                ], 400);
+            }
+
+            $order = MerchantOrder::find($orderId);
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found'
+                ], 404);
+            }
+
+            $customerId = Auth::user()->id;
+            // Ensure the order belongs to the authenticated customer
+            if ($order->customer()->id != $customerId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access to this order receipt'
+                ], 403);
+            }
+
+            // Only allow completed orders
+            if ($order->status !== 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Receipt only available for completed orders',
+                    'order_status' => $order->status
+                ], 400);
+            }
+
+            $html = $this->receiptService->generateReceiptHtml($order);
+
+            return response()->json([
+                'success' => true,
+                'receipt_html' => $html,
+                'order_id' => $order->id,
+                'order_number' => $order->order_number
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating receipt: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -39,6 +39,8 @@ Route::prefix('pax')->group(function () {
             Route::prefix('orders')->name('orders.')->group(function () {
                 Route::post('/', [PaxOrderController::class, 'createCustomerOrder']);
                 Route::post('/complete', [PaxOrderController::class, 'completeCustomerOrder']);
+
+                Route::get('/get-receipt', [PaxOrderController::class, 'getReceipt']);
             });
 
             /** ****************** Merchant Settings Routes ****************** */
