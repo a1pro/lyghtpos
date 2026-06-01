@@ -84,6 +84,8 @@ Route::prefix('pos')->group(function () {
                 Route::get('pending', [PosCustomerOrderController::class, 'getPendingOrders']);
                 Route::get('history', [PosCustomerOrderController::class, 'getOrdersHistory']);
                 Route::post('purchase', [PosCustomerOrderController::class, 'purchaseOrder']);
+
+                Route::get('/get-receipt', [PosCustomerOrderController::class, 'getReceipt']);
             });
 
             /**  ************ Joining Fees Related Routes ***************** */
