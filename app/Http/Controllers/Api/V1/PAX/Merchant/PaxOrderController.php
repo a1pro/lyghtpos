@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\PAX\Merchant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PAX\Merchant\PaxCustomerCompleteOrderRequest;
 use App\Http\Requests\Api\PAX\Merchant\PaxCustomerCreateOrderRequest;
+use App\Http\Requests\Api\PAX\Merchant\PaxGetReceiptRequest;
 use App\Services\Merchant\Order\MerchantOrderReceiptService;
 use App\Models\MerchantOrder;
 use App\Models\User;
@@ -176,11 +177,20 @@ class PaxOrderController extends Controller
     }
 
     /**
-     * Get order receipt HTML - For testing (no auth required)
+     * Get order receipt HTML     
      */
-    public function getReceipt(Request $request, $orderId)
+    public function getReceipt(PaxGetReceiptRequest $request)
     {
         try {
+            $orderId = $request->order_id;
+
+            if (!$orderId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order ID is required'
+                ], 400);
+            }
+
             $order = MerchantOrder::find($orderId);
 
             if (!$order) {
@@ -188,6 +198,15 @@ class PaxOrderController extends Controller
                     'success' => false,
                     'message' => 'Order not found'
                 ], 404);
+            }
+
+            $merchantId = Auth::id();
+            // Ensure the order belongs to the authenticated merchant
+            if ($order->merchant_id != $merchantId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access to this order receipt'
+                ], 403);
             }
 
             // Only allow completed orders
@@ -199,14 +218,14 @@ class PaxOrderController extends Controller
                 ], 400);
             }
 
-            return $this->receiptService->generateReceiptHtml($order);
+            $html = $this->receiptService->generateReceiptHtml($order, true);
 
-            // return response()->json([
-            //     'success' => true,
-            //     'receipt_html' => $html,
-            //     'order_id' => $order->id,
-            //     'order_number' => $order->order_number
-            // ]);
+            return response()->json([
+                'success' => true,
+                'receipt_html' => $html,
+                'order_id' => $order->id,
+                'order_number' => $order->order_number
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
