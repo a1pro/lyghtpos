@@ -100,7 +100,7 @@ class MerchantOrderReceiptService
     }
 
     /**
-     * Receipt for card payments - Handpoint format
+     * Receipt for card payments - Handpoint format with EMV details
      */
     private function getCardReceiptHtml(MerchantOrder $order, $customer, bool $forPaxTerminal): string
     {
@@ -119,79 +119,84 @@ class MerchantOrderReceiptService
             $itemsHtml .= "<div><label class=\"left\">{$item->quantity}x {$item->product_name}</label><span class=\"right\">\${$itemTotal}</span></div>";
         }
 
+        // Build EMV details section only if any EMV data exists
+        $emvHtml = $this->buildEmvDetailsHtml($order);
+
         return <<<HTML
-            <html>
-            <head>{$styles}</head>
-            <body>
-                <div class="receipt">
-                    <header>
-                        <div id="merchant_name">
-                            <p class="large bold center">{$merchant->name}</p>
-                        </div>
-                        <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        <div>
-                            <label class="left">{$order->created_at->format('m/d/Y')}</label>
-                            <span class="right">{$order->created_at->format('g:i A')}</span>
-                        </div>
-                    </header>
-                    <main>
-                        <div id="response">
-                            <p class="large bold center">APPROVED</p>
-                        </div>
-                        <div id="txn_type">
-                            <p class="large bold center">CARD PAYMENT</p>
-                        </div>
-                        <div id="amount">
-                            <label class="left bold">Amount: </label>
-                            <span class="large right bold">\${$total}</span>
-                        </div>
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="order_info">
-                            <p class="left bold">Order #: {$order->order_number}</p>
-                            <p class="left bold">Customer: {$customerName}</p>
-                        </div>
-                        
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="items">
-                            <p class="left bold">Items:</p>
-                            {$itemsHtml}
-                        </div>
-                        
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="totals">
-                            <div><label class="left">Subtotal:</label><span class="right">\${$subtotal}</span></div>
-                            <div><label class="left">Tax:</label><span class="right">\${$tax}</span></div>
-                            <div class="separator dotted" style="margin-top: 5px; margin-bottom: 5px;"></div>
-                            <div><label class="left bold">TOTAL:</label><span class="right bold">\${$total}</span></div>
-                        </div>
-                        
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="payment_details">
-                            <div><label class="left bold">Payment Method:</label><span class="right">Card</span></div>
-                            <div><label class="left bold">Transaction ID:</label><span class="right">{$transactionId}</span></div>
-                        </div>
-                        
-                        <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="receipt_type_description">
-                            <p class="center bold">** CUSTOMER COPY **</p>
-                        </div>
-                    </main>
-                    <footer>
-                        <div class="separator" style="margin-top: 20px; margin-bottom: 20px;"></div>
-                        <div id="thankyou">
-                            <p class="center">Thank you for your business!</p>
-                        </div>
-                        <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                    </footer>
-                </div>
-            </body>
-            </html>
-            HTML;
+        <html>
+        <head>{$styles}</head>
+        <body>
+            <div class="receipt">
+                <header>
+                    <div id="merchant_name">
+                        <p class="large bold center">{$merchant->name}</p>
+                    </div>
+                    <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    <div>
+                        <label class="left">{$order->created_at->format('m/d/Y')}</label>
+                        <span class="right">{$order->created_at->format('g:i A')}</span>
+                    </div>
+                </header>
+                <main>
+                    <div id="response">
+                        <p class="large bold center">APPROVED</p>
+                    </div>
+                    <div id="txn_type">
+                        <p class="large bold center">CARD PAYMENT</p>
+                    </div>
+                    <div id="amount">
+                        <label class="left bold">Amount: </label>
+                        <span class="large right bold">\${$total}</span>
+                    </div>
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="order_info">
+                        <p class="left bold">Order #: {$order->order_number}</p>
+                        <p class="left bold">Customer: {$customerName}</p>
+                    </div>
+                    
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="items">
+                        <p class="left bold">Items:</p>
+                        {$itemsHtml}
+                    </div>
+                    
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="totals">
+                        <div><label class="left">Subtotal:</label><span class="right">\${$subtotal}</span></div>
+                        <div><label class="left">Tax:</label><span class="right">\${$tax}</span></div>
+                        <div class="separator dotted" style="margin-top: 5px; margin-bottom: 5px;"></div>
+                        <div><label class="left bold">TOTAL:</label><span class="right bold">\${$total}</span></div>
+                    </div>
+                    
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="payment_details">
+                        <div><label class="left bold">Payment Method:</label><span class="right">Card</span></div>
+                        <div><label class="left bold">Transaction ID:</label><span class="right">{$transactionId}</span></div>
+                    </div>
+                    
+                    {$emvHtml}
+                    
+                    <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="receipt_type_description">
+                        <p class="center bold">** CUSTOMER COPY **</p>
+                    </div>
+                </main>
+                <footer>
+                    <div class="separator" style="margin-top: 20px; margin-bottom: 20px;"></div>
+                    <div id="thankyou">
+                        <p class="center">Thank you for your business!</p>
+                    </div>
+                    <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                </footer>
+            </div>
+        </body>
+        </html>
+        HTML;
     }
 
     /**
@@ -296,7 +301,7 @@ class MerchantOrderReceiptService
     }
 
     /**
-     * Receipt for hybrid payments - Handpoint format
+     * Receipt for hybrid payments - Handpoint format with EMV details
      */
     private function getHybridReceiptHtml(MerchantOrder $order, $customer, bool $forPaxTerminal): string
     {
@@ -319,88 +324,93 @@ class MerchantOrderReceiptService
             $itemsHtml .= "<div><label class=\"left\">{$item->quantity}x {$item->product_name}</label><span class=\"right\">\${$itemTotal}</span></div>";
         }
 
+        // Build EMV details section only if any EMV data exists
+        $emvHtml = $this->buildEmvDetailsHtml($order);
+
         return <<<HTML
-            <html>
-            <head>{$styles}</head>
-            <body>
-                <div class="receipt">
-                    <header>
-                        <div id="merchant_name">
-                            <p class="large bold center">{$merchant->name}</p>
-                        </div>
-                        <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        <div>
-                            <label class="left">{$order->created_at->format('m/d/Y')}</label>
-                            <span class="right">{$order->created_at->format('g:i A')}</span>
-                        </div>
-                    </header>
-                    <main>
-                        <div id="response">
-                            <p class="large bold center">HYBRID PAYMENT SUCCESSFUL</p>
-                        </div>
-                        <div id="txn_type">
-                            <p class="large bold center">SPLIT PAYMENT</p>
-                        </div>
-                        <div id="amount">
-                            <label class="left bold">Total Amount: </label>
-                            <span class="large right bold">\${$total}</span>
-                        </div>
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="order_info">
-                            <p class="left bold">Order #: {$order->order_number}</p>
-                            <p class="left bold">Customer: {$customerName}</p>
-                        </div>
-                        
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="items">
-                            <p class="left bold">Items:</p>
-                            {$itemsHtml}
-                        </div>
-                        
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="totals">
-                            <div><label class="left">Subtotal:</label><span class="right">\${$subtotal}</span></div>
-                            <div><label class="left">Tax:</label><span class="right">\${$tax}</span></div>
-                            <div class="separator dotted" style="margin-top: 5px; margin-bottom: 5px;"></div>
-                            <div><label class="left bold">TOTAL:</label><span class="right bold">\${$total}</span></div>
-                        </div>
-                        
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="payment_breakdown">
-                            <p class="left bold">Payment Breakdown:</p>
-                            <div><label class="left">Card Payment:</label><span class="right">\${$cardTotalWithTax} (incl. tax)</span></div>
-                            <div><label class="left">Token Payment:</label><span class="right">{$tokenAmount} (excl. tax)</span></div>
-                        </div>
-                        
-                        <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="payment_details">
-                            <div><label class="left bold">Payment Method:</label><span class="right">Hybrid (Card + Tokens)</span></div>
-                            <div><label class="left bold">Card TXN ID:</label><span class="right">{$cardTxId}</span></div>
-                            <div><label class="left bold">Token TXN ID:</label><span class="right">{$cyclosTxId}</span></div>
-                        </div>
-                        
-                        <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                        
-                        <div id="receipt_type_description">
-                            <p class="center bold">** CUSTOMER COPY **</p>
-                        </div>
-                    </main>
-                    <footer>
-                        <div class="separator" style="margin-top: 20px; margin-bottom: 20px;"></div>
-                        <div id="thankyou">
-                            <p class="center">Thank you for your business!</p>
-                        </div>
-                        <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
-                    </footer>
-                </div>
-            </body>
-            </html>
-            HTML;
+        <html>
+        <head>{$styles}</head>
+        <body>
+            <div class="receipt">
+                <header>
+                    <div id="merchant_name">
+                        <p class="large bold center">{$merchant->name}</p>
+                    </div>
+                    <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    <div>
+                        <label class="left">{$order->created_at->format('m/d/Y')}</label>
+                        <span class="right">{$order->created_at->format('g:i A')}</span>
+                    </div>
+                </header>
+                <main>
+                    <div id="response">
+                        <p class="large bold center">HYBRID PAYMENT SUCCESSFUL</p>
+                    </div>
+                    <div id="txn_type">
+                        <p class="large bold center">SPLIT PAYMENT</p>
+                    </div>
+                    <div id="amount">
+                        <label class="left bold">Total Amount: </label>
+                        <span class="large right bold">\${$total}</span>
+                    </div>
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="order_info">
+                        <p class="left bold">Order #: {$order->order_number}</p>
+                        <p class="left bold">Customer: {$customerName}</p>
+                    </div>
+                    
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="items">
+                        <p class="left bold">Items:</p>
+                        {$itemsHtml}
+                    </div>
+                    
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="totals">
+                        <div><label class="left">Subtotal:</label><span class="right">\${$subtotal}</span></div>
+                        <div><label class="left">Tax:</label><span class="right">\${$tax}</span></div>
+                        <div class="separator dotted" style="margin-top: 5px; margin-bottom: 5px;"></div>
+                        <div><label class="left bold">TOTAL:</label><span class="right bold">\${$total}</span></div>
+                    </div>
+                    
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="payment_breakdown">
+                        <p class="left bold">Payment Breakdown:</p>
+                        <div><label class="left">Card Payment:</label><span class="right">\${$cardTotalWithTax} (incl. tax)</span></div>
+                        <div><label class="left">Token Payment:</label><span class="right">{$tokenAmount} (excl. tax)</span></div>
+                    </div>
+                    
+                    <div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="payment_details">
+                        <div><label class="left bold">Payment Method:</label><span class="right">Hybrid (Card + Tokens)</span></div>
+                        <div><label class="left bold">Card TXN ID:</label><span class="right">{$cardTxId}</span></div>
+                        <div><label class="left bold">Token TXN ID:</label><span class="right">{$cyclosTxId}</span></div>
+                    </div>
+                    
+                    {$emvHtml}
+                    
+                    <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                    
+                    <div id="receipt_type_description">
+                        <p class="center bold">** CUSTOMER COPY **</p>
+                    </div>
+                </main>
+                <footer>
+                    <div class="separator" style="margin-top: 20px; margin-bottom: 20px;"></div>
+                    <div id="thankyou">
+                        <p class="center">Thank you for your business!</p>
+                    </div>
+                    <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
+                </footer>
+            </div>
+        </body>
+        </html>
+        HTML;
     }
 
     /**
@@ -701,5 +711,80 @@ class MerchantOrderReceiptService
         ];
 
         return $methodLabels[$method] ?? ucfirst($method);
+    }
+
+    /**
+     * Build EMV details HTML section for receipt
+     */
+    private function buildEmvDetailsHtml(MerchantOrder $order): string
+    {
+        // Check if any EMV data exists
+        $hasEmvData = $order->handpoint_transaction_reference
+            || $order->handpoint_rrn
+            || $order->handpoint_aid
+            || $order->handpoint_arc;
+
+        if (!$hasEmvData) {
+            return '';
+        }
+
+        $html = '<div class="separator dotted" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>';
+        $html .= '<div id="emv_details">';
+
+        // Transaction Reference
+        if ($order->handpoint_transaction_reference) {
+            $html .= '<div>';
+            $html .= '<label class="left bold">Transaction Reference:</label>';
+            $html .= '<span class="right">' . htmlspecialchars($order->handpoint_transaction_reference) . '</span>';
+            $html .= '</div>';
+        }
+
+        // RRN (Retrieval Reference Number)
+        if ($order->handpoint_rrn) {
+            $html .= '<div>';
+            $html .= '<label class="left bold">RRN:</label>';
+            $html .= '<span class="right">' . htmlspecialchars($order->handpoint_rrn) . '</span>';
+            $html .= '</div>';
+        }
+
+        $html .= '<div class="separator dotted" style="margin-top: 5px; margin-bottom: 5px;"></div>';
+
+        $html .= '<label class="left bold">EMV Details:</label>';
+
+        // AID (Application Identifier)
+        if ($order->handpoint_aid) {
+            $html .= '<div>';
+            $html .= '<label class="left bold">AID:</label>';
+            $html .= '<span class="right">' . htmlspecialchars($order->handpoint_aid) . '</span>';
+            $html .= '</div>';
+        }
+
+        // ARC (Authorization Response Code)
+        if ($order->handpoint_arc) {
+            $html .= '<div>';
+            $html .= '<label class="left bold">ARC:</label>';
+            $html .= '<span class="right">' . htmlspecialchars($order->handpoint_arc) . '</span>';
+            $html .= '</div>';
+        }
+
+        // Issuer Response Code
+        if ($order->handpoint_issuer_response_code) {
+            $html .= '<div>';
+            $html .= '<label class="left bold">Issuer Response Code:</label>';
+            $html .= '<span class="right">' . htmlspecialchars($order->handpoint_issuer_response_code) . '</span>';
+            $html .= '</div>';
+        }
+
+        // Authorization Code
+        if ($order->handpoint_authorization_code) {
+            $html .= '<div>';
+            $html .= '<label class="left bold">Authorization Code:</label>';
+            $html .= '<span class="right">' . htmlspecialchars($order->handpoint_authorization_code) . '</span>';
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+
+        return $html;
     }
 }
