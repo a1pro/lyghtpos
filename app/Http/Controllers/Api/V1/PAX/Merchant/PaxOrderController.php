@@ -143,11 +143,30 @@ class PaxOrderController extends Controller
                 throw new \Exception('Order is not in pending state');
             }
 
+            Log::info('Completing order for pax merchant', [
+                'order_id' => $orderId,
+                'request_all' => $request->all(),
+            ]);
+
+            // Extract Handpoint EMV details from the response
+            $handpointResponse = $request->handpoint_response;
+            $rawResponse = $handpointResponse['raw_response'] ?? [];
+            $cardDetails = $handpointResponse['card_details'] ?? [];
+
             // Prepare payment data from Handpoint
             $paymentData = [
                 'transaction_id' => $request->transaction_id,
                 'handpoint_response' => $request->handpoint_response,
                 'payment_timestamp' => now()->toIso8601String(),
+
+                'handpoint_aid' => $rawResponse['aid'] ?? null,
+                'handpoint_arc' => $rawResponse['arc'] ?? null,
+                'handpoint_issuer_response_code' => $rawResponse['issuerResponseCode'] ?? null,
+                'handpoint_rrn' => $rawResponse['rrn'] ?? null,
+                'handpoint_authorization_code' => $rawResponse['authorisationCode'] ?? null,
+                'handpoint_card_last4' => $cardDetails['last4'] ?? null,
+                'handpoint_card_brand' => $cardDetails['brand'] ?? null,
+                'handpoint_transaction_reference' => $rawResponse['transactionReference'] ?? $handpointResponse['transaction_reference'] ?? null,
             ];
 
             // Complete the order
