@@ -249,6 +249,38 @@ class PaxMerchantOrderService
                 $updateData['payment_metadata']['handpoint_response'] = $paymentData['handpoint_response'] ?? null;
             }
 
+            if (isset($paymentData['handpoint_aid'])) {
+                $updateData['handpoint_aid'] = $paymentData['handpoint_aid'];
+            }
+
+            if (isset($paymentData['handpoint_arc'])) {
+                $updateData['handpoint_arc'] = $paymentData['handpoint_arc'];
+            }
+
+            if (isset($paymentData['handpoint_issuer_response_code'])) {
+                $updateData['handpoint_issuer_response_code'] = $paymentData['handpoint_issuer_response_code'];
+            }
+
+            if (isset($paymentData['handpoint_rrn'])) {
+                $updateData['handpoint_rrn'] = $paymentData['handpoint_rrn'];
+            }
+
+            if (isset($paymentData['handpoint_authorization_code'])) {
+                $updateData['handpoint_authorization_code'] = $paymentData['handpoint_authorization_code'];
+            }
+
+            if (isset($paymentData['handpoint_card_last4'])) {
+                $updateData['handpoint_card_last4'] = $paymentData['handpoint_card_last4'];
+            }
+
+            if (isset($paymentData['handpoint_card_brand'])) {
+                $updateData['handpoint_card_brand'] = $paymentData['handpoint_card_brand'];
+            }
+
+            if (isset($paymentData['handpoint_transaction_reference'])) {
+                $updateData['handpoint_transaction_reference'] = $paymentData['handpoint_transaction_reference'];
+            }
+
             if (isset($paymentResult['cyclos_transaction_id'])) {
                 $updateData['cyclos_transaction_id'] = $paymentResult['cyclos_transaction_id'];
             }

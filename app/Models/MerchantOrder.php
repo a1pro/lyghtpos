@@ -28,7 +28,16 @@ class MerchantOrder extends Model
         'cyclos_transaction_id',
         'paid_at',
         'cyclos_order_id',
-        'payment_metadata'
+        'payment_metadata',
+
+        'handpoint_aid',
+        'handpoint_arc',
+        'handpoint_issuer_response_code',
+        'handpoint_rrn',
+        'handpoint_authorization_code',
+        'handpoint_card_last4',
+        'handpoint_card_brand',
+        'handpoint_transaction_reference',
     ];
 
     protected $casts = [
