@@ -2,6 +2,7 @@
 
 namespace App\Services\Api\PAX\Merchant;
 
+use App\Mail\Pax\Customer\OrderCompleted;
 use App\Models\MerchantOrder;
 use App\Models\MerchantOrderItem;
 use App\Models\User;
@@ -9,9 +10,11 @@ use App\Services\Api\POS\Customer\PosCustomerWalletService;
 use App\Services\Cyclos\MerchantCyclosOrderService;
 use App\Services\FavorMember\CyclosPayment\CyclosPaymentService;
 use App\Services\Merchant\MerchantOrderService;
+use App\Services\Merchant\Order\MerchantOrderReceiptService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class PaxMerchantOrderService
 {
@@ -307,6 +310,8 @@ class PaxMerchantOrderService
                 'tax_transaction_id' => $paymentResult['tax_transaction_id'] ?? null,
             ]);
 
+            $this->sendOrderReceiptEmail($order);
+
             return $order;
         });
     }
@@ -589,6 +594,50 @@ class PaxMerchantOrderService
                 'success' => false,
                 'message' => $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Send order receipt email to customer (runs in background, doesn't block main flow)
+     */
+    protected function sendOrderReceiptEmail(MerchantOrder $order): void
+    {
+        try {
+            dispatch(function () use ($order) {
+                try {
+                    $customer = $order->customer();
+
+                    if (!$customer || !$customer->email) {
+                        Log::warning('Cannot send order receipt email - customer has no email', [
+                            'order_id' => $order->id,
+                            'customer_id' => $customer->id ?? null
+                        ]);
+                        return;
+                    }
+
+                    $receiptService = app(MerchantOrderReceiptService::class);
+                    $receiptHtml = $receiptService->generateReceiptHtml($order);
+
+                    Mail::to($customer->email)->send(new OrderCompleted($order, $receiptHtml));
+
+                    Log::info('Order receipt email sent successfully', [
+                        'order_id' => $order->id,
+                        'customer_email' => $customer->email
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send order receipt email in background', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            })->onQueue('emails');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to dispatch order receipt email job', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
