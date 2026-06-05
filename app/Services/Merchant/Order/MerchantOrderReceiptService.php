@@ -108,6 +108,7 @@ class MerchantOrderReceiptService
         $items = $order->items;
         $subtotal = $order->total_amount;
         $tax = $order->tax_amount;
+        $finStatus = $order->handpoint_fin_status;
         $total = $subtotal + $tax;
         $transactionId = $order->card_transaction_id ?? 'N/A';
         $customerName = $customer ? ($customer->first_name . ' ' . $customer->last_name) : 'N/A';
@@ -129,7 +130,8 @@ class MerchantOrderReceiptService
             <div class="receipt">
                 <header>
                     <div id="merchant_name">
-                        <p class="large bold center">{$merchant->name}</p>
+                        <p class="large bold center">{$merchant->first_name} {$merchant->last_name}</p>
+                            <p class="large bold center">{$merchant->address->full_address}</p>
                     </div>
                     <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
                     <div>
@@ -143,6 +145,10 @@ class MerchantOrderReceiptService
                     </div>
                     <div id="txn_type">
                         <p class="large bold center">CARD PAYMENT</p>
+                    </div>
+                    <div id="finstatus">
+                        <label class="left bold">SALE: </label>
+                        <span class="large right bold">{$finStatus}</span>
                     </div>
                     <div id="amount">
                         <label class="left bold">Amount: </label>
@@ -227,7 +233,8 @@ class MerchantOrderReceiptService
                 <div class="receipt">
                     <header>
                         <div id="merchant_name">
-                            <p class="large bold center">{$merchant->name}</p>
+                            <p class="large bold center">{$merchant->first_name} {$merchant->last_name}</p>
+                            <p class="large bold center">{$merchant->address->full_address}</p>
                         </div>
                         <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
                         <div>
@@ -309,6 +316,7 @@ class MerchantOrderReceiptService
         $items = $order->items;
         $subtotal = $order->total_amount;
         $tax = $order->tax_amount;
+        $finStatus = $order->handpoint_fin_status;
         $total = $subtotal + $tax;
         $cardAmount = $order->card_amount;
         $tokenAmount = $order->token_amount;
@@ -334,7 +342,8 @@ class MerchantOrderReceiptService
             <div class="receipt">
                 <header>
                     <div id="merchant_name">
-                        <p class="large bold center">{$merchant->name}</p>
+                        <p class="large bold center">{$merchant->first_name} {$merchant->last_name}</p>
+                            <p class="large bold center">{$merchant->address->full_address}</p>
                     </div>
                     <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
                     <div>
@@ -348,6 +357,10 @@ class MerchantOrderReceiptService
                     </div>
                     <div id="txn_type">
                         <p class="large bold center">SPLIT PAYMENT</p>
+                    </div>
+                    <div id="finstatus">
+                        <label class="left bold">SALE: </label>
+                        <span class="large right bold">{$finStatus}</span>
                     </div>
                     <div id="amount">
                         <label class="left bold">Total Amount: </label>
@@ -439,7 +452,8 @@ class MerchantOrderReceiptService
                 <div class="receipt">
                     <header>
                         <div id="merchant_name">
-                            <p class="large bold center">{$merchant->name}</p>
+                            <p class="large bold center">{$merchant->first_name} {$merchant->last_name}</p>
+                            <p class="large bold center">{$merchant->address->full_address}</p>
                         </div>
                         <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
                         <div>
@@ -533,7 +547,8 @@ class MerchantOrderReceiptService
                 <div class="receipt">
                     <header>
                         <div id="merchant_name">
-                            <p class="large bold center">{$merchant->name}</p>
+                            <p class="large bold center">{$merchant->first_name} {$merchant->last_name}</p>
+                            <p class="large bold center">{$merchant->address->full_address}</p>
                         </div>
                         <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
                         <div>
@@ -628,7 +643,8 @@ class MerchantOrderReceiptService
                 <div class="receipt">
                     <header>
                         <div id="merchant_name">
-                            <p class="large bold center">{$merchant->name}</p>
+                            <p class="large bold center">{$merchant->first_name} {$merchant->last_name}</p>
+                            <p class="large bold center">{$merchant->address->full_address}</p>
                         </div>
                         <div class="separator solid" style="margin-top: 10px; height: 2px; margin-bottom: 10px;"></div>
                         <div>
