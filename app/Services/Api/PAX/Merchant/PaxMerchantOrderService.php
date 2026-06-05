@@ -252,6 +252,10 @@ class PaxMerchantOrderService
                 $updateData['payment_metadata']['handpoint_response'] = $paymentData['handpoint_response'] ?? null;
             }
 
+            if (isset($paymentData['handpoint_fin_status'])) {
+                $updateData['handpoint_fin_status'] = $paymentData['handpoint_fin_status'];
+            }
+
             if (isset($paymentData['handpoint_aid'])) {
                 $updateData['handpoint_aid'] = $paymentData['handpoint_aid'];
             }
