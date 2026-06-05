@@ -64,17 +64,36 @@ class UserAddress extends Model
      */
     public function getFullAddressAttribute()
     {
-        $address = $this->address;
+        $addressParts = [];
 
-        $address .= ", {$this->city}";
-
-        if ($this->state) {
-            $address .= ", {$this->state}";
+        if (!empty($this->address)) {
+            $addressParts[] = trim($this->address);
         }
 
-        $address .= ", {$this->postal_code}, {$this->country}";
+        $cityName = $this->getCityNameAttribute();
+        if (!empty($cityName)) {
+            $addressParts[] = $cityName;
+        }
 
-        return $address;
+        $stateName = $this->getStateNameAttribute();
+        if (!empty($stateName)) {
+            $addressParts[] = $stateName;
+        }
+
+        if (!empty($this->postal_code)) {
+            $addressParts[] = $this->postal_code;
+        }
+
+        $countryName = $this->getCountryNameAttribute();
+        if (!empty($countryName)) {
+            $addressParts[] = $countryName;
+        }
+
+        if (empty($addressParts)) {
+            return '';
+        }
+
+        return implode(', ', $addressParts);
     }
 
     /**

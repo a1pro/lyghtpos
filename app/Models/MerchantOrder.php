@@ -38,6 +38,7 @@ class MerchantOrder extends Model
         'handpoint_card_last4',
         'handpoint_card_brand',
         'handpoint_transaction_reference',
+        'handpoint_fin_status',
     ];
 
     protected $casts = [

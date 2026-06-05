@@ -159,6 +159,7 @@ class PaxOrderController extends Controller
                 'handpoint_response' => $request->handpoint_response,
                 'payment_timestamp' => now()->toIso8601String(),
 
+                'handpoint_fin_status' => $rawResponse['finStatus'] ?? null,
                 'handpoint_aid' => $rawResponse['aid'] ?? null,
                 'handpoint_arc' => $rawResponse['arc'] ?? null,
                 'handpoint_issuer_response_code' => $rawResponse['issuerResponseCode'] ?? null,
