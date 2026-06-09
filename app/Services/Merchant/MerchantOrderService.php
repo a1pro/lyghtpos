@@ -4,6 +4,7 @@ namespace App\Services\Merchant;
 
 use App\Models\MerchantOrder;
 use App\Models\MerchantOrderItem;
+use App\Models\User;
 use App\Services\Cyclos\MerchantCyclosOrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -43,10 +44,14 @@ class MerchantOrderService
                 $paymentStatus = 'paid';
             }
 
+            $customer = User::where('cyclos_user_id', $customerCyclosId)->first();
+            $customerId = $customer->id;
+
             // Create the order
             $order = MerchantOrder::create([
                 'merchant_id' => $merchantId,
                 'customer_cyclos_id' => $customerCyclosId,
+                'customer_id' => $customerId,
                 'total_amount' => $totalAmount,
                 'tax_amount' => $taxAmount ?? 0,
                 'payment_method' => $paymentMethod,

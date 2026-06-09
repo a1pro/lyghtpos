@@ -3,6 +3,7 @@
 namespace App\Services\Api\PAX\Merchant;
 
 use App\Mail\Pax\Customer\OrderCompleted;
+use App\Models\HandpointTransactionLog;
 use App\Models\MerchantOrder;
 use App\Models\MerchantOrderItem;
 use App\Models\User;
@@ -225,6 +226,97 @@ class PaxMerchantOrderService
     }
 
     /**
+     * Record Handpoint transaction data to the logs table
+     */
+    public function recordHandpointTransaction(MerchantOrder $order, array $handpointResponse, array $paymentData): ?HandpointTransactionLog
+    {
+        try {
+            $rawResponse = $handpointResponse['raw_response'] ?? [];
+            $cardDetails = $handpointResponse['card_details'] ?? [];
+            $deviceStatus = $rawResponse['deviceStatus'] ?? [];
+
+            // Prepare log data
+            $logData = [
+                'merchant_order_id' => $order->id,
+                'merchant_id' => $order->merchant_id,
+                'customer_id' => $order->customer_id,
+
+                // Transaction Identifiers
+                'transaction_id' => $paymentData['transaction_id'] ?? $handpointResponse['transaction_id'] ?? null,
+                'transaction_reference' => $paymentData['handpoint_transaction_reference'] ?? $rawResponse['transactionReference'] ?? null,
+
+                // Status
+                'status' => $handpointResponse['status'] ?? 'unknown',
+                'fin_status' => $paymentData['handpoint_fin_status'] ?? $rawResponse['finStatus'] ?? null,
+                'status_message' => $rawResponse['statusMessage'] ?? null,
+
+                // Amounts (convert from cents if needed)
+                'amount' => isset($handpointResponse['amount']) ? $handpointResponse['amount'] : (isset($rawResponse['totalAmount']) ? $rawResponse['totalAmount'] / 100 : 0),
+                'currency' => $rawResponse['currency'] ?? 'USD',
+                'tip_amount' => isset($rawResponse['tipAmount']) ? $rawResponse['tipAmount'] / 100 : null,
+                'approved_amount' => isset($rawResponse['approvedAmount']) ? $rawResponse['approvedAmount'] / 100 : null,
+                'requested_amount' => isset($rawResponse['requestedAmount']) ? $rawResponse['requestedAmount'] / 100 : null,
+
+                // EMV & Card Details
+                'aid' => $paymentData['handpoint_aid'] ?? $rawResponse['aid'] ?? null,
+                'arc' => $paymentData['handpoint_arc'] ?? $rawResponse['arc'] ?? null,
+                'issuer_response_code' => $paymentData['handpoint_issuer_response_code'] ?? $rawResponse['issuerResponseCode'] ?? null,
+                'rrn' => $paymentData['handpoint_rrn'] ?? $rawResponse['rrn'] ?? null,
+                'authorization_code' => $paymentData['handpoint_authorization_code'] ?? $rawResponse['authorisationCode'] ?? null,
+                'card_last4' => $paymentData['handpoint_card_last4'] ?? $cardDetails['last4'] ?? null,
+                'card_brand' => $paymentData['handpoint_card_brand'] ?? $cardDetails['brand'] ?? $rawResponse['cardSchemeName'] ?? null,
+                'masked_card_number' => $rawResponse['maskedCardNumber'] ?? null,
+                'card_expiry' => $rawResponse['expiryDateMMYY'] ?? null,
+                'tender_type' => $rawResponse['tenderType'] ?? null,
+
+                // Terminal Details
+                'device_serial' => $handpointResponse['device_serial'] ?? $rawResponse['device_serial'] ?? $deviceStatus['serialNumber'] ?? null,
+                'device_status_message' => $deviceStatus['statusMessage'] ?? null,
+                'device_battery_status' => isset($deviceStatus['batteryStatus']) ? (string) $deviceStatus['batteryStatus'] : null,
+
+                // Receipt URLs
+                'merchant_receipt_url' => $rawResponse['merchantReceipt'] ?? null,
+                'customer_receipt_url' => $rawResponse['customerReceipt'] ?? null,
+
+                // Flags
+                'is_partial_approval' => $rawResponse['isPartialApproval'] ?? false,
+                'is_recovered' => $rawResponse['recoveredTransaction'] ?? false,
+                'is_reversal_attempted' => $rawResponse['reversalAttempted'] ?? false,
+
+                // Raw Response and Additional Data
+                'raw_response' => $handpointResponse,
+                'additional_data' => [
+                    'payment_data' => $paymentData,
+                    'order_total' => $order->total_amount + $order->tax_amount,
+                    'order_payment_method' => $order->payment_method,
+                ],
+                'transaction_timestamp' => isset($handpointResponse['timestamp']) ? date('Y-m-d H:i:s', strtotime($handpointResponse['timestamp'])) : now(),
+            ];
+
+            // Create or update the log
+            $log = HandpointTransactionLog::updateOrCreate(
+                ['transaction_id' => $logData['transaction_id']],
+                $logData
+            );
+
+            Log::info('Handpoint transaction recorded successfully', [
+                'log_id' => $log->id,
+                'transaction_id' => $log->transaction_id,
+                'order_id' => $order->id,
+            ]);
+
+            return $log;
+        } catch (\Exception $e) {
+            Log::error('Failed to record Handpoint transaction', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return null;
+        }
+    }
+
+    /**
      * Complete the order after successful payment
      */
     public function completeOrder(MerchantOrder $order, array $paymentData): MerchantOrder
@@ -286,6 +378,11 @@ class PaxMerchantOrderService
 
             if (isset($paymentData['handpoint_transaction_reference'])) {
                 $updateData['handpoint_transaction_reference'] = $paymentData['handpoint_transaction_reference'];
+            }
+
+            // Store handpoint log ID if present
+            if (isset($paymentData['handpoint_log_id'])) {
+                $updateData['payment_metadata']['handpoint_log_id'] = $paymentData['handpoint_log_id'];
             }
 
             if (isset($paymentResult['cyclos_transaction_id'])) {
@@ -636,7 +733,6 @@ class PaxMerchantOrderService
                     ]);
                 }
             })->onQueue('emails');
-
         } catch (\Exception $e) {
             Log::error('Failed to dispatch order receipt email job', [
                 'order_id' => $order->id,
