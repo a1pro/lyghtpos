@@ -23,6 +23,7 @@ use App\Http\Controllers\Merchant\MerchantProductController;
 use App\Http\Controllers\Merchant\MerchantProductImportController;
 use App\Http\Controllers\Merchant\WalletController;
 use App\Http\Controllers\Merchant\CategoryController;
+use App\Http\Controllers\Merchant\HandpointLogController;
 use App\Http\Controllers\Merchant\MerchantAdvertisementController;
 use App\Http\Controllers\Merchant\MerchantProfileController;
 use App\Http\Controllers\Merchant\MerchantManageSubscriptionController;
@@ -287,6 +288,11 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('/{order}', [MerchantOrderController::class, 'show'])->name('show');
 
         Route::get('/{orderId}/receipt', [MerchantOrderController::class, 'getReceipt'])->name('receipt');
+    });
+
+    Route::prefix('handpoint-logs')->name('handpoint-logs.')->group(function () {
+        Route::get('/', [HandpointLogController::class, 'index'])->name('index');
+        Route::get('/{id}', [HandpointLogController::class, 'show'])->name('show');
     });
 });
 

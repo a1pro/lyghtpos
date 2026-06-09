@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Merchant;
 
 use App\Http\Controllers\Controller;
+use App\Models\HandpointTransactionLog;
 use App\Models\MerchantOrder;
 use App\Services\Merchant\MerchantOrderService;
 use App\Services\Merchant\Order\MerchantOrderReceiptService;
@@ -56,9 +57,13 @@ class MerchantOrderController extends Controller
         // Load items relationship
         $order->load(['items']);
 
+        $handpointLogs = HandpointTransactionLog::where('merchant_order_id', $order->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         $customer = $order->customer();
 
-        return view('merchant.pages.orders.view', compact('order', 'customer'));
+        return view('merchant.pages.orders.view', compact('order', 'customer', 'handpointLogs'));
     }
 
     /**
