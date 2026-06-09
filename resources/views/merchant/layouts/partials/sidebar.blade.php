@@ -108,6 +108,16 @@
                     </a>
                 </li>
 
+                <li class="nav-header">Logs</li>
+
+                <!-- PAX Terminal Logs -->
+                <li class="nav-item">
+                    <a href="{{ route('merchant.handpoint-logs.index') }}" class="nav-link {{ activeSegment('handpoint-logs') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-terminal"></i>
+                        <p>PAX Terminal Logs</p>
+                    </a>
+                </li>
+
                 {{-- <li class="nav-header">{{ __('Purchases') }}</li> --}}
 
                 <!-- Purchases (Dropdown) -->
@@ -145,14 +155,14 @@
 
                 <!-- Settings Section for Merchants -->
 
+                <li class="nav-header">Settings</li>
+
                 <li class="nav-item">
                     <a href="{{ route('merchant.manage-subscriptions.index') }}" class="nav-link {{ request()->routeIs('merchant.manage-subscriptions.index') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-shopping-cart"></i>
                         <p>Manage Subscription</p>
                     </a>
                 </li>
-
-                <li class="nav-header">Settings</li>
 
                 @else
                 <!-- Show pending status message for unapproved merchants -->

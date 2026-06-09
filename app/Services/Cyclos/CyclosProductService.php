@@ -204,7 +204,7 @@ class CyclosProductService
                 } elseif (isset($product['stockQuantity'])) {
                     $product['quantity'] = (float) $product['stockQuantity'];
                 } else {
-                    $product['quantity'] = 1000000;
+                    $product['quantity'] = 0;
                 }
 
                 // Ensure we have an ID field

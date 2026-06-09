@@ -433,7 +433,7 @@ class MerchantProductService
                 'response_type' => gettype($responseData),
                 'is_array' => is_array($responseData),
                 'response_keys' => is_array($responseData) ? array_keys($responseData) : null,
-                'response_sample' => is_array($responseData) ? array_slice($responseData, 0, 2) : null
+                'responseData' => $responseData ?? null
             ]);
 
             // Helper function to add quantity field and format product
@@ -448,7 +448,7 @@ class MerchantProductService
                 } elseif (isset($product['stockQuantity'])) {
                     $product['quantity'] = (float) $product['stockQuantity'];
                 } else {
-                    $product['quantity'] = 1000000;
+                    $product['quantity'] = 0;
                 }
 
                 // Ensure we have an ID field
@@ -548,7 +548,7 @@ class MerchantProductService
                 } elseif (isset($product['stockQuantity'])) {
                     $product['quantity'] = (float) $product['stockQuantity'];
                 } else {
-                    $product['quantity'] = 1000000;
+                    $product['quantity'] = 0;
                 }
 
                 if (!isset($product['id']) && isset($product['_id'])) {
@@ -1363,14 +1363,15 @@ class MerchantProductService
         }
 
         // Check stock
-        $unlimitedStock = (bool) ($product['unlimitedStock'] ?? false);
-        $stockQuantity = (int) ($product['stockQuantity'] ?? 0);
+        // $unlimitedStock = (bool) ($product['unlimitedStock'] ?? false);
+        // $stockQuantity = (int) ($product['stockQuantity'] ?? 0);
 
-        if (!$unlimitedStock && $stockQuantity <= 0) {
-            return false;
-        }
+        // if (!$unlimitedStock && $stockQuantity <= 0) {
+        //     return false;
+        // }
 
-        return true;
+        // Check actual status
+        return $product['status'];
     }
 
     /**

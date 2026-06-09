@@ -152,6 +152,261 @@
     </div>
 </div>
 
+<!-- Handpoint Terminal Logs Section -->
+@if(isset($handpointLogs) && $handpointLogs->count() > 0)
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-terminal"></i> Handpoint Terminal Logs
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                                <th>Card Details</th>
+                                <th>RRN</th>
+                                <th>Auth Code</th>
+                                <th>Device Serial</th>
+                                <th>Date/Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($handpointLogs as $log)
+                            <tr>
+                                <td>
+                                    <code>{{ $log->transaction_id ?? 'N/A' }}</code>
+                                    @if(!empty($log->transaction_reference))
+                                    <br><small class="text-muted">Ref: {{ $log->transaction_reference }}</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    @php
+                                    $statusBadgeClass = match($log->fin_status ?? '') {
+                                    'AUTHORISED' => 'badge-success',
+                                    'DECLINED' => 'badge-danger',
+                                    'PENDING' => 'badge-warning',
+                                    default => 'badge-secondary'
+                                    };
+                                    @endphp
+                                    <span class="badge {{ $statusBadgeClass }}">{{ $log->fin_status ?? $log->status ?? 'N/A' }}</span>
+                                    @if(!empty($log->status_message))
+                                    <br><small>{{ $log->status_message }}</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ $log->currency ?? 'USD' }} {{ number_format($log->amount ?? 0, 2) }}
+                                    @if(!empty($log->tip_amount))
+                                    <br><small>Tip: {{ $log->currency ?? 'USD' }} {{ number_format($log->tip_amount, 2) }}</small>
+                                    @endif
+                                    @if($log->is_partial_approval ?? false)
+                                    <br><small class="text-warning">Partial Approval</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!empty($log->card_brand) || !empty($log->card_last4))
+                                    <strong>{{ $log->card_brand ?? 'Card' }}</strong>
+                                    @if(!empty($log->card_last4))
+                                    <br>**** {{ $log->card_last4 }}
+                                    @endif
+                                    @if(!empty($log->card_expiry))
+                                    <br><small>Exp: {{ $log->card_expiry }}</small>
+                                    @endif
+                                    @else
+                                    N/A
+                                    @endif
+                                </td>
+                                <td>
+                                    <code>{{ $log->rrn ?? 'N/A' }}</code>
+                                </td>
+                                <td>
+                                    <code>{{ $log->authorization_code ?? 'N/A' }}</code>
+                                </td>
+                                <td>
+                                    <code>{{ $log->device_serial ?? 'N/A' }}</code>
+                                    @if(!empty($log->device_battery_status))
+                                    <br><small>Battery: {{ $log->device_battery_status }}%</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ isset($log->transaction_timestamp) ? $log->transaction_timestamp->format('Y-m-d H:i:s') : (isset($log->created_at) ? $log->created_at->format('Y-m-d H:i:s') : 'N/A') }}
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#handpointModal{{ $log->id ?? '' }}">
+                                        <i class="fas fa-eye"></i> Details
+                                    </button>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Handpoint Log Detail Modals -->
+@foreach($handpointLogs as $log)
+<div class="modal fade" id="handpointModal{{ $log->id ?? '' }}" tabindex="-1" role="dialog" aria-labelledby="handpointModalLabel{{ $log->id ?? '' }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="handpointModalLabel{{ $log->id ?? '' }}">
+                    <i class="fas fa-terminal"></i> Handpoint Transaction Details
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Transaction Information</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Transaction ID:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->transaction_id ?? 'N/A' }}</code></dd>
+
+                            <dt class="col-sm-4">Reference:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->transaction_reference ?? 'N/A' }}</code></dd>
+
+                            <dt class="col-sm-4">Status:</dt>
+                            <dd class="col-sm-8">{{ $log->fin_status ?? $log->status ?? 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Status Message:</dt>
+                            <dd class="col-sm-8">{{ $log->status_message ?? 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Tender Type:</dt>
+                            <dd class="col-sm-8">{{ $log->tender_type ?? 'N/A' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Amount Details</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Amount:</dt>
+                            <dd class="col-sm-8">{{ $log->currency ?? 'USD' }} {{ number_format($log->amount ?? 0, 2) }}</dd>
+
+                            <dt class="col-sm-4">Tip Amount:</dt>
+                            <dd class="col-sm-8">{{ isset($log->tip_amount) ? ($log->currency ?? 'USD') . ' ' . number_format($log->tip_amount, 2) : 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Approved Amount:</dt>
+                            <dd class="col-sm-8">{{ isset($log->approved_amount) ? ($log->currency ?? 'USD') . ' ' . number_format($log->approved_amount, 2) : 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Requested Amount:</dt>
+                            <dd class="col-sm-8">{{ isset($log->requested_amount) ? ($log->currency ?? 'USD') . ' ' . number_format($log->requested_amount, 2) : 'N/A' }}</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>EMV & Card Details</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Card Brand:</dt>
+                            <dd class="col-sm-8">{{ $log->card_brand ?? 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Card Last4:</dt>
+                            <dd class="col-sm-8">{{ $log->card_last4 ?? 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Masked Card:</dt>
+                            <dd class="col-sm-8">{{ $log->masked_card_number ?? 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Card Expiry:</dt>
+                            <dd class="col-sm-8">{{ $log->card_expiry ?? 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">AID:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->aid ?? 'N/A' }}</code></dd>
+
+                            <dt class="col-sm-4">ARC:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->arc ?? 'N/A' }}</code></dd>
+
+                            <dt class="col-sm-4">Issuer Response:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->issuer_response_code ?? 'N/A' }}</code></dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Authorization Details</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">RRN:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->rrn ?? 'N/A' }}</code></dd>
+
+                            <dt class="col-sm-4">Auth Code:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->authorization_code ?? 'N/A' }}</code></dd>
+
+                            <dt class="col-sm-4">Partial Approval:</dt>
+                            <dd class="col-sm-8">{{ ($log->is_partial_approval ?? false) ? 'Yes' : 'No' }}</dd>
+
+                            <dt class="col-sm-4">Recovered:</dt>
+                            <dd class="col-sm-8">{{ ($log->is_recovered ?? false) ? 'Yes' : 'No' }}</dd>
+
+                            <dt class="col-sm-4">Reversal Attempted:</dt>
+                            <dd class="col-sm-8">{{ ($log->is_reversal_attempted ?? false) ? 'Yes' : 'No' }}</dd>
+                        </dl>
+
+                        <h6 class="mt-3">Terminal Details</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Device Serial:</dt>
+                            <dd class="col-sm-8"><code>{{ $log->device_serial ?? 'N/A' }}</code></dd>
+
+                            <dt class="col-sm-4">Device Status:</dt>
+                            <dd class="col-sm-8">{{ $log->device_status_message ?? 'N/A' }}</dd>
+
+                            <dt class="col-sm-4">Battery Status:</dt>
+                            <dd class="col-sm-8">{{ isset($log->device_battery_status) ? $log->device_battery_status . '%' : 'N/A' }}</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if(!empty($log->merchant_receipt_url) || !empty($log->customer_receipt_url))
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Receipt Links</h6>
+                        @if(!empty($log->merchant_receipt_url))
+                        <a href="{{ $log->merchant_receipt_url }}" target="_blank" class="btn btn-sm btn-info">
+                            <i class="fas fa-store"></i> Merchant Receipt
+                        </a>
+                        @endif
+                        @if(!empty($log->customer_receipt_url))
+                        <a href="{{ $log->customer_receipt_url }}" target="_blank" class="btn btn-sm btn-success">
+                            <i class="fas fa-user"></i> Customer Receipt
+                        </a>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+                @if(!empty($log->raw_response))
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Raw Response</h6>
+                        <pre style="max-height: 200px; overflow-y: auto; background: #f5f5f5; padding: 10px; border-radius: 5px;"><code>{{ json_encode($log->raw_response, JSON_PRETTY_PRINT) }}</code></pre>
+                    </div>
+                </div>
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
+@endif
+
+
 <!-- Receipt Modal -->
 <div class="modal fade" id="receiptModal" tabindex="-1" role="dialog" aria-labelledby="receiptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">

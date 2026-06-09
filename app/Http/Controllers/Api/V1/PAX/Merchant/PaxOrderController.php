@@ -170,6 +170,14 @@ class PaxOrderController extends Controller
                 'handpoint_transaction_reference' => $rawResponse['transactionReference'] ?? $handpointResponse['transaction_reference'] ?? null,
             ];
 
+            // Record Handpoint transaction log BEFORE completing order
+            $handpointLog = $this->paxMerchantOrderService->recordHandpointTransaction($order, $handpointResponse, $paymentData);
+
+            // Store log ID in payment data for reference
+            if ($handpointLog) {
+                $paymentData['handpoint_log_id'] = $handpointLog->id;
+            }
+
             // Complete the order
             $completedOrder = $this->paxMerchantOrderService->completeOrder($order, $paymentData);
 
@@ -181,6 +189,7 @@ class PaxOrderController extends Controller
                 'status' => $completedOrder->status,
                 'payment_status' => $completedOrder->payment_status,
                 'transaction_id' => $completedOrder->payment_transaction_id,
+                'handpoint_log_id' => $handpointLog?->id,
             ]);
         } catch (\Exception $e) {
             Log::error('Order completion error', [
