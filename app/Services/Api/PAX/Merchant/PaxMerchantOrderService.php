@@ -227,14 +227,34 @@ class PaxMerchantOrderService
 
     /**
      * Record Handpoint transaction data to the logs table
+     * 
+     * @throws \Exception When duplicate transaction ID is detected
      */
-    public function recordHandpointTransaction(MerchantOrder $order, array $handpointResponse, array $paymentData): ?HandpointTransactionLog
+    public function recordHandpointTransaction(MerchantOrder $order, array $handpointResponse, array $paymentData): HandpointTransactionLog
     {
-        try {
-            $rawResponse = $handpointResponse['raw_response'] ?? [];
-            $cardDetails = $handpointResponse['card_details'] ?? [];
-            $deviceStatus = $rawResponse['deviceStatus'] ?? [];
+        $rawResponse = $handpointResponse['raw_response'] ?? [];
+        $cardDetails = $handpointResponse['card_details'] ?? [];
+        $deviceStatus = $rawResponse['deviceStatus'] ?? [];
 
+        // Get transaction ID from response
+        $transactionId = $paymentData['transaction_id'] ?? $handpointResponse['transaction_id'] ?? null;
+
+        // Check for duplicate transaction ID
+        if ($transactionId) {
+            $existingLog = HandpointTransactionLog::where('transaction_id', $transactionId)->first();
+            if ($existingLog) {
+                Log::warning('Duplicate Handpoint transaction detected', [
+                    'transaction_id' => $transactionId,
+                    'existing_log_id' => $existingLog->id,
+                    'existing_order_id' => $existingLog->merchant_order_id,
+                    'new_order_id' => $order->id,
+                ]);
+
+                throw new \Exception("Duplicate transaction ID: {$transactionId}. This transaction has already been recorded.");
+            }
+        }
+
+        try {
             // Prepare log data
             $logData = [
                 'merchant_order_id' => $order->id,
@@ -242,7 +262,7 @@ class PaxMerchantOrderService
                 'customer_id' => $order->customer_id,
 
                 // Transaction Identifiers
-                'transaction_id' => $paymentData['transaction_id'] ?? $handpointResponse['transaction_id'] ?? null,
+                'transaction_id' => $transactionId,
                 'transaction_reference' => $paymentData['handpoint_transaction_reference'] ?? $rawResponse['transactionReference'] ?? null,
 
                 // Status
@@ -293,11 +313,8 @@ class PaxMerchantOrderService
                 'transaction_timestamp' => isset($handpointResponse['timestamp']) ? date('Y-m-d H:i:s', strtotime($handpointResponse['timestamp'])) : now(),
             ];
 
-            // Create or update the log
-            $log = HandpointTransactionLog::updateOrCreate(
-                ['transaction_id' => $logData['transaction_id']],
-                $logData
-            );
+            // Create the log (not updateOrCreate anymore since we check duplicate above)
+            $log = HandpointTransactionLog::create($logData);
 
             Log::info('Handpoint transaction recorded successfully', [
                 'log_id' => $log->id,
@@ -309,10 +326,11 @@ class PaxMerchantOrderService
         } catch (\Exception $e) {
             Log::error('Failed to record Handpoint transaction', [
                 'order_id' => $order->id,
+                'transaction_id' => $transactionId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return null;
+            throw $e; // Re-throw to be handled by controller
         }
     }
 
