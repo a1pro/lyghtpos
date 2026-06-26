@@ -39,6 +39,9 @@ class MerchantOrder extends Model
         'handpoint_card_brand',
         'handpoint_transaction_reference',
         'handpoint_fin_status',
+
+        'failed_at',
+        'failure_message',
     ];
 
     protected $casts = [
