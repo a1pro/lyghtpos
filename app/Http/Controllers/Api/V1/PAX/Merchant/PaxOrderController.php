@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1\PAX\Merchant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PAX\Merchant\PaxCustomerCompleteOrderRequest;
 use App\Http\Requests\Api\PAX\Merchant\PaxCustomerCreateOrderRequest;
+use App\Http\Requests\Api\PAX\Merchant\PaxCustomerFailOrderRequest;
 use App\Http\Requests\Api\PAX\Merchant\PaxGetReceiptRequest;
+use App\Http\Requests\Api\PAX\Merchant\PaxHandpointResponseRequest;
 use App\Services\Merchant\Order\MerchantOrderReceiptService;
 use App\Models\MerchantOrder;
 use App\Models\User;
@@ -170,14 +172,6 @@ class PaxOrderController extends Controller
                 'handpoint_transaction_reference' => $rawResponse['transactionReference'] ?? $handpointResponse['transaction_reference'] ?? null,
             ];
 
-            // Record Handpoint transaction log BEFORE completing order
-            $handpointLog = $this->paxMerchantOrderService->recordHandpointTransaction($order, $handpointResponse, $paymentData);
-
-            // Store log ID in payment data for reference
-            if ($handpointLog) {
-                $paymentData['handpoint_log_id'] = $handpointLog->id;
-            }
-
             // Complete the order
             $completedOrder = $this->paxMerchantOrderService->completeOrder($order, $paymentData);
 
@@ -189,7 +183,6 @@ class PaxOrderController extends Controller
                 'status' => $completedOrder->status,
                 'payment_status' => $completedOrder->payment_status,
                 'transaction_id' => $completedOrder->payment_transaction_id,
-                'handpoint_log_id' => $handpointLog?->id,
             ]);
         } catch (\Exception $e) {
             Log::error('Order completion error', [
@@ -201,6 +194,157 @@ class PaxOrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Handle failed order
+     */
+    public function failCustomerOrder(PaxCustomerFailOrderRequest $request)
+    {
+        try {
+            $orderId = $request->order_id;
+
+            $order = MerchantOrder::where('id', $orderId)
+                ->where('merchant_id', Auth::id())
+                ->first();
+
+            if (!$order) {
+                throw new \Exception('Order not found');
+            }
+
+            if ($order->status !== 'pending') {
+                throw new \Exception('Order is not in pending state');
+            }
+
+            Log::warning('Payment failed for order', [
+                'order_id' => $orderId,
+                'failure_message' => $request->failure_message,
+            ]);
+
+            $order->update([
+                'status' => 'cancelled',
+                'payment_status' => 'failed',
+                'failed_at' => now(),
+                'failure_message' => $request->failure_message
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order has been cancelled',
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Order failure handling error', [
+                'order_id' => $request->order_id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Record Handpoint response for an order (can be called multiple times)
+     */
+    public function recordHandpointResponse(PaxHandpointResponseRequest $request)
+    {
+        try {
+            $orderId = $request->order_id;
+            $handpointResponse = $request->handpoint_response;
+
+            $order = MerchantOrder::where('id', $orderId)
+                ->where('merchant_id', Auth::id())
+                ->first();
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found'
+                ], 404);
+            }
+
+            Log::info('Recording Handpoint response for order', [
+                'order_id' => $orderId,
+                'handpoint_status' => $handpointResponse['status'] ?? 'unknown',
+                'transaction_id' => $handpointResponse['transaction_id'] ?? null,
+            ]);
+
+            $rawResponse = $handpointResponse['raw_response'] ?? [];
+            $cardDetails = $handpointResponse['card_details'] ?? [];
+
+            $paymentData = [
+                'transaction_id' => $handpointResponse['transaction_id'] ?? null,
+                'handpoint_response' => $handpointResponse,
+                'payment_timestamp' => now()->toIso8601String(),
+                'handpoint_fin_status' => $rawResponse['finStatus'] ?? null,
+                'handpoint_aid' => $rawResponse['aid'] ?? null,
+                'handpoint_arc' => $rawResponse['arc'] ?? null,
+                'handpoint_issuer_response_code' => $rawResponse['issuerResponseCode'] ?? null,
+                'handpoint_rrn' => $rawResponse['rrn'] ?? null,
+                'handpoint_authorization_code' => $rawResponse['authorisationCode'] ?? null,
+                'handpoint_card_last4' => $cardDetails['last4'] ?? null,
+                'handpoint_card_brand' => $cardDetails['brand'] ?? null,
+                'handpoint_transaction_reference' => $rawResponse['transactionReference'] ?? $handpointResponse['transaction_reference'] ?? null,
+            ];
+
+            $handpointLog = $this->paxMerchantOrderService->recordHandpointTransaction($order, $handpointResponse, $paymentData);
+
+            $order->update([
+                'payment_metadata' => array_merge($order->payment_metadata ?? [], [
+                    'last_handpoint_response' => $handpointResponse,
+                    'last_handpoint_log_id' => $handpointLog->id,
+                    'last_handpoint_received_at' => now()->toIso8601String(),
+                ])
+            ]);
+
+            $isSuccessful = in_array($handpointResponse['status'] ?? '', ['success', 'approved', 'completed']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Handpoint response recorded successfully',
+                'handpoint_log_id' => $handpointLog->id,
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'payment_status' => $isSuccessful ? 'ready_to_complete' : 'failed',
+                'can_complete' => $isSuccessful && $order->status === 'pending',
+                'can_fail' => !$isSuccessful && $order->status === 'pending',
+            ]);
+        } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+
+            if (str_contains($errorMessage, 'Duplicate transaction ID')) {
+                Log::warning('Duplicate Handpoint response rejected', [
+                    'order_id' => $request->order_id ?? null,
+                    'error' => $errorMessage,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'error_type' => 'duplicate_transaction',
+                    'order_id' => $request->order_id,
+                ], 409);
+            }
+
+            Log::error('Failed to record Handpoint response', [
+                'order_id' => $request->order_id ?? null,
+                'error' => $errorMessage,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to record Handpoint response: ' . $errorMessage,
+                'error_type' => 'recording_failed',
             ], 500);
         }
     }

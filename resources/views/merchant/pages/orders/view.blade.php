@@ -116,6 +116,13 @@
                         <span class="badge {{ $statusClass }}">{{ ucfirst($order->status) }}</span>
                     </dd>
 
+                    @if($order->failure_message)
+                    <dt class="col-sm-5">Failure Reason:</dt>
+                    <dd class="col-sm-7">
+                       <span class="text-danger">{{$order->failure_message}}</span>
+                    </dd>
+                    @endif
+
                     <dt class="col-sm-5">Payment Method:</dt>
                     <dd class="col-sm-7">
                         @php

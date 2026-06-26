@@ -39,6 +39,9 @@ Route::prefix('pax')->group(function () {
             Route::prefix('orders')->name('orders.')->group(function () {
                 Route::post('/', [PaxOrderController::class, 'createCustomerOrder']);
                 Route::post('/complete', [PaxOrderController::class, 'completeCustomerOrder']);
+                Route::post('/fail', [PaxOrderController::class, 'failCustomerOrder']);
+
+                Route::post('/handpoint', [PaxOrderController::class, 'recordHandpointResponse']);
 
                 Route::get('/get-receipt', [PaxOrderController::class, 'getReceipt']);
             });
