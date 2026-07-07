@@ -15,14 +15,16 @@
             box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
+
         body.coming-soon {
-    background-image: 
-        linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.4)),
-        url("images/main.png");
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
-}
+            background-image:
+                linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.4)),
+                url("images/main.png");
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+        }
+
         body {
             height: 100vh;
             background: linear-gradient(135deg, #0f172a, #020617);
@@ -111,6 +113,7 @@
                 padding: 15px 20px;
             }
         }
+
     </style>
 </head>
 <body class="coming-soon">
@@ -118,29 +121,29 @@
     <!-- Header -->
     <div class="header">
         <div class="logo">Lyght POS</div>
-        
+
         @auth
-            @php
-                $user = Auth::user();
-            @endphp
-            
-            @if($user->role_id == 1)
-                <a href="{{ url('/admin') }}" class="login-btn">Admin</a>
-            @elseif($user->role_id == 2)
-                <a href="{{ route('merchant.dashboard') }}" class="login-btn">Merchant Dashboard</a>
-            @endif
-            
-            <!-- Optional: Add logout button -->
-            <form method="POST" action="{{ route('logout') }}" style="display: inline;">
-                @csrf
-                <button type="submit" class="logout-btn">Logout</button>
-            </form>
-            
+        @php
+        $user = Auth::user();
+        @endphp
+
+        @if($user->role_id == 1)
+        <a href="{{ url('/admin') }}" class="login-btn">Admin</a>
+        @elseif($user->role_id == 2)
+        <a href="{{ route('merchant.dashboard') }}" class="login-btn">Merchant Dashboard</a>
+        @endif
+
+        <!-- Optional: Add logout button -->
+        <form method="POST" action="{{ route('logout') }}" style="display: inline;">
+            @csrf
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+
         @else
-            <a href="{{ url('login') }}" class="login-btn">Login</a>
+        <a href="{{ url('login') }}" class="login-btn">Login</a>
         @endauth
     </div>
-    
+
 
     <!-- Main Content -->
     <div class="content">
