@@ -22,6 +22,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 
+// Public pages 
+Route::get('/privacy-policy', function(){
+    return view('pages.privacy-policy');
+});
+
 Route::get('/', [HomeController::class, 'index'])->name('dashboard');
 Route::post('check-email', [App\Http\Controllers\Auth\RegisterController::class, 'checkEmail'])->name('check.email');
 Route::get('/paypal/success', [PosPayPalPaymentController::class, 'paypalSuccess'])->name('paypal.success');
