@@ -35,6 +35,7 @@ class RegisterRequest extends FormRequest
             'consent_language_authorizing' => 'nullable|string',
             'communyti_enrollment' => 'nullable',
             'advocate_contact' => 'nullable|string|regex:/^[0-9]{8,14}$/',
+            'intended_pos' => 'required'
         ];
     }
 

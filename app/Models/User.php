@@ -28,6 +28,7 @@ class User extends Authenticatable
         'subscribed',
         'governance_check',
         'account_type',
+        'intended_pos',
         'cyclos_user_id',
         'cyclos_group',
         'cyclos_username',
