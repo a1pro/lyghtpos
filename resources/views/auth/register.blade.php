@@ -365,6 +365,41 @@
                             </div> --}}
 
                         </div>
+<div class="section-title mt-4">
+    Intend POS Type
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <label class="account-type-card">
+            <input type="radio" name="intended_pos" value="pax" checked required>  <!-- Only THIS has checked -->
+
+            <div class="card">
+                <div class="card-body">
+                    <h6>Pax POS</h6>
+                    <p class="text-muted mb-0">
+                        I want to use PAX as intended POS
+                    </p>
+                </div>
+            </div>
+        </label>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <label class="account-type-card">
+            <input type="radio" name="intended_pos" value="clover" required>  <!-- NO checked here -->
+
+            <div class="card">
+                <div class="card-body">
+                    <h6>Clover POS</h6>
+                    <p class="text-muted mb-0">
+                        I want to use Clover as intended POS
+                    </p>
+                </div>
+            </div>
+        </label>
+    </div>
+</div>
 
                         <!-- ACCOUNT SECURITY -->
                         <div class="section-title mt-4">
