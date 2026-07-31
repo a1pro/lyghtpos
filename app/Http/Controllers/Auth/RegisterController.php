@@ -44,6 +44,7 @@ class RegisterController extends Controller
     public function register(RegisterRequest $request)
     {
         $validator = Validator::make($request->all(), $request->rules());
+        
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -103,6 +104,7 @@ class RegisterController extends Controller
             'role_id' => $role->id ?? 2,
             'account_type' => $data['account_type'],
             'phone' => $data['phone'],
+            'intended_pos' => $data['intended_pos']
         ]);
 
         // Create merchant record for TRADE_MERCHANT
