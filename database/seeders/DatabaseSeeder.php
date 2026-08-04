@@ -17,6 +17,6 @@ class DatabaseSeeder extends Seeder
         $this->call(MerchantSubscriptionPlanSeeder::class);
         $this->call(GovernanctLayerData::class);
         $this->call(AppSettingSeeder::class);
-        $this->call(TransactionSeeder::class);
+        // $this->call(TransactionSeeder::class);
     }
 }
