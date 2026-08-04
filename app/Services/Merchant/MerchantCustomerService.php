@@ -95,6 +95,9 @@ class MerchantCustomerService
                 throw new Exception('Invalid country, state, or city selected.');
             }
 
+            $merchantId = $data['merchant_id'];
+            $intendedPos = User::where('id',$merchantId)->value('intended_pos');
+            
             $user = User::create([
                 'merchant_id' => $data['merchant_id'],
                 'role_id' => 11,
@@ -103,6 +106,7 @@ class MerchantCustomerService
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
                 'password' => Hash::make($plainPassword),
+                'intended_pos' => $intendedPos
             ]);
 
             $cyclosUserResponse = $this->cyclosUserService->createUser($user);
@@ -192,6 +196,7 @@ class MerchantCustomerService
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
                 'password' => Hash::make($plainPassword),
+                'intended_pos' => 'pax'
             ]);
 
             UserAddress::create([
@@ -201,6 +206,7 @@ class MerchantCustomerService
                 'state' => $data['state'],
                 'postal_code' => $data['postal_code'],
                 'country' => $data['country'],
+                
             ]);
 
             $cyclosUserResponse = $this->cyclosUserService->createUser($user);
