@@ -70,7 +70,7 @@ class PosAuthService
 
         // Create associated customer record
         $customer = Customer::create([
-            'user_id' => $user->id,
+            'user_id' => $merchantCode,
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'phone' => $user->phone,
