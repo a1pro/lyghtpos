@@ -15,12 +15,10 @@
             <thead>
                 <tr>
                     <th>{{ __('customer.ID') }}</th>
-                    <th>{{ __('customer.Avatar') }}</th>
                     <th>{{ __('customer.First_Name') }}</th>
                     <th>{{ __('customer.Last_Name') }}</th>
                     <th>{{ __('customer.Email') }}</th>
                     <th>{{ __('customer.Phone') }}</th>
-                    <th>{{ __('customer.Address') }}</th>
                     <th>{{ __('common.Created_At') }}</th>
                     {{-- <th>{{ __('customer.Actions') }}</th> --}}
                 </tr>
@@ -29,19 +27,11 @@
                 @foreach ($customers as $customer)
                 <tr>
                     <td>{{$loop->iteration}}</td>
-                    <td>
-                        <img width="50" src="{{$customer->getAvatarUrl()}}" alt="">
-                    </td>
                     <td>{{$customer->first_name}}</td>
                     <td>{{$customer->last_name}}</td>
                     <td>{{$customer->email}}</td>
                     <td>{{$customer->phone}}</td>
-                    <td>{{$customer->address}}</td>
                     <td>{{$customer->created_at}}</td>
-                    {{-- <td>
-                        <a href="{{auth()->user()->role_id ==1 ? route('customers.edit', $customer) : route('merchant.customers.edit', $customer) }}" class="btn btn-primary"><i class="fas fa-edit"></i></a>
-                        <button class="btn btn-danger btn-delete" data-url="{{auth()->user()->role_id == 1 ? route('customers.destroy', $customer):route('merchant.customers.destroy', $customer)}}"><i class="fas fa-trash"></i></button>
-                    </td> --}}
                 </tr>
                 @endforeach
             </tbody>

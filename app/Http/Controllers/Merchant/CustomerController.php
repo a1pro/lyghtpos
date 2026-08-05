@@ -8,6 +8,7 @@ use App\Http\Requests\Customer\CustomerUpdateRequest;
 use App\Services\Merchant\MerchantPlansConditionService;
 use App\Models\Customer;
 use App\Models\Country;
+use App\Models\User;
 use App\Services\Merchant\MerchantCustomerService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -36,8 +37,7 @@ class CustomerController extends Controller
      */
     public function index(): Response|View
     {
-        $user = Auth::user();
-        $customers = Customer::where('user_id', Auth::id())->latest()->paginate(10);
+        $customers = User::where('merchant_id', Auth::id())->with('address')->latest()->paginate(10);
 
         return view('merchant.pages.customers.index')->with('customers', $customers);
     }
