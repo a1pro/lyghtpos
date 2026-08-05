@@ -308,7 +308,10 @@ class MerchantCartController extends Controller
      */
     public function getCustomers(Request $request): JsonResponse
     {
-        $customers = User::whereNotNull('cyclos_user_id')
+        $merchantId = Auth::id();
+
+        $customers = User::where('merchant_id', $merchantId)
+            ->whereNotNull('cyclos_user_id')
             ->whereIn('role_id', [8, 11]) // 8 = Favor member, 11 = Merchant Customer
             ->get(['id', 'first_name', 'last_name', 'cyclos_user_id']);
 
