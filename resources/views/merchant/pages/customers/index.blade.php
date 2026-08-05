@@ -14,12 +14,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>{{ __('customer.ID') }}</th>
+                    <th>Sr no.</th>
                     <th>{{ __('customer.First_Name') }}</th>
                     <th>{{ __('customer.Last_Name') }}</th>
                     <th>{{ __('customer.Email') }}</th>
                     <th>{{ __('customer.Phone') }}</th>
-                    <th>{{ __('common.Created_At') }}</th>
+                    <th>Registered At</th>
                     {{-- <th>{{ __('customer.Actions') }}</th> --}}
                 </tr>
             </thead>
@@ -30,8 +30,8 @@
                     <td>{{$customer->first_name}}</td>
                     <td>{{$customer->last_name}}</td>
                     <td>{{$customer->email}}</td>
-                    <td>{{$customer->phone}}</td>
-                    <td>{{$customer->created_at}}</td>
+                    <td>{{$customer->phone ?? 'N/A'}}</td>
+                    <td>{{date('Y-m-d H:i',strtotime($customer->created_at))}}</td>
                 </tr>
                 @endforeach
             </tbody>

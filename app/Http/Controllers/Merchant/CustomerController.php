@@ -71,10 +71,6 @@ class CustomerController extends Controller
                     ->with('error', $customerAdd['message']);
             }
 
-            if ($request->hasFile('avatar')) {
-                $data['avatar'] = $request->file('avatar')->store('customers', 'public');
-            }
-
             $data['merchant_id'] = Auth::id();
 
             $this->merchantCustomerService->createCustomer($data);

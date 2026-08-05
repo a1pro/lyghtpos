@@ -46,8 +46,6 @@
                 @enderror
             </div>
 
-            <hr>
-
             <h5 class="mb-3">Customer Address</h5>
 
             <div class="form-group">
@@ -106,19 +104,6 @@
                        id="postal_code" placeholder="Zip/Postal Code" value="{{ old('postal_code') }}" required>
                 @error('postal_code')
                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
-                @enderror
-            </div>
-
-            <hr>
-
-            <div class="form-group">
-                <label for="avatar">{{ __('customer.Avatar') }}</label>
-                <div class="custom-file">
-                    <input type="file" class="custom-file-input @error('avatar') is-invalid @enderror" name="avatar" id="avatar">
-                    <label class="custom-file-label" for="avatar">{{ __('customer.Choose_file') }}</label>
-                </div>
-                @error('avatar')
-                <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                 @enderror
             </div>
 
