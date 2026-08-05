@@ -268,7 +268,7 @@ class PlanController extends Controller
                             'transaction_id' => $transactionId,
                             'amount_paid' => $pendingSubscription['amount'],
                             'payment_method' => 'paypal',
-                            'status' => 'history'
+                            'status' => 'active'
                         ]);
                     }
 
