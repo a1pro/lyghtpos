@@ -17,7 +17,7 @@ class PaxMerchantSettingService
         $defaultVatTax = 10.00;
 
         $user = Auth::user();
-        $merchant = Merchant::select('vat_tax_percentage', 'pos_payment_types')
+        $merchant = Merchant::select('vat_tax_percentage', 'pos_payment_types', 'handpoint_api_key')
             ->where("user_id", $user->id)
             ->first();
 
@@ -41,7 +41,8 @@ class PaxMerchantSettingService
 
         return [
             'vat_tax_percentage' => $vatTaxPercentage,
-            'pos_payment_types' => $paymentTypes
+            'pos_payment_types' => $paymentTypes,
+            'handpoint_api_key' => $merchant->handpoint_api_key ?? null
         ];
     }
 }

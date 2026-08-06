@@ -86,6 +86,10 @@ class MerchantProfileService
                 }
             }
 
+             if (isset($data['handpoint_api_key'])) {
+                $merchant->handpoint_api_key = $data['handpoint_api_key'];
+            }
+
             $merchant->save();
 
             return [

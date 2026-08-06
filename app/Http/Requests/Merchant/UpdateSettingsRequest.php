@@ -37,6 +37,11 @@ class UpdateSettingsRequest extends FormRequest
             'pos_payment_types.*' => [
                 'string',
                 'in:card,tokens,hybrid,pos_mobile,cash'
+            ],
+            'handpoint_api_key' => [
+                'nullable',
+                'string',
+                'max:255'
             ]
         ];
     }
@@ -56,7 +61,10 @@ class UpdateSettingsRequest extends FormRequest
             'pos_payment_types.required' => 'At least one payment type must be selected.',
             'pos_payment_types.array' => 'The payment types must be submitted as an array.',
             'pos_payment_types.min' => 'Please select at least one payment type.',
-            'pos_payment_types.*.in' => 'The selected payment type is invalid. Allowed types: card, tokens, hybrid, pos_mobile, cash.'
+            'pos_payment_types.*.in' => 'The selected payment type is invalid. Allowed types: card, tokens, hybrid, pos_mobile, cash.',
+
+            'handpoint_api_key.string' => 'The Handpoint API key must be a string.',
+            'handpoint_api_key.max' => 'The Handpoint API key cannot exceed 255 characters.',
         ];
     }
 
@@ -68,7 +76,8 @@ class UpdateSettingsRequest extends FormRequest
         return [
             'vat_tax_percentage' => 'VAT tax percentage',
             'pos_payment_types' => 'POS payment types',
-            'pos_payment_types.*' => 'payment type'
+            'pos_payment_types.*' => 'payment type',
+            'handpoint_api_key' => 'Handpoint API key',
         ];
     }
 }
