@@ -12,9 +12,9 @@
                 {{ __('dashboard.title') }}
             </a>
         @elseif(userSubscription()=='Active')
-            <button type="button" class="btn btn-success btn-sm ml-2">Subscribed</button>
+            <a href="{{route('merchant.manage-subscriptions.index')}}" class="btn btn-success btn-sm my-auto ml-2">Subscribed</a>
         @else
-            <button type="button" class="btn btn-danger btn-sm ml-2">Plan is Expired Expired</button>
+            <a href="{{route('merchant.manage-subscriptions.index')}}" class="btn btn-danger my-auto btn-sm ml-2">Plan is Expired</a>
         @endif
     </ul>
 
@@ -64,8 +64,7 @@
                 <a href="{{ route('merchant.profile.index') }}" class="dropdown-item">
                     <i class="fas fa-user mr-2"></i> Profile
                 </a>
-                <div class="dropdown-divider"></div>
-                <a href="{{ route('logout') }}" class="dropdown-item"
+                <a href="{{ route('logout') }}" class="dropdown-item text-danger"
                    onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt mr-2"></i> {{ __('common.Logout') }}
                 </a>

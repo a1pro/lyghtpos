@@ -421,6 +421,13 @@
                                     @endif
                                 </div>
                             </div>
+                            
+                            @if($user && $user->intended_pos == 'pax')
+                            <div class="info-row">
+                                <div class="info-label">Handpoint API Key:</div>
+                                <div class="info-value">{{ $merchant->handpoint_api_key ?? 'N/A' }}</div>
+                            </div>
+                            @endif
 
                             <button type="button" class="btn btn-primary btn-sm mt-3" data-toggle="modal" data-target="#editSettingsModal">
                                 <i class="fas fa-edit"></i> Edit Settings
@@ -709,6 +716,35 @@
                         </span>
                         @enderror
                     </div>
+
+                    @if($user && $user->intended_pos == 'pax')
+                        <div class="form-group">
+                            <label for="handpoint_api_key">Handpoint API Key</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-key"></i>
+                                    </span>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    class="form-control @error('handpoint_api_key') is-invalid @enderror" 
+                                    name="handpoint_api_key" 
+                                    id="handpoint_api_key" 
+                                    value="{{ old('handpoint_api_key', $merchant->handpoint_api_key ?? '') }}" 
+                                    placeholder="xxxxxxx-xxxxxxx-xxxxxxx-xxxxxxx"
+                                >
+                            </div>
+                            <small class="form-text text-muted">
+                                Enter your Handpoint API key for PAX payment processing.
+                            </small>
+                            @error('handpoint_api_key')
+                            <span class="invalid-feedback" role="alert">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                            @enderror
+                        </div>
+                    @endif
                 </div>
 
                 <div class="modal-footer">

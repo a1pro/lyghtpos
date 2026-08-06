@@ -91,7 +91,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center py-4">
+                                        <td colspan="7" class="text-center py-4">
                                             <p class="mb-0">No team members found.</p>
                                             <a href="{{ route('merchant.team-members.create') }}" class="btn btn-primary mt-3">
                                                 Add Your First Team Member
