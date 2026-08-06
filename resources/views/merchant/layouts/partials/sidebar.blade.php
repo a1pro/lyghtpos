@@ -82,8 +82,6 @@
                 </a>
                 </li> --}}
 
-                <hr class="dropdown-divider my-2"/>
-
                 <li class="nav-header">{{ __('Sales') }}</li>
 
                 <!-- POS Cart -->
@@ -109,8 +107,6 @@
                         <p>{{ __('customer.title') }}</p>
                     </a>
                 </li>
-
-                <hr class="dropdown-divider my-2"/>
 
                 <li class="nav-header">Logs</li>
 
@@ -159,8 +155,6 @@
 
                 <!-- Settings Section for Merchants -->
 
-                <hr class="dropdown-divider my-2"/>
-
                 <li class="nav-header">Settings</li>
 
                 <li class="nav-item">
@@ -190,11 +184,9 @@
                 </li>
                 @endif
 
-                <hr class="dropdown-divider my-2"/>
-
                 <!-- Logout (Always visible) -->
                 <li class="nav-item">
-                    <a href="#" class="nav-link text-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <a href="#" class="nav-link text-danger mt-2" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                         <i class="nav-icon fas fa-sign-out-alt"></i>
                         <p>{{ __('common.Logout') }}</p>
                     </a>
