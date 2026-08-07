@@ -17,7 +17,7 @@
                 <!-- Dashboard -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.dashboard') }}" class="nav-link {{ request()->routeIs('merchant.dashboard') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <i class="nav-icon fas fa-house"></i>
                         <p>{{ __('dashboard.title') }}</p>
                     </a>
                 </li>
@@ -95,7 +95,7 @@
                 <!-- Orders -->
                 <li class="nav-item">
                     <a href="{{ route('merchant.orders.index') }}" class="nav-link {{ activeSegment('orders') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <i class="nav-icon fas fa-list"></i>
                         <p>{{ __('Order List') }}</p>
                     </a>
                 </li>
@@ -159,7 +159,7 @@
 
                 <li class="nav-item">
                     <a href="{{ route('merchant.manage-subscriptions.index') }}" class="nav-link {{ request()->routeIs('merchant.manage-subscriptions.index') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <i class="nav-icon fas fa-calendar"></i>
                         <p>Manage Subscription</p>
                     </a>
                 </li>

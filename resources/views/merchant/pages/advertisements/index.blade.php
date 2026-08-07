@@ -58,10 +58,10 @@
     .category-badge {
         display: inline-block;
         background-color: #e9ecef;
-        color: #495057;
+        color: #000000;
         padding: 3px 8px;
-        border-radius: 12px;
-        font-size: 11px;
+        border-radius: 4px;
+        font-size: 12px;
         margin: 2px;
     }
 
@@ -256,10 +256,8 @@
 
 @section('js')
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
         // View Product Details
         $(document).on('click', '.btn-view', function() {
             var advertisement = $(this).data('advertisement');

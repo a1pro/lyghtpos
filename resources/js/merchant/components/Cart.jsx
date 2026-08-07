@@ -182,7 +182,6 @@ class MerchantCart extends Component {
                 'Content-Type': 'application/json'
             }
         }).then((res) => {
-            console.log("cart dataaa", res);
             const cart = Array.isArray(res.data) ? res.data : [];
             this.setState({ cart, loading: { ...this.state.loading, cart: false } });
         }).catch((error) => {
@@ -222,12 +221,6 @@ class MerchantCart extends Component {
 
     handleChangeQty(product_id, qty) {
         if (qty < 1) return;
-
-        console.log('Updating quantity for product:', {
-            product_id: product_id,
-            product_id_type: typeof product_id,
-            qty: qty
-        });
 
         this.setState({ updatingQty: product_id });
 
@@ -389,7 +382,7 @@ class MerchantCart extends Component {
         const { cart = [], products = [], customers = [], barcode = "", translations = {}, loading, loadingMore, addingToCart, updatingQty, hasMore } = this.state;
 
         return (
-            <div className="row">
+            <div className="row mb-3">
                 <div className="col-md-6 col-lg-4">
                     <div className="row mb-2">
                         {/* <div className="col">
