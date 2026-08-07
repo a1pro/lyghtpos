@@ -11,8 +11,8 @@
 @section('content')
 <div class="card">
     <div class="card-body">
-        <table class="table">
-            <thead>
+        <table class="table table-bordered table-hover">
+            <thead class="thead-light">
                 <tr>
                     <th>Sr no.</th>
                     <th>{{ __('customer.First_Name') }}</th>
@@ -20,7 +20,6 @@
                     <th>{{ __('customer.Email') }}</th>
                     <th>{{ __('customer.Phone') }}</th>
                     <th>Registered At</th>
-                    {{-- <th>{{ __('customer.Actions') }}</th> --}}
                 </tr>
             </thead>
             <tbody>
@@ -56,18 +55,18 @@
             });
 
             swalWithBootstrapButtons.fire({
-                title: '{{ __('customer.sure ') }}', // Wrap in quotes
-                text: '{{ __('customer.really_delete ') }}', // Wrap in quotes
+                title: '{{ __('customer.sure ') }}',
+                text: '{{ __('customer.really_delete ') }}',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: '{{ __('customer.yes_delete ') }}', // Wrap in quotes
-                cancelButtonText: '{{ __('customer.No ') }}', // Wrap in quotes
+                confirmButtonText: '{{ __('customer.yes_delete ') }}',
+                cancelButtonText: '{{ __('customer.No ') }}',
                 reverseButtons: true
             }).then((result) => {
                 if (result.value) {
                     $.post($this.data('url'), {
                         _method: 'DELETE',
-                        _token: '{{ csrf_token() }}' // Wrap in quotes
+                        _token: '{{ csrf_token() }}'
                     }, function(res) {
                         $this.closest('tr').fadeOut(500, function() {
                             $(this).remove();

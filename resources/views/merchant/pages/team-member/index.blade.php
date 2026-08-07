@@ -1,23 +1,18 @@
 {{-- resources/views/merchant/pages/team-member/index.blade.php --}}
 @extends('merchant.layouts.main')
 
+@section('title', 'Team Members')
+
+@section('content-header', 'Team Members')
+
+@section('content-actions')
+<a href="{{ route('merchant.team-members.create') }}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Add New Member
+</a>
+@endsection
+
 @section('content')
 <div class="container-fluid">
-    <!-- start page title -->
-    <div class="row">
-        <div class="col-12">
-            <div class="page-title-box d-flex align-items-center justify-content-between">
-                <h4 class="mb-0">Team Members</h4>
-                <div class="page-title-right">
-                    <a href="{{ route('merchant.team-members.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add New Member
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- end page title -->
-
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
@@ -31,7 +26,7 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover">
-                            <thead>
+                            <thead class="thead-light">
                                 <tr>
                                     <th>S.NO</th>
                                     <th>Name</th>
@@ -93,9 +88,6 @@
                                     <tr>
                                         <td colspan="7" class="text-center py-4">
                                             <p class="mb-0">No team members found.</p>
-                                            <a href="{{ route('merchant.team-members.create') }}" class="btn btn-primary mt-3">
-                                                Add Your First Team Member
-                                            </a>
                                         </td>
                                     </tr>
                                 @endforelse
