@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\CLOVER\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\CLOVER\Auth\CloverLoginRequest;
 use Illuminate\Http\Request;
-use App\Services\Api\Clover\Auth\CloverAuthService;
+use App\Services\Api\CLOVER\Auth\CloverAuthService;
 use Illuminate\Support\Facades\DB;
 
 class CloverAuthController extends Controller
