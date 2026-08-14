@@ -890,7 +890,7 @@ class MerchantProductService
      * Update a product in Cyclos marketplace
      * PUT /api/marketplace/{productId}
      */
-    public function updateProduct(string $cyclosUserId, string $productId, array $productData, ?string $kind = 'webshop'): array
+    public function updateProduct(string $cyclosUserId, string $productId, array $productData, ?string $kind = 'webshop', $image = null): array
     {
         try {
             // First get the version of ad for edit
@@ -1020,6 +1020,39 @@ class MerchantProductService
                 ];
             }
 
+            $imageUploaded = false;
+            $existingImageId = $productData['existing_image_id'] ?? null;
+            if ($image && !$existingImageId) {
+                Log::info('No existing image ID provided for product, will assign new image', [
+                    'product_id' => $productId,
+                ]);
+
+                $imageUploaded = $this->assignImageToProduct($productId, $image);
+
+                if (!$imageUploaded) {
+                    Log::warning('Product image upload failed', [
+                        'product_id' => $productId,
+                    ]);
+                }
+            } elseif ($image) {
+                Log::info('Existing image ID provided, will delete and re-assign new image', [
+                    'product_id' => $productId,
+                    'existing_image_id' => $existingImageId,
+                ]);
+
+                $imageUploaded = $this->deleteAssignImageToProduct($productId, $existingImageId, $image);
+
+                if (!$imageUploaded) {
+                    Log::warning('Product image upload failed', [
+                        'product_id' => $productId,
+                    ]);
+                }
+            } else {
+                Log::info('No image provided for product update', [
+                    'product_id' => $productId,
+                ]);
+            }
+
             $data = $response->json();
 
             Log::info('Product updated successfully in Cyclos', [
@@ -1029,6 +1062,7 @@ class MerchantProductService
             return [
                 'success' => true,
                 'product_id' => $productId,
+                'image_uploaded' => $imageUploaded,
                 'data' => $data,
             ];
         } catch (Exception $e) {
@@ -1041,6 +1075,55 @@ class MerchantProductService
                 'success' => false,
                 'message' => 'Exception: ' . $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Delete and re-assign an image to an existing product using the marketplace images endpoint
+     * DELETE /api/images/{id}
+     */
+    public function deleteAssignImageToProduct(string $productId, string $imageId, UploadedFile $image): bool
+    {
+        try {
+            // First, delete existing image
+            $deleteUrl = $this->baseUrl . "/api/images/{$imageId}";
+
+            Log::info('Deleting existing images for product', [
+                'product_id' => $productId,
+                'url' => $deleteUrl,
+            ]);
+
+            /** @var \Illuminate\Http\Client\Response $deleteResponse */
+            $deleteResponse = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->delete($deleteUrl);
+
+            if ($deleteResponse->failed()) {
+                Log::error('Failed to delete existing images for product', [
+                    'product_id' => $productId,
+                    'status' => $deleteResponse->status(),
+                    'body' => $deleteResponse->body(),
+                ]);
+                return false;
+            }
+
+            Log::info('Existing images deleted successfully for product', [
+                'product_id' => $productId,
+            ]);
+
+            // Now assign the new image
+            return $this->assignImageToProduct($productId, $image);
+        } catch (Exception $e) {
+            Log::error('Exception in deleteAssignImageToProduct', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'product_id' => $productId,
+            ]);
+            return false;
         }
     }
 

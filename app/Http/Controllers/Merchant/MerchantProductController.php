@@ -371,6 +371,14 @@ public function getRemainingProductCount()
 
             $selectedCategoryId = $this->getSelectedCategoryId($product, $categoriesData);
 
+            Log::info('Editing product', [
+                'product' => $formattedProduct,
+                'rawProduct' => $product,
+                'tradeTypes' => $tradeTypes,
+                'currencies' => $currencies,
+                'selectedCategoryId' => $selectedCategoryId 
+            ]);
+
             return view('merchant.pages.products.edit', [
                 'product' => $formattedProduct,
                 'rawProduct' => $product,
@@ -413,10 +421,14 @@ public function getRemainingProductCount()
                 $productData['trade_type'] = 'tradeTypeOffer';
             }
 
+            $image = $request->hasFile('image') ? $request->file('image') : null;
+
             $result = $this->productService->updateProduct(
                 $cyclosUserId,
                 $productId,
-                $productData
+                $productData,
+                'webshop',
+                $image,
             );
 
             if ($result['success']) {

@@ -101,6 +101,46 @@
                 </div>
 
                 <div class="col-md-4">
+                <!-- Advertisement Image -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Advertisement Image</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <div class="text-center mb-3">
+                                    @php
+                                        $imageUrl = old('image', $advertisement['image']['url'] ?? null);
+                                    @endphp
+                                    @if($imageUrl)
+                                        <img id="imagePreview" src="{{ $imageUrl }}" alt="Advertisement Image" class="img-fluid rounded" style="max-height: 200px; border: 1px solid #ddd; padding: 5px; background: #f8f9fa;">
+                                    @else
+                                        <img id="imagePreview" src="https://placehold.co/300x300?text=No+Image" alt="No Image" class="img-fluid rounded" style="max-height: 200px; border: 1px solid #ddd; padding: 5px; background: #f8f9fa;">
+                                    @endif
+                                </div>
+                                
+                                <div class="custom-file">
+                                    <input type="file" class="custom-file-input @error('image') is-invalid @enderror" name="image" id="image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                                    <label class="custom-file-label" for="image" id="fileLabel">
+                                        Choose file
+                                    </label>
+                                </div>
+                                
+                                <small class="form-text text-muted">
+                                    Upload an advertisement image (max 2MB, JPEG/PNG/JPG/GIF)
+                                </small>
+                                @error('image')
+                                <span class="invalid-feedback d-block" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Hidden field for image ID to track existing image --}}
+                    <input type="hidden" name="existing_image_id" value="{{ $advertisement['image']['id'] ?? '' }}">
+
                  <!-- Trade Type -->
                  @if(!empty($tradeTypes))
                  <div class="card mb-3">
@@ -173,36 +213,63 @@
 
 @section('js')
 <script src="{{ asset('plugins/bs-custom-file-input/bs-custom-file-input.min.js') }}"></script>
-<!-- Select2 for category selection -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
         // Initialize custom file input
-        bsCustomFileInput.init();
+        if (typeof bsCustomFileInput !== 'undefined') {
+            bsCustomFileInput.init();
+        }
 
-        / Initialize select2 for category
-        $('#category').select2({
-            placeholder: 'Choose Category'
-            , allowClear: false
-            , width: '100%'
-        });
+        // Get DOM elements
+        const imageInput = document.getElementById('image');
+        const imagePreview = document.getElementById('imagePreview');
+        const fileLabel = document.getElementById('fileLabel');
+        const productForm = document.getElementById('advertisementForm');
+        const submitBtn = document.getElementById('submitBtn');
 
+        // Store the original image URL for restoration
+        const originalImageUrl = imagePreview ? imagePreview.src : null;
 
-        // Unlimited stock toggle
-        $('#unlimited_stock').on('change', function() {
-            $('#quantity').prop('disabled', this.checked);
-            if (this.checked) {
-                $('#quantity').val('');
-            }
-        });
+        // Image preview functionality
+        if (imageInput && imagePreview) {
+            imageInput.addEventListener('change', function() {
+                const file = this.files[0];
+                
+                if (file) {
+                    // Update the file label
+                    if (fileLabel) {
+                        fileLabel.textContent = file.name;
+                    }
+                    
+                    // Read and display the image
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    // If no file selected, restore original image
+                    if (originalImageUrl) {
+                        imagePreview.src = originalImageUrl;
+                    }
+                    if (fileLabel) {
+                        fileLabel.textContent = 'Choose file';
+                    }
+                }
+            });
+        }
 
-        // Form submission handling
-        $('#advertisementForm').on('submit', function() {
-            $('#submitBtn').prop('disabled', true)
-                .html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+        // Custom file input label update (fallback for when bsCustomFileInput fails)
+        const customFileInputs = document.querySelectorAll('.custom-file-input');
+        customFileInputs.forEach(function(input) {
+            input.addEventListener('change', function() {
+                const fileName = this.files[0] ? this.files[0].name : 'Choose file';
+                const label = this.nextElementSibling;
+                if (label && label.classList.contains('custom-file-label')) {
+                    label.textContent = fileName;
+                }
+            });
         });
     });
-
 </script>
 @endsection

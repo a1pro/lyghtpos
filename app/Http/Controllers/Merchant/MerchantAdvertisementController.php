@@ -280,6 +280,8 @@ class MerchantAdvertisementController extends Controller
         try {
             $advertisementData = $request->validated();
 
+            $image = $request->hasFile('image') ? $request->file('image') : null;
+
             // Add trade_type if not present
             if (!isset($advertisementData['trade_type'])) {
                 $advertisementData['trade_type'] = 'tradeTypeOffer';
@@ -289,7 +291,8 @@ class MerchantAdvertisementController extends Controller
                 $cyclosUserId,
                 $advertisementId,
                 $advertisementData,
-                'simple'
+                'simple',
+                $image
             );
 
             if ($result['success']) {

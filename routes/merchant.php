@@ -168,7 +168,7 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
         Route::get('create', [MerchantAdvertisementController::class, 'create'])->name('create');
         Route::post('/', [MerchantAdvertisementController::class, 'store'])->name('store');
         Route::get('{advertisement}/edit', [MerchantAdvertisementController::class, 'edit'])->name('edit');
-        Route::put('{product}', [MerchantAdvertisementController::class, 'update'])->name('update');
+        Route::put('{advertisement}', [MerchantAdvertisementController::class, 'update'])->name('update');
         Route::delete('{advertisement}', [MerchantAdvertisementController::class, 'destroy'])->name('destroy');
     });
 

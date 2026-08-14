@@ -28,6 +28,8 @@ class AdvertisementUpdateRequest extends FormRequest
             'categories.*' => ['string'],
             'trade_type' => ['nullable', 'string', Rule::in(['tradeTypeDemand', 'tradeTypeOffer'])],
             'status' => ['nullable', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            'existing_image_id' => ['nullable', 'string'],
         ];
     }
 
@@ -39,6 +41,8 @@ class AdvertisementUpdateRequest extends FormRequest
         return [
             'name.required' => __('validation.required', ['attribute' => 'name']),
             'price.numeric' => __('validation.numeric', ['attribute' => 'price']),
+            'image.image' => __('validation.image', ['attribute' => 'image']),
+            'image.max' => __('validation.max.file', ['attribute' => 'image', 'max' => 2048]),
         ];
     }
 

@@ -98,7 +98,7 @@
                         <div class="card-body">
                             <div class="form-group">
                                 <label for="category">Select Category</label>
-                                <select name="categories[]" class="form-control select2 @error('categories') is-invalid @enderror" id="category" required>
+                                <select name="categories[]" class="form-control @error('categories') is-invalid @enderror" id="category" required>
                                     <option value="">Choose Category</option>
                                     @if(!empty($flattenedCategories))
                                     @foreach($flattenedCategories as $categoryId => $categoryName)
@@ -116,47 +116,85 @@
                             </div>
                         </div>
                     </div>
-
-
                 </div>
 
                 <div class="col-md-4">
-                 <!-- Trade Type -->
-                 @if(!empty($tradeTypes))
-                 <div class="card mb-3">
-                     <div class="card-header">
-                         <h5 class="card-title mb-0">Trade Type</h5>
-                     </div>
-                     <div class="card-body">
-                         <div class="form-group">
-                             @php
-                             // Extract current trade type from the correct nested structure
-                             $currentTradeType = 'tradeTypeOffer'; // default
+                    <!-- Product Image -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Product Image</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <div class="text-center mb-3">
+                                    @php
+                                        $imageUrl = old('image', $product['image']['url'] ?? null);
+                                    @endphp
+                                    @if($imageUrl)
+                                        <img id="imagePreview" src="{{ $imageUrl }}" alt="Product Image" class="img-fluid rounded" style="max-height: 200px; border: 1px solid #ddd; padding: 5px; background: #f8f9fa;">
+                                    @else
+                                        <img id="imagePreview" src="https://placehold.co/300x300?text=No+Image" alt="No Image" class="img-fluid rounded" style="max-height: 200px; border: 1px solid #ddd; padding: 5px; background: #f8f9fa;">
+                                    @endif
+                                </div>
+                                
+                                <div class="custom-file">
+                                    <input type="file" class="custom-file-input @error('image') is-invalid @enderror" name="image" id="image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                                    <label class="custom-file-label" for="image" id="fileLabel">
+                                        Choose file
+                                    </label>
+                                </div>
+                                
+                                <small class="form-text text-muted">
+                                    Upload a product image (max 2MB, JPEG/PNG/JPG/GIF)
+                                </small>
+                                @error('image')
+                                <span class="invalid-feedback d-block" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
 
-                             if (!empty($rawProduct['customValues']) && is_array($rawProduct['customValues'])) {
+                    {{-- Hidden field for image ID to track existing image --}}
+                    <input type="hidden" name="existing_image_id" value="{{ $product['image']['id'] ?? '' }}">
+
+                    <!-- Trade Type -->
+                    @if(!empty($tradeTypes))
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Trade Type</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                @php
+                                // Extract current trade type from the correct nested structure
+                                $currentTradeType = 'tradeTypeOffer'; // default
+
+                                if (!empty($rawProduct['customValues']) && is_array($rawProduct['customValues'])) {
                                     foreach ($rawProduct['customValues'] as $customValue) {
                                         if (isset($customValue['field']['internalName']) && $customValue['field']['internalName'] === 'tradeType') {
-                                        if (!empty($customValue['enumeratedValues']) && is_array($customValue['enumeratedValues'])) {
-                                            $currentTradeType = $customValue['enumeratedValues'][0]['internalName'] ?? 'tradeTypeOffer';
+                                            if (!empty($customValue['enumeratedValues']) && is_array($customValue['enumeratedValues'])) {
+                                                $currentTradeType = $customValue['enumeratedValues'][0]['internalName'] ?? 'tradeTypeOffer';
+                                            }
+                                            break;
                                         }
-                                        break;
                                     }
                                 }
-                             }
-                             @endphp
+                                @endphp
 
-                             @foreach($tradeTypes as $tradeType)
-                             <div class="custom-control custom-radio">
-                                 <input type="radio" id="trade_type_{{ $tradeType['internalName'] }}" name="trade_type" value="{{ $tradeType['internalName'] }}" class="custom-control-input" {{ old('trade_type', $currentTradeType) == $tradeType['internalName'] ? 'checked' : '' }}>
-                                 <label class="custom-control-label" for="trade_type_{{ $tradeType['internalName'] }}">
-                                     {{ $tradeType['value'] }}
-                                 </label>
-                             </div>
-                             @endforeach
-                         </div>
-                     </div>
-                 </div>
-                 @endif
+                                @foreach($tradeTypes as $tradeType)
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" id="trade_type_{{ $tradeType['internalName'] }}" name="trade_type" value="{{ $tradeType['internalName'] }}" class="custom-control-input" {{ old('trade_type', $currentTradeType) == $tradeType['internalName'] ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="trade_type_{{ $tradeType['internalName'] }}">
+                                        {{ $tradeType['value'] }}
+                                    </label>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                    @endif
 
                     <!-- Product Info -->
                     <div class="card mb-3">
@@ -193,36 +231,89 @@
 
 @section('js')
 <script src="{{ asset('plugins/bs-custom-file-input/bs-custom-file-input.min.js') }}"></script>
-<!-- Select2 for category selection -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
         // Initialize custom file input
-        bsCustomFileInput.init();
+        if (typeof bsCustomFileInput !== 'undefined') {
+            bsCustomFileInput.init();
+        }
 
-        / Initialize select2 for category
-        $('#category').select2({
-            placeholder: 'Choose Category'
-            , allowClear: false
-            , width: '100%'
-        });
+        // Get DOM elements
+        const imageInput = document.getElementById('image');
+        const imagePreview = document.getElementById('imagePreview');
+        const fileLabel = document.getElementById('fileLabel');
+        const unlimitedStockCheckbox = document.getElementById('unlimited_stock');
+        const quantityInput = document.getElementById('quantity');
+        const productForm = document.getElementById('productForm');
+        const submitBtn = document.getElementById('submitBtn');
 
+        // Store the original image URL for restoration
+        const originalImageUrl = imagePreview ? imagePreview.src : null;
+
+        // Image preview functionality
+        if (imageInput && imagePreview) {
+            imageInput.addEventListener('change', function() {
+                const file = this.files[0];
+                
+                if (file) {
+                    // Update the file label
+                    if (fileLabel) {
+                        fileLabel.textContent = file.name;
+                    }
+                    
+                    // Read and display the image
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    // If no file selected, restore original image
+                    if (originalImageUrl) {
+                        imagePreview.src = originalImageUrl;
+                    }
+                    if (fileLabel) {
+                        fileLabel.textContent = 'Choose file';
+                    }
+                }
+            });
+        }
 
         // Unlimited stock toggle
-        $('#unlimited_stock').on('change', function() {
-            $('#quantity').prop('disabled', this.checked);
-            if (this.checked) {
-                $('#quantity').val('');
-            }
-        });
+        if (unlimitedStockCheckbox && quantityInput) {
+            unlimitedStockCheckbox.addEventListener('change', function() {
+                quantityInput.disabled = this.checked;
+                if (this.checked) {
+                    quantityInput.value = '';
+                }
+            });
+        }
 
         // Form submission handling
-        $('#productForm').on('submit', function() {
-            $('#submitBtn').prop('disabled', true)
-                .html('<i class="fas fa-spinner fa-spin"></i> Updating...');
-        });
-    });
+        if (productForm && submitBtn) {
+            productForm.addEventListener('submit', function() {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            });
+        }
 
+        // Custom file input label update (fallback for when bsCustomFileInput fails)
+        const customFileInputs = document.querySelectorAll('.custom-file-input');
+        customFileInputs.forEach(function(input) {
+            input.addEventListener('change', function() {
+                const fileName = this.files[0] ? this.files[0].name : 'Choose file';
+                const label = this.nextElementSibling;
+                if (label && label.classList.contains('custom-file-label')) {
+                    label.textContent = fileName;
+                }
+            });
+        });
+
+        // Initialize quantity field state on page load
+        if (unlimitedStockCheckbox && unlimitedStockCheckbox.checked && quantityInput) {
+            quantityInput.disabled = true;
+            quantityInput.value = '';
+        }
+    });
 </script>
 @endsection
