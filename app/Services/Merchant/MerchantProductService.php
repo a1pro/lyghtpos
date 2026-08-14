@@ -1133,7 +1133,7 @@ class MerchantProductService
      * 
      * GET /api/marketplace/{productId}/data-for-edit
      */
-    protected function getProductVersionForEdit(string $productId): int|null
+    public function getProductVersionForEdit(string $productId): int|null
     {
         try {
             $url = $this->baseUrl . "/api/marketplace/{$productId}/data-for-edit";

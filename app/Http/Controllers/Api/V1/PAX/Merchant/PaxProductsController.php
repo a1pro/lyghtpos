@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\PAX\Merchant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PAX\Merchant\PaxProductUpdateRequest;
 use App\Services\Cyclos\CyclosProductService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -86,6 +87,56 @@ class PaxProductsController extends Controller
                 'message' => 'Product categories retrieved successfully',
                 'data' => $data
             ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'An error occurred while processing your request: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateMerchantProduct(PaxProductUpdateRequest $request)
+    {
+        try {
+            $merchantUser = Auth::user();
+
+            if (!$merchantUser) {
+                throw new \Exception("User not found.");
+            }
+
+            if (!$merchantUser->cyclos_user_id) {
+                throw new \Exception("Cyclos ID not found.");
+            }
+
+            $productData = $request->validated();
+
+            $productId = $productData['product_id'] ?? null;
+
+            $image = $request->hasFile('image') ? $request->file('image') : null;
+
+            $result = $this->productService->updateProduct(
+                $merchantUser->cyclos_user_id,
+                $productId,
+                $productData,
+                'webshop',
+                $image
+            );
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'status_code' => 200,
+                    'message' => 'Product updated successfully',
+                    'image_uploaded' => $result['image_uploaded'] ?? null
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'status_code' => 400,
+                    'message' => 'Failed to update product: ' . ($result['message'] ?? 'Unknown error')
+                ], 400);
+            }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

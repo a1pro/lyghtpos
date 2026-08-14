@@ -2,8 +2,10 @@
 
 namespace App\Services\Cyclos;
 
+use App\Services\Merchant\MerchantProductService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\UploadedFile;
 use Exception;
 
 class CyclosProductService
@@ -20,10 +22,14 @@ class CyclosProductService
     protected bool $fallbackToMock;
     protected ?array $marketplaceData = null;
 
-    public function __construct()
+    protected MerchantProductService $merchantProductService;
+
+    public function __construct(MerchantProductService $merchantProductService)
     {
         $this->loadSettings();
         $this->validateRequiredConfig();
+
+         $this->merchantProductService = $merchantProductService;
     }
 
     /**
@@ -364,6 +370,196 @@ class CyclosProductService
             'updated_at' => $updatedAt,
             'raw' => $rawProduct,
         ];
+    }
+
+    /**
+     * Update a product in Cyclos marketplace
+     * PUT /api/marketplace/{productId}
+     */
+    public function updateProduct(string $cyclosUserId, string $productId, array $productData, ?string $kind = 'webshop', $image = null): array
+    {
+        try {
+            // First get the version of ad for edit
+            $version = $this->merchantProductService->getProductVersionForEdit($productId);
+
+            if (!$version) {
+                Log::error("Failed to get product version for edit", [
+                    'product_id' => $productId
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Failed to get product version for edit. Product may not exist or is not editable.',
+                ];
+            }
+
+
+            $imageUploaded = false;
+            $existingImageId = $productData['existing_product_image_id'] ?? null;
+            if ($image && !$existingImageId) {
+                Log::info('No existing image ID provided for product, will assign new image', [
+                    'product_id' => $productId,
+                ]);
+
+                $imageUploaded = $this->assignImageToProduct($productId, $image);
+
+                if (!$imageUploaded) {
+                    Log::warning('Product image upload failed', [
+                        'product_id' => $productId,
+                    ]);
+                }
+            } elseif ($image) {
+                Log::info('Existing image ID provided, will delete and re-assign new image', [
+                    'product_id' => $productId,
+                    'existing_image_id' => $existingImageId,
+                ]);
+
+                $imageUploaded = $this->deleteAssignImageToProduct($productId, $existingImageId, $image);
+
+                if (!$imageUploaded) {
+                    Log::warning('Product image upload failed', [
+                        'product_id' => $productId,
+                    ]);
+                }
+            } else {
+                Log::info('No image provided for product update', [
+                    'product_id' => $productId,
+                ]);
+            }
+
+            Log::info('Product updated successfully in Cyclos', [
+                'product_id' => $productId,
+            ]);
+
+            return [
+                'success' => true,
+                'product_id' => $productId,
+                'image_uploaded' => $imageUploaded,
+            ];
+        } catch (Exception $e) {
+            Log::error('Exception in CyclosProductService', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Delete and re-assign an image to an existing product using the marketplace images endpoint
+     * DELETE /api/images/{id}
+     */
+    public function deleteAssignImageToProduct(string $productId, string $imageId, UploadedFile $image): bool
+    {
+        try {
+            // First, delete existing image
+            $deleteUrl = $this->baseUrl . "/api/images/{$imageId}";
+
+            Log::info('Deleting existing images for product', [
+                'product_id' => $productId,
+                'url' => $deleteUrl,
+            ]);
+
+            /** @var \Illuminate\Http\Client\Response $deleteResponse */
+            $deleteResponse = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->delete($deleteUrl);
+
+            if ($deleteResponse->failed()) {
+                Log::error('Failed to delete existing images for product', [
+                    'product_id' => $productId,
+                    'status' => $deleteResponse->status(),
+                    'body' => $deleteResponse->body(),
+                ]);
+                return false;
+            }
+
+            Log::info('Existing images deleted successfully for product', [
+                'product_id' => $productId,
+            ]);
+
+            // Now assign the new image
+            return $this->assignImageToProduct($productId, $image);
+        } catch (Exception $e) {
+            Log::error('Exception in deleteAssignImageToProduct', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'product_id' => $productId,
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Assign an image to an existing product using the marketplace images endpoint
+     * POST /api/marketplace/{productId}/images
+     */
+    public function assignImageToProduct(string $productId, UploadedFile $image): bool
+    {
+        try {
+            $url = $this->baseUrl . "/api/marketplace/{$productId}/images";
+
+            Log::info('Assigning image to product', [
+                'product_id' => $productId,
+                'url' => $url,
+                'file_name' => $image->getClientOriginalName(),
+                'file_size' => $image->getSize(),
+                'mime_type' => $image->getMimeType(),
+            ]);
+
+            $fileContents = file_get_contents($image->getRealPath());
+
+            if ($fileContents === false) {
+                Log::error('Failed to read image file contents');
+                return false;
+            }
+
+            /** @var Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'text/plain',
+                    'Channel' => $this->channel,
+                ])
+                ->attach(
+                    'image',
+                    $fileContents,
+                    $image->getClientOriginalName(),
+                    ['Content-Type' => $image->getMimeType()]
+                )
+                ->timeout(60)
+                ->post($url);
+
+            if ($response->failed()) {
+                Log::error('Failed to assign image to product', [
+                    'product_id' => $productId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return false;
+            }
+
+            Log::info('Image assigned to product successfully', [
+                'product_id' => $productId,
+                'response' => $response->body(),
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Exception in assignImageToProduct', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'product_id' => $productId,
+            ]);
+            return false;
+        }
     }
 
     /**
