@@ -31,10 +31,23 @@ return [
     ],
 
     'procharge' => [
-        'base_url' => env('PROCHARGE_BASE_URL'),
-        'username' => env('PROCHARGE_USERNAME'),
-        'password' => env('PROCHARGE_PASSWORD'),
-        'merchant_id' => env('PROCHARGE_MERCHANT_ID'),
+        'mode' => env('PROCHARGE_MODE', 'sandbox'),
+        'sandbox' => [
+            'api_key' => env('PROCHARGE_SANDBOX_API_KEY'),
+            'api_base_url' => env('PROCHARGE_SANDBOX_API_BASE_URL', 'https://dev-api.procharge.com'),
+            'username' => env('PROCHARGE_SANDBOX_USERNAME'),
+            'password' => env('PROCHARGE_SANDBOX_PASSWORD'),
+            'pin' => env('PROCHARGE_SANDBOX_PIN'),
+            'merchant_number' => env('PROCHARGE_SANDBOX_MERCHANT_NUMBER', '889901550594702'),
+        ],
+        'live' => [
+            'api_key' => env('PROCHARGE_LIVE_API_KEY'),
+            'api_base_url' => env('PROCHARGE_LIVE_API_BASE_URL', 'https://api.procharge.com'),
+            'username' => env('PROCHARGE_LIVE_USERNAME'),
+            'password' => env('PROCHARGE_LIVE_PASSWORD'),
+            'pin' => env('PROCHARGE_LIVE_PIN'),
+            'merchant_number' => env('PROCHARGE_LIVE_MERCHANT_NUMBER'),
+        ],
     ],
 
     'cyclos' => [

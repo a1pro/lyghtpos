@@ -40,6 +40,12 @@ class MerchantOrder extends Model
         'handpoint_transaction_reference',
         'handpoint_fin_status',
 
+        'procharge_authorization_number',
+        'procharge_card_token',
+        'procharge_transaction_id',
+        'procharge_invoice_id',
+        'procharge_response',
+
         'failed_at',
         'failure_message',
     ];

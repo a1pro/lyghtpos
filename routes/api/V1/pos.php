@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosTokenBundleController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerSubscriptionController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosProfileController;
+use App\Http\Controllers\Api\V1\POS\Customer\ProchargePaymentController;
 use App\Http\Controllers\Api\V1\POS\Settings\PosSettingsController;
 use App\Http\Controllers\Location\LocationController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +51,11 @@ Route::prefix('pos')->group(function () {
             Route::post('capture-payment', [PosPayPalPaymentController::class, 'capturePayment']);
             Route::get('payment-status', [PosPayPalPaymentController::class, 'checkPaymentStatus']);
             Route::get('payment-history', [PosPayPalPaymentController::class, 'getPaymentHistory']);
+        });
+
+        /** ************** Procharge Routes ************************ */
+        Route::prefix('procharge')->group(function () {
+            Route::post('charge-card', [ProchargePaymentController::class, 'chargeCardToken']);
         });
 
         /** ************** User Routes ************************ */
