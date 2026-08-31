@@ -29,6 +29,12 @@ class UpdateSettingsRequest extends FormRequest
                 'max:100',
                 'regex:/^\d+(\.\d{1,2})?$/'
             ],
+            'card_surcharge_percentage' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:4',
+            ],
             'pos_payment_types' => [
                 'required',
                 'array',
@@ -58,6 +64,11 @@ class UpdateSettingsRequest extends FormRequest
             'vat_tax_percentage.max' => 'The VAT tax percentage cannot exceed 100%.',
             'vat_tax_percentage.regex' => 'The VAT tax percentage must have at most 2 decimal places.',
 
+            'card_surcharge_percentage.required' => 'The card surcharge percentage is required.',
+            'card_surcharge_percentage.numeric' => 'The card surcharge percentage must be a valid number.',
+            'card_surcharge_percentage.min' => 'The card surcharge percentage must be at least 0%.',
+            'card_surcharge_percentage.max' => 'The card surcharge percentage cannot exceed 4%.',
+
             'pos_payment_types.required' => 'At least one payment type must be selected.',
             'pos_payment_types.array' => 'The payment types must be submitted as an array.',
             'pos_payment_types.min' => 'Please select at least one payment type.',
@@ -75,6 +86,7 @@ class UpdateSettingsRequest extends FormRequest
     {
         return [
             'vat_tax_percentage' => 'VAT tax percentage',
+            'card surcharge' => 'Card surcharge percentage',
             'pos_payment_types' => 'POS payment types',
             'pos_payment_types.*' => 'payment type',
             'handpoint_api_key' => 'Handpoint API key',

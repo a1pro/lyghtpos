@@ -76,6 +76,11 @@ class MerchantProfileService
                 $merchant->vat_tax_percentage = $data['vat_tax_percentage'];
             }
 
+            // Update card surcharge percentage
+            if (isset($data['card_surcharge_percentage'])) {
+                $merchant->card_surcharge_percentage = min($data['card_surcharge_percentage'], 4);
+            }
+
             // Update POS payment types
             if (isset($data['pos_payment_types'])) {
                 // If it's already an array, encode to JSON

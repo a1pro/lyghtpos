@@ -16,6 +16,7 @@ class MerchantOrder extends Model
         'customer_cyclos_id',
         'tax_amount',
         'card_amount',
+        'card_surcharge_amount',
         'token_amount',
         'total_amount',
         'payment_method',
@@ -53,6 +54,7 @@ class MerchantOrder extends Model
     protected $casts = [
         'tax_amount' => 'decimal:2',
         'card_amount' => 'decimal:2',
+        'card_surcharge_amount' => 'decimal:2',
         'token_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'payment_metadata' => 'array',

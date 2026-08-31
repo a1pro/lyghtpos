@@ -15,6 +15,7 @@ class Merchant extends Model
         'location',
         'website',
         'vat_tax_percentage',
+        'card_surcharge_percentage',
         'pos_payment_types',
         'consent_language_authorizing',
         'communyti_enrollment',

@@ -23,9 +23,10 @@ class PaxCustomerCreateOrderRequest extends FormRequest
         return [
             'customer_id' => 'required|string',
 
-            'amount' => 'required|numeric|min:0.01', // excluding tax amount
+            'amount' => 'required|numeric|min:0.01', // excluding tax & surcharge amount
             'tax_amount' => 'required|numeric|min:0',
-            'total_amount' => 'required|numeric|min:0', // including tax amount
+            'total_amount' => 'required|numeric|min:0', // including tax & surcharge amount
+            'card_surcharge_amount' => 'nullable|numeric|min:0',
 
             'payment_method' => [
                 'required',
@@ -34,7 +35,7 @@ class PaxCustomerCreateOrderRequest extends FormRequest
 
             // Payment amounts based on method
             'token_amount' => 'required_if:payment_method,cyclos_tokens,hybrid|nullable|numeric|min:0', // excluding tax amount
-            'card_amount' => 'required_if:payment_method,card,hybrid|nullable|numeric|min:0', // excluding tax amount
+            'card_amount' => 'required_if:payment_method,card,hybrid|nullable|numeric|min:0', // excluding tax & surcharge amount
 
             // Products
             'products' => 'required|array|min:1',
@@ -54,9 +55,10 @@ class PaxCustomerCreateOrderRequest extends FormRequest
             $amount = $this->input('amount');
             $tokenAmount = $this->input('token_amount', 0);
             $cardAmount = $this->input('card_amount', 0);
+            $cardSurchargeAmount = $this->input('card_surcharge_amount', 0);
 
             // Validate total calculation
-            if ($amount + $taxAmount != $totalAmount) {
+            if ($amount + $taxAmount + $cardSurchargeAmount != $totalAmount) {
                 $validator->errors()->add('total_amount', 'Total amount must equal amount + tax_amount');
             }
 
@@ -92,6 +94,9 @@ class PaxCustomerCreateOrderRequest extends FormRequest
             'tax_amount.min' => 'Tax amount cannot be negative',
             'total_amount.required' => 'Total amount is required',
 
+            'card_surcharge_amount.numeric' => 'Card surcharge amount must be a number',
+            'card_surcharge_amount.min' => 'Card surcharge amount cannot be negative',
+
             'payment_method.required' => 'Payment method is required',
             'payment_method.in' => 'Payment method must be either card, cyclos_tokens, hybrid, pos_mobile, or cash',
 
@@ -122,6 +127,7 @@ class PaxCustomerCreateOrderRequest extends FormRequest
             'amount' => 'order amount',
             'tax_amount' => 'tax amount',
             'total_amount' => 'total amount',
+            'card_surcharge_amount' => 'card surcharge amount',
             'payment_method' => 'payment method',
             'token_amount' => 'token amount',
             'card_amount' => 'card amount',

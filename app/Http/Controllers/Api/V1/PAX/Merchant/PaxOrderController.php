@@ -58,11 +58,12 @@ class PaxOrderController extends Controller
             }
 
             $paymentMethod = $request->payment_method;
-            $totalAmount = $request->total_amount;
-            $productsTotal = $request->amount; // excluding tax amount
+            $totalAmount = $request->total_amount; // including tax & surcharge amount
+            $productsTotal = $request->amount; // excluding tax & surcharge amount
             $taxAmount = $request->tax_amount;
-            $cardAmount = $request->card_amount;
+            $cardAmount = $request->card_amount; // excluding tax & surcharge amount
             $tokenAmount = $request->token_amount;
+            $cardSurchargeAmount = $request->card_surcharge_amount ?? 0;
             $products = $request->products;
             $notes = $request->notes ?? null;
 
@@ -84,6 +85,7 @@ class PaxOrderController extends Controller
                 $taxAmount,
                 $cardAmount,
                 $tokenAmount,
+                $cardSurchargeAmount,
                 $notes
             );
 
@@ -101,6 +103,9 @@ class PaxOrderController extends Controller
             if ($paymentMethod === 'card') {
                 $responseData['message'] = "Card payment required: {$totalAmount}";
                 $responseData['amount_to_charge'] = $totalAmount;
+                if ($cardSurchargeAmount > 0) {
+                    $responseData['card_surcharge_amount'] = $cardSurchargeAmount;
+                }
             } elseif ($paymentMethod === 'cyclos_tokens') {
                 $responseData['message'] = "Token payment will be processed from Cyclos wallet";
                 $responseData['token_amount'] = $tokenAmount;
@@ -108,6 +113,9 @@ class PaxOrderController extends Controller
                 $responseData['message'] = "Hybrid payment: Card {$cardAmount} + Tokens {$tokenAmount}";
                 $responseData['card_amount'] = $cardAmount;
                 $responseData['token_amount'] = $tokenAmount;
+                if ($cardSurchargeAmount > 0) {
+                    $responseData['card_surcharge_amount'] = $cardSurchargeAmount;
+                }
             }
 
             return response()->json($responseData);

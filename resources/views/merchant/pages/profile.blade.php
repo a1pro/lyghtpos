@@ -386,6 +386,11 @@
                             </div>
 
                             <div class="info-row">
+                                <div class="info-label">Card Surcharge (%):</div>
+                                <div class="info-value">{{ $merchant->card_surcharge_percentage ?? 0 }}%</div>
+                            </div>
+
+                            <div class="info-row">
                                 <div class="info-label">POS Payment Types:</div>
                                 <div class="info-value">
                                     @php
@@ -639,6 +644,24 @@
                         </div>
                         <small class="form-text text-muted">Set the VAT/GST percentage (0-100%)</small>
                         @error('vat_tax_percentage')
+                        <span class="invalid-feedback" role="alert">
+                            <strong>{{ $message }}</strong>
+                        </span>
+                        @enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="card_surcharge_percentage">Card Surcharge (%)</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control @error('card_surcharge_percentage') is-invalid @enderror" name="card_surcharge_percentage" id="card_surcharge_percentage" value="{{ old('card_surcharge_percentage', $merchant->card_surcharge_percentage ?? 0) }}" min="0" max="4" placeholder="0.00">
+                            <div class="input-group-append">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">
+                            Maximum allowed is 4%. This surcharge applies to card payments.
+                        </small>
+                        @error('card_surcharge_percentage')
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $message }}</strong>
                         </span>

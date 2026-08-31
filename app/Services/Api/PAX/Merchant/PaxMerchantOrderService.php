@@ -43,13 +43,14 @@ class PaxMerchantOrderService
         User $customer,
         array $cartItems,
         string $paymentMethod,
-        float $productsTotal, // excluding tax amount
+        float $productsTotal, // excluding tax & surcharge amount
         float $taxAmount,
-        ?float $cardAmount = null, // excluding tax amount
+        ?float $cardAmount = null, // excluding tax & surcharge amount
         ?float $tokenAmount = null, // excluding tax amount
+        ?float $cardSurchargeAmount = 0,
         ?string $notes = null
     ) {
-        return DB::transaction(function () use ($customer, $cartItems, $paymentMethod, $productsTotal, $taxAmount, $cardAmount, $tokenAmount, $notes) {
+        return DB::transaction(function () use ($customer, $cartItems, $paymentMethod, $productsTotal, $taxAmount, $cardAmount, $tokenAmount, $cardSurchargeAmount, $notes) {
             $merchant = Auth::user();
             $merchantId = $merchant->id;
             $customerCyclosId = $customer->cyclos_user_id;
@@ -140,7 +141,8 @@ class PaxMerchantOrderService
                 'customer_cyclos_id' => $customerCyclosId,
                 'total_amount' => $productsTotal, // Products total (excl. tax)
                 'tax_amount' => $taxAmount,
-                'card_amount' => $cardPortion,
+                'card_amount' => $cardPortion, // excluding surcharge
+                'card_surcharge_amount' => $cardSurchargeAmount,
                 'token_amount' => $tokenPortion,
                 'payment_method' => $paymentMethod,
                 'status' => 'pending',
@@ -515,7 +517,7 @@ class PaxMerchantOrderService
                         'total_to_credit' => $productsAmount
                     ]);
 
-                    // Credit tokens for FULL grand total (products + tax)
+                    // Credit tokens for products total (excluding tax)
                     $creditResult = $this->cyclosPaymentService->addFunds(
                         $order->customer_cyclos_id,
                         $productsAmount,
@@ -665,7 +667,7 @@ class PaxMerchantOrderService
                         'total_to_credit' => $productsAmount
                     ]);
 
-                    // Credit tokens for FULL grand total (products + tax)
+                    // Credit tokens for products total (excluding tax)
                     $creditResult = $this->cyclosPaymentService->addFunds(
                         $order->customer_cyclos_id,
                         $productsAmount,

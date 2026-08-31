@@ -31,7 +31,7 @@
                         <td><code>{{ $order->order_number }}</code></td>
                         <td>{{ $order->customer()->first_name ?? 'N/A' }} {{ $order->customer()->last_name ?? 'N/A' }}</td>
                         <td><strong>{{ config('settings.currency_symbol', '$') }} {{ number_format($order->tax_amount, 2) }}</strong></td>
-                        <td><strong>{{ config('settings.currency_symbol', '$') }} {{ number_format($order->total_amount + ($order->tax_amount ?? 0), 2) }}</strong></td>
+                        <td><strong>{{ config('settings.currency_symbol', '$') }} {{ number_format($order->total_amount + ($order->tax_amount ?? 0) + ($order->card_surcharge_amount ?? 0), 2) }}</strong></td>
                         <td>
                             @php
                             $methodLabels = [

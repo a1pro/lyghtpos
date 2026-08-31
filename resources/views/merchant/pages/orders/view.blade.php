@@ -65,12 +65,15 @@
                     <dt class="col-sm-5">Tax Amount:</dt>
                     <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
 
+                    <dt class="col-sm-5">Card Surcharge Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->card_surcharge_amount ?? 'N/A' }}</dd>
+
                     <dt class="col-sm-5">Grand Total:</dt>
-                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount + $order->card_surcharge_amount ?? 'N/A' }} (incl. tax & surcharge)</dd>
 
                     @elseif($order->payment_method == 'hybrid')
                     <dt class="col-sm-5">Card Amount:</dt>
-                    <dd class="col-sm-7">{{ $order->card_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+                    <dd class="col-sm-7">{{ $order->card_amount + $order->tax_amount + $order->card_surcharge_amount ?? 'N/A' }} (incl. tax & surcharge)</dd>
 
                     <dt class="col-sm-5">Token Amount:</dt>
                     <dd class="col-sm-7">{{ $order->token_amount ?? 'N/A' }} (excl. tax)</dd>
@@ -78,15 +81,21 @@
                     <dt class="col-sm-5">Tax Amount:</dt>
                     <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
 
+                    <dt class="col-sm-5">Card Surcharge Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->card_surcharge_amount ?? 'N/A' }}</dd>
+
                     <dt class="col-sm-5">Grand Total:</dt>
-                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount + $order->card_surcharge_amount ?? 'N/A' }} (incl. tax & surcharge)</dd>
 
                     @elseif($order->payment_method == 'card')
                     <dt class="col-sm-5">Tax Amount:</dt>
                     <dd class="col-sm-7">{{ $order->tax_amount ?? 'N/A' }}</dd>
 
+                    <dt class="col-sm-5">Card Surcharge Amount:</dt>
+                    <dd class="col-sm-7">{{ $order->card_surcharge_amount ?? 'N/A' }}</dd>
+
                     <dt class="col-sm-5">Grand Total:</dt>
-                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount ?? 'N/A' }} (incl. tax)</dd>
+                    <dd class="col-sm-7">{{ $order->total_amount + $order->tax_amount + $order->card_surcharge_amount ?? 'N/A' }} (incl. tax & surcharge)</dd>
 
                     @elseif($order->payment_method == 'cash')
                     <dt class="col-sm-5">Tax Amount:</dt>
