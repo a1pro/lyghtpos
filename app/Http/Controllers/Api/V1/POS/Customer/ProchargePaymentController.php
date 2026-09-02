@@ -23,7 +23,13 @@ class ProchargePaymentController extends Controller
         $userId = Auth::id();
 
         try {
-            $result = $this->prochargePaymentService->chargeCardToken($request->order_id, $request->card_token, $request->amount, $userId);
+            $orderId = $request->order_id ?? null;
+            $cardToken = $request->card_token;
+
+            $amount = $request->amount;
+            $cardSurchargeAmount = $request->card_surcharge_amount ?? 0;
+
+            $result = $this->prochargePaymentService->chargeCardToken($orderId, $cardToken, $amount, $cardSurchargeAmount, $userId);
 
             return response()->json([
                 'success' => true,

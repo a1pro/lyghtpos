@@ -22,6 +22,7 @@ class ProchargeTransactionLog extends Model
         'card_scheme',
         
         'amount',
+        'custom_card_surcharge_amount',
         'currency',
         
         'response_code',

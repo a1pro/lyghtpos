@@ -24,7 +24,8 @@ class ChargeCardTokenRequest extends FormRequest
         return [
             'order_id' => 'nullable|integer|exists:merchant_orders,id',
             'card_token' => 'required|string',
-            'amount' => 'required|numeric|min:0.01'
+            'amount' => 'required|numeric|min:0.01', // Excluding tax & surcharge amount
+            'card_surcharge_amount' => 'nullable|numeric|min:0'
         ];
     }
 
@@ -40,6 +41,9 @@ class ChargeCardTokenRequest extends FormRequest
             'amount.required' => 'The amount is required.',
             'amount.numeric' => 'The amount must be a number.',
             'amount.min' => 'The amount must be at least 0.01.',
+
+            'card_surcharge_amount.numeric' => 'The card surcharge amount must be a number.',
+            'card_surcharge_amount.min' => 'The card surcharge amount must be at least 0.',
         ];
     }
 }

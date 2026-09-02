@@ -122,7 +122,8 @@ class PaxMerchantOrderService
                         $paymentMethod,
                         $productsTotal,
                         $notes,
-                        $taxAmount
+                        $taxAmount,
+                        $cardSurchargeAmount
                     );
 
                     return $order;

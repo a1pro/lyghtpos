@@ -83,18 +83,20 @@ class ProchargePaymentService
         }
     }
 
-    public function chargeCardToken($orderId, $cardToken, $amount, $customerId = null)
+    public function chargeCardToken($orderId, $cardToken, $amount, $cardSurchargeAmount, $customerId = null)
     {
         $endpoint = $this->baseUrl . '/api/transaction';
 
         try {
             $accessToken = $this->getAccessToken();
 
+            $amountToCharge = $amount + $cardSurchargeAmount;
+
             $payload = [
                 "merchantNumber" => $this->merchantNumber,
                 "transactionCode" => "1",
                 "token" => $cardToken,
-                "amount" => number_format($amount, 2, '.', ''),
+                "amount" => number_format($amountToCharge, 2, '.', ''),
             ];
 
             Log::info('Charging Procharge card', [
@@ -102,6 +104,7 @@ class ProchargePaymentService
                 'customer_id' => $customerId ?? null,
                 'card_token' => $cardToken,
                 'amount' => $amount,
+                'card_surcharge_amount' => $cardSurchargeAmount,
             ]);
 
             $response = Http::withHeaders([
@@ -149,7 +152,8 @@ class ProchargePaymentService
                 $cardToken,
                 $orderId,
                 $customerId,
-                $isApproved
+                $isApproved,
+                $cardSurchargeAmount
             );
 
             if ($response->successful() && !$isApproved) {
@@ -188,7 +192,7 @@ class ProchargePaymentService
             ]);
 
             if ($order) {
-                $this->updateOrderWithSuccessStatus($order, $cardToken, $responseData);
+                $this->updateOrderWithSuccessStatus($order, $cardToken, $responseData, $cardSurchargeAmount);
             }
 
             return $responseData;
@@ -204,7 +208,7 @@ class ProchargePaymentService
     /**
      * Create transaction log entry
      */
-    private function createTransactionLog($requestPayload, $responseData, $cardToken, $orderId, $customerId, $isApproved)
+    private function createTransactionLog($requestPayload, $responseData, $cardToken, $orderId, $customerId, $isApproved, $cardSurchargeAmount)
     {
         try {
             $amount = $responseData['approvedAmount'] ?? null;
@@ -244,6 +248,7 @@ class ProchargePaymentService
                 'card_token' => $cardToken,
                 'order_id' => $orderId,
                 'customer_id' => $customerId,
+                'custom_card_surcharge_amount' => $cardSurchargeAmount,
 
                 // Status
                 'status' => $isApproved ? 'approved' : 'declined',
@@ -294,7 +299,7 @@ class ProchargePaymentService
     /**
      * Update order with success status
      */
-    private function updateOrderWithSuccessStatus($order, $cardToken, $responseData)
+    private function updateOrderWithSuccessStatus($order, $cardToken, $responseData, $cardSurchargeAmount)
     {
         $order->update([
             'procharge_authorization_number' => $responseData['authorizationNumber'] ?? null,
@@ -302,6 +307,7 @@ class ProchargePaymentService
             'procharge_transaction_id' => $responseData['transactionIdentifier'] ?? null,
             'procharge_invoice_id' => $responseData['invoiceID'] ?? null,
             'procharge_response' => json_encode($responseData),
+            'card_surcharge_amount' => $cardSurchargeAmount,
         ]);
     }
 }

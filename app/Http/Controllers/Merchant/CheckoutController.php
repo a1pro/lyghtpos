@@ -73,7 +73,8 @@ class CheckoutController extends Controller
                 $paymentMethod,
                 $total,
                 $notes,
-                $taxAmount
+                $taxAmount,
+                0
             );
 
             // Clear cart after successful order creation

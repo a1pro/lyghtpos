@@ -21,4 +21,9 @@ class Merchant extends Model
         'communyti_enrollment',
         'advocate_contact'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

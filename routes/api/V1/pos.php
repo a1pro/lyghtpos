@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\POS\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosLoginController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosRegisterController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerAgreementsController;
+use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerMerchantSettingsController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerOrderController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerWallet;
 use App\Http\Controllers\Api\V1\POS\Customer\PosJoiningFeesController;
@@ -102,6 +103,11 @@ Route::prefix('pos')->group(function () {
                 Route::get('/pending', [PosCustomerAgreementsController::class, 'getPendingAgreements'])->name('pending');
                 Route::post('/content', [PosCustomerAgreementsController::class, 'getAgreementContent'])->name('content');
                 Route::post('/accept', [PosCustomerAgreementsController::class, 'acceptAgreement'])->name('accept');
+            });
+
+            /** ****************** Customer's Merchant Settings Routes (customer who registered using merchant referral) ****************** */
+            Route::prefix('merchant')->name('merchant')->group(function () {
+                Route::get('/settings', [PosCustomerMerchantSettingsController::class, 'getCustomerMerchantSettings']);
             });
         });
     });

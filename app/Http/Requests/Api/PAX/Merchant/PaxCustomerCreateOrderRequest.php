@@ -59,7 +59,7 @@ class PaxCustomerCreateOrderRequest extends FormRequest
 
             // Validate total calculation
             if ($amount + $taxAmount + $cardSurchargeAmount != $totalAmount) {
-                $validator->errors()->add('total_amount', 'Total amount must equal amount + tax_amount');
+                $validator->errors()->add('total_amount', 'Total amount must equal amount + tax_amount + card_surcharge_amount');
             }
 
             // Validate payment method specific amounts

@@ -124,6 +124,32 @@ class User extends Authenticatable
         return $this->hasOne(Merchant::class, 'user_id');
     }
 
+     /**
+     * Get the merchant user that referred this customer
+     * The merchant_id on users table references the user ID of the merchant
+     */
+    public function referredByMerchantUser(): HasOne
+    {
+        return $this->hasOne(User::class, 'id', 'merchant_id');
+    }
+
+    /**
+     * Get the merchant record that referred this customer
+     * Through the merchant user relationship
+     */
+    public function referredByMerchant(): HasOne
+    {
+        return $this->hasOne(Merchant::class, 'user_id', 'merchant_id');
+    }
+
+    /**
+     * Check if the user is a customer referred by a merchant
+     */
+    public function isReferredByMerchant(): bool
+    {
+        return !is_null($this->merchant_id) && $this->isCustomer();
+    }
+
     public function subscribed()
     {
         return false;
@@ -167,6 +193,11 @@ class User extends Authenticatable
     public function isFavorMember(): bool
     {
         return $this->role_id === 8;
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->role_id === 11;
     }
 
     public function scopeFavorMembers($query)

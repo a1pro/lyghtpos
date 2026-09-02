@@ -29,9 +29,10 @@ class MerchantOrderService
         string $paymentMethod,
         float $totalAmount,
         ?string $notes = null,
-        ?float $taxAmount = null
+        ?float $taxAmount = null,
+        ?float $cardSurchargeAmount = null
     ): MerchantOrder {
-        return DB::transaction(function () use ($customerCyclosId, $cartItems, $paymentMethod, $totalAmount, $notes, $taxAmount) {
+        return DB::transaction(function () use ($customerCyclosId, $cartItems, $paymentMethod, $totalAmount, $notes, $taxAmount, $cardSurchargeAmount) {
             $merchant = Auth::user();
             $merchantId = $merchant->id;
 
@@ -54,6 +55,7 @@ class MerchantOrderService
                 'customer_id' => $customerId,
                 'total_amount' => $totalAmount,
                 'tax_amount' => $taxAmount ?? 0,
+                'card_surcharge_amount' => $cardSurchargeAmount ?? 0,
                 'payment_method' => $paymentMethod,
                 'status' => $status,
                 'payment_status' => $paymentStatus,
