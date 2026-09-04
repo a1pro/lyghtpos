@@ -18,6 +18,9 @@ class ProchargePaymentController extends Controller
         $this->prochargePaymentService = $prochargePaymentService;
     }
 
+    /**
+     * Charge a card using a token via Procharge API
+     */
     public function chargeCardToken(ChargeCardTokenRequest $request)
     {
         $userId = Auth::id();
@@ -37,16 +40,42 @@ class ProchargePaymentController extends Controller
                 'data' => $result,
             ]);
         } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+
             Log::error('Procharge Payment Error', [
                 'order_id' => $request->order_id ?? null,
                 'user_id' => $userId ?? null,
-                'message' => $e->getMessage(),
+                'message' => $errorMessage,
             ]);
+
+            $friendlyMessage = $this->getUserFriendlyMessage($errorMessage);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to process payment.',
+                'message' => $friendlyMessage,
             ], 402);
         }
+    }
+
+    /**
+     * Get user-friendly error message based on Procharge response
+     */
+    private function getUserFriendlyMessage(string $errorMessage): string
+    {
+        $errorPatterns = [
+            'card number is invalid' => 'Invalid card details.',
+            'invalid token' => 'Invalid card details.',
+            'DO NOT HONOR' => 'Card declined. Please contact your bank.',
+            'Insufficient funds' => 'Insufficient funds.',
+            'declined' => 'Payment declined.',
+        ];
+
+        foreach ($errorPatterns as $pattern => $friendlyMessage) {
+            if (stripos($errorMessage, $pattern) !== false) {
+                return $friendlyMessage;
+            }
+        }
+
+        return 'Failed to process payment.';
     }
 }
