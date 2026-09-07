@@ -45,8 +45,8 @@ class PaxMerchantSettingService
         }
 
         return [
-            'vat_tax_percentage' => round($vatTaxPercentage, 2),
-            'card_surcharge_percentage' => round($cardSurchargePercentage, 2),
+            'vat_tax_percentage' => $vatTaxPercentage,
+            'card_surcharge_percentage' => $cardSurchargePercentage,
             'pos_payment_types' => $paymentTypes,
             'handpoint_api_key' => $merchant->handpoint_api_key ?? null
         ];
