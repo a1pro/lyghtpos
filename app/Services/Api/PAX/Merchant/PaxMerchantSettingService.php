@@ -27,11 +27,11 @@ class PaxMerchantSettingService
         }
 
         $vatTaxPercentage = !is_null($merchant->vat_tax_percentage)
-            ? floatval($merchant->vat_tax_percentage)
+            ? number_format((float)$merchant->vat_tax_percentage, 2, '.', '')
             : $defaultVatTax;
 
         $cardSurchargePercentage = !is_null($merchant->card_surcharge_percentage)
-            ? floatval($merchant->card_surcharge_percentage)
+            ? number_format((float)$merchant->card_surcharge_percentage, 2, '.', '')
             : $defaultCardSurcharge;
 
         $paymentTypes = $defaultPaymentTypes;
@@ -65,11 +65,11 @@ class PaxMerchantSettingService
         }
 
         // Update only the card_surcharge_percentage field
-        $merchant->card_surcharge_percentage = round($cardSurchargePercentage, 2);
+        $merchant->card_surcharge_percentage = number_format((float)$cardSurchargePercentage, 2, '.', '');
         $merchant->save();
 
         return [
-            'card_surcharge_percentage' => round($merchant->card_surcharge_percentage, 2)
+            'card_surcharge_percentage' => number_format((float)$merchant->card_surcharge_percentage, 2, '.', '')
         ];
     }
 }
