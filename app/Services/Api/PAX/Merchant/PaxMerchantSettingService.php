@@ -65,7 +65,7 @@ class PaxMerchantSettingService
         }
 
         // Update only the card_surcharge_percentage field
-        $merchant->card_surcharge_percentage = $cardSurchargePercentage;
+        $merchant->card_surcharge_percentage = round((float) $cardSurchargePercentage, 2);
         $merchant->save();
 
         return [
