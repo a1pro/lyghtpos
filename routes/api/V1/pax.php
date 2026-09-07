@@ -50,6 +50,7 @@ Route::prefix('pax')->group(function () {
             /** ****************** Merchant Settings Routes ****************** */
             Route::prefix('settings')->name('settings')->group(function () {
                 Route::get('/', [PaxMerchantSettingsController::class, 'getMerchantSettings']);
+                Route::put('/card-surcharge', [PaxMerchantSettingsController::class, 'updateCardSurcharge']);
             });
 
             /** ****************** Merchant Profile Routes ****************** */

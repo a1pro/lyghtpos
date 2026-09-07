@@ -51,4 +51,25 @@ class PaxMerchantSettingService
             'handpoint_api_key' => $merchant->handpoint_api_key ?? null
         ];
     }
+
+    /**
+     * Update card surcharge percentage
+     */
+    public function updateCardSurcharge($cardSurchargePercentage)
+    {
+        $user = Auth::user();
+        $merchant = Merchant::where("user_id", $user->id)->first();
+
+        if (!$merchant) {
+            throw new \Exception("Merchant cannot be found!");
+        }
+
+        // Update only the card_surcharge_percentage field
+        $merchant->card_surcharge_percentage = $cardSurchargePercentage;
+        $merchant->save();
+
+        return [
+            'card_surcharge_percentage' => (float) $merchant->card_surcharge_percentage
+        ];
+    }
 }
