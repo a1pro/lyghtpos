@@ -23,7 +23,7 @@ class PosPurchaseOrderRequest extends FormRequest
     {
         return [
             'order_id' => 'required',
-            'paid_via' => 'required|string|in:token,paypal,procharge',
+            'paid_via' => 'required|string|in:cyclos_tokens,paypal,procharge',
         ];
     }
 
@@ -33,7 +33,7 @@ class PosPurchaseOrderRequest extends FormRequest
             'order_id.required' => 'Order ID is required.',
             
             'paid_via.required' => 'Payment method is required.',
-            'paid_via.in' => 'Payment method must be one of the following: token, paypal, procharge.',
+            'paid_via.in' => 'Payment method must be one of the following: cyclos_tokens, paypal, procharge.',
         ];
     }
 }
