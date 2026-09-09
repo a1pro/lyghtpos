@@ -81,7 +81,10 @@ class PosCustomerOrderController extends Controller
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
                     'per_page' => $data->perPage(),
-                    'total' => $data->total()
+                    'total' => $data->total(),
+                    'from' => $data->firstItem(),
+                    'to' => $data->lastItem(),
+                    'has_more_pages' => $data->hasMorePages()
                 ]
             ]);
         } catch (\Exception $e) {
