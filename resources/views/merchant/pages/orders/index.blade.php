@@ -55,7 +55,11 @@
                             default => 'badge-secondary'
                             };
                             @endphp
+                            @if($order->refund_status == 'refunded')
+                            <span class="badge badge-info">Refunded</span>
+                            @else
                             <span class="badge {{ $statusClass }}">{{ ucfirst($order->status) }}</span>
+                            @endif
                         </td>
                         <td>{{ $order->created_at->format('Y-m-d H:i') }}</td>
                         <td>

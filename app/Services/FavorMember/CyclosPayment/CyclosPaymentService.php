@@ -492,6 +492,85 @@ class CyclosPaymentService
     }
 
     /**
+     * Transfer tokens from user to user in Cyclos
+     */
+    public function transferTokens(string $fromCyclosUserId, string $toCyclosUserId, float $amount, string $description = ''): array
+    {
+        try {
+            $paymentTypeId = config('services.cyclos.order_payment_type_id');
+            
+            $paymentUrl = $this->baseUrl . "/api/{$fromCyclosUserId}/payments";
+
+            $paymentData = [
+                'subject' => $toCyclosUserId,
+                'amount' => $amount,
+                'type' => $paymentTypeId,
+                'description' => $description,
+                'currency' => $this->currencyCode,
+            ];
+
+            Log::info('Adding funds user to user', [
+                'from_user' => $fromCyclosUserId,
+                'to_user' => $toCyclosUserId,
+                'amount' => $amount,
+                'payment_type' => $this->paymentTypeId,
+                'currency' => $this->currencyCode,
+            ]);
+
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->post($paymentUrl, $paymentData);
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+
+                Log::error('Cyclos payment failed', [
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                    'payment_type_used' => $this->paymentTypeId,
+                    'admin_user_id_used' => $this->adminUserId,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Payment failed: ' . json_encode($errorData),
+                ];
+            }
+
+            $data = $response->json();
+
+            Log::info('Cyclos payment successful', [
+                'transaction_id' => $data['id'] ?? null,
+                'currency' => $this->currencyCode,
+            ]);
+
+            return [
+                'success' => true,
+                'txn_id' => $data['id'] ?? null,
+                'full_response' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exception in transferTokens', [
+                'error' => $e->getMessage(),
+                'from_user_id' => $fromCyclosUserId,
+                'to_user_id' => $toCyclosUserId,
+                'amount' => $amount
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Get user accounts from Cyclos
      */
     public function getUserAccounts(string $cyclosUserId): array

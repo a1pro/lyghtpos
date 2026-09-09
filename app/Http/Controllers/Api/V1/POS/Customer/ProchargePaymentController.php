@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\V1\POS\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Services\Api\POS\Customer\ProchargePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Http\Requests\Api\POS\Customer\ChargeCardTokenRequest;
+use App\Services\Procharge\ProchargePaymentService;
 
 class ProchargePaymentController extends Controller
 {
@@ -74,6 +74,11 @@ class ProchargePaymentController extends Controller
             if (stripos($errorMessage, $pattern) !== false) {
                 return $friendlyMessage;
             }
+        }
+
+        // if $errorMessage is simple string no array nothing then return it as is, otherwise return a generic message
+        if (is_string($errorMessage) && !empty($errorMessage)) {
+            return $errorMessage;
         }
 
         return 'Failed to process payment.';

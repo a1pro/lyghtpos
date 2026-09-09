@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Api\POS\Customer;
+namespace App\Services\Procharge;
 
 use App\Models\MerchantOrder;
 use App\Models\ProchargeTransactionLog;
@@ -37,6 +37,7 @@ class ProchargePaymentService
         } else {
             $this->apiKey = config('services.procharge.sandbox.api_key');
             $this->baseUrl = config('services.procharge.sandbox.api_base_url', 'https://dev-api.procharge.com');
+
             $this->username = config('services.procharge.sandbox.username');
             $this->password = config('services.procharge.sandbox.password');
             $this->pin = config('services.procharge.sandbox.pin');
@@ -206,6 +207,104 @@ class ProchargePaymentService
     }
 
     /**
+     * Refund a transaction
+     */
+    public function refundTransaction($cardToken, $amountToRefund, $orderId = null)
+    {
+        $endpoint = $this->baseUrl . '/api/transaction';
+
+        try {
+            $accessToken = $this->getAccessToken();
+
+            $payload = [
+                "transactionCode" => "2",
+                "token" => $cardToken,
+                "amount" => number_format($amountToRefund, 2, '.', ''),
+            ];
+
+            Log::info('Refunding Procharge transaction', [
+                'order_id' => $orderId ?? null,
+                'card_token' => $cardToken,
+                'amount' => $amountToRefund,
+            ]);
+
+            $response = Http::withHeaders([
+                'x-api-key' => $this->apiKey,
+                'Authorization' => $accessToken,
+                'Content-Type' => 'application/json',
+            ])->post($endpoint, $payload);
+
+            $responseData = $response->json();
+
+            Log::info('Procharge refund transaction response', [
+                'order_id' => $orderId ?? null,
+                'response_code' => $responseData['responseCode'] ?? null,
+                'response_text' => $responseData['responseText'] ?? null,
+            ]);
+
+            // Check if transaction was APPROVED
+            $isApproved = false;
+            $responseCode = $responseData['responseCode'] ?? null;
+            $authorizationNumber = $responseData['authorizationNumber'] ?? null;
+            $responseText = $responseData['responseText'] ?? '';
+
+            // CRITERIA 1: responseCode must be 0
+            if ($responseCode === 0) {
+                // CRITERIA 2: authorizationNumber must not be empty
+                if (!empty($authorizationNumber)) {
+                    // CRITERIA 3: responseText should contain "APPROVAL"
+                    if (str_contains(strtoupper($responseText), 'APPROVAL')) {
+                        $isApproved = true;
+                    }
+                }
+            }
+
+            $log = $this->createRefundTransactionLog(
+                $payload,
+                $responseData,
+                $cardToken,
+                $orderId,
+                $isApproved
+            );
+
+            if (!$response->successful() || !$isApproved) {
+                Log::warning('Procharge refund transaction failed', [
+                    'response_code' => $responseCode,
+                    'response_text' => $responseText,
+                    'log_id' => $log->id,
+                ]);
+
+                return [
+                    'success' => false,
+                    'refund_mode' => 'procharge',
+                    'txn_id' => null,
+                    'full_response' => $responseData,
+                    'message' => $responseText ?: 'Refund transaction failed',
+                ];
+            }
+
+            Log::info('Procharge refund transaction succeeded', [
+                'transaction_id' => $responseData['transactionIdentifier'] ?? null,
+                'authorization' => $authorizationNumber,
+                'log_id' => $log->id,
+            ]);
+
+            return [
+                'success' => true,
+                'refund_mode' => 'procharge',
+                'txn_id' => $responseData['transactionIdentifier'] ?? null,
+                'full_response' => $responseData,
+                'message' => $responseText ?: 'Refund transaction succeeded',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Procharge refund error: ' . $e->getMessage(), [
+                'amount' => $amountToRefund,
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Create transaction log entry
      */
     private function createTransactionLog($requestPayload, $responseData, $cardToken, $orderId, $customerId, $isApproved, $cardSurchargeAmount)
@@ -272,6 +371,70 @@ class ProchargePaymentService
     }
 
     /**
+     * Create transaction log entry
+     */
+    private function createRefundTransactionLog($requestPayload, $responseData, $cardToken, $orderId, $isApproved)
+    {
+        try {
+            $amount = $responseData['approvedAmount'] ?? null;
+            if (empty($amount) && !is_numeric($amount)) {
+                $amount = $requestPayload['amount'] ?? null;
+            }
+            $amount = is_numeric($amount) ? (float) $amount : null;
+
+            $invoiceId = !empty($responseData['invoiceID']) ? (int) $responseData['invoiceID'] : null;
+            $paymentId = !empty($responseData['paymentID']) ? (int) $responseData['paymentID'] : null;
+
+            $log = ProchargeTransactionLog::create([
+                // Core transaction fields
+                'transaction_identifier' => $responseData['transactionIdentifier'] ?? null,
+                'authorization_number' => $responseData['authorizationNumber'] ?? null,
+                'invoice_id' => $invoiceId,
+                'payment_id' => $paymentId,
+                'batch_id' => $responseData['batchID'] ?? null,
+                'batch_number' => $responseData['batchNumber'] ?? null,
+
+                // Card details
+                'card_type' => $responseData['cardType'] ?? null,
+                'card_last_four' => $responseData['cardLastFour'] ?? null,
+                'card_scheme' => $responseData['cardScheme'] ?? null,
+
+                // Amount - ensure it's not empty string
+                'amount' => $amount,
+                'currency' => 'USD',
+
+                // Response status
+                'response_code' => isset($responseData['responseCode']) ? (int) $responseData['responseCode'] : null,
+                'response_text' => $responseData['responseText'] ?? null,
+                'network_response_code' => $responseData['networkResponseCode'] ?? null,
+                'host_response' => $responseData['cygmaResponse']['HostResponse'] ?? null,
+
+                // Request data
+                'card_token' => $cardToken,
+                'order_id' => $orderId,
+
+                // Status
+                'status' => $isApproved ? 'refunded' : 'refund_failed',
+
+                // Payloads
+                'request_payload' => $requestPayload,
+                'response_payload' => $responseData,
+
+                // Environment
+                'environment' => $this->mode,
+            ]);
+
+            return $log;
+        } catch (\Exception $e) {
+            Log::error('Failed to create Procharge transaction log', [
+                'error' => $e->getMessage(),
+                'order_id' => $orderId,
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Update order with declined status
      */
     private function updateOrderWithDeclinedStatus($order, $cardToken, $responseData)
@@ -308,6 +471,7 @@ class ProchargePaymentService
             'procharge_invoice_id' => $responseData['invoiceID'] ?? null,
             'procharge_response' => json_encode($responseData),
             'card_surcharge_amount' => $cardSurchargeAmount,
+            'payment_status' => 'paid',
         ]);
     }
 }

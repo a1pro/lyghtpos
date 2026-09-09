@@ -23,7 +23,17 @@ class PosPurchaseOrderRequest extends FormRequest
     {
         return [
             'order_id' => 'required',
+            'paid_via' => 'required|string|in:token,paypal,procharge',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'order_id.required' => 'Order ID is required.',
             
+            'paid_via.required' => 'Payment method is required.',
+            'paid_via.in' => 'Payment method must be one of the following: token, paypal, procharge.',
         ];
     }
 }

@@ -129,6 +129,7 @@ class PosCustomerOrderService
                 'status' => 'completed',
                 'payment_status' => 'paid',
                 'paid_at' => now(),
+                'pos_mobile_payment_method' => $data['paid_via'] ?? null,
                 'notes' => "Order marked as accepted from buyer.",
             ]);
 

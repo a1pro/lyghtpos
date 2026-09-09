@@ -2,6 +2,8 @@
 
 namespace App\Services\Cyclos;
 
+use App\Models\MerchantOrder;
+use App\Services\FavorMember\CyclosPayment\CyclosPaymentService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Config;
@@ -22,8 +24,11 @@ class MerchantCyclosOrderService
     protected bool $mockMode;
     protected bool $fallbackToMock;
 
-    public function __construct()
+    protected CyclosPaymentService $cyclosPaymentService;
+
+    public function __construct(CyclosPaymentService $cyclosPaymentService)
     {
+        $this->cyclosPaymentService = $cyclosPaymentService;
         $this->loadSettings();
         $this->validateRequiredConfig();
     }
@@ -423,6 +428,180 @@ class MerchantCyclosOrderService
                 'success' => false,
                 'message' => $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Refund an order by transferring tokens from seller back to buyer
+     */
+    public function refundOrder(MerchantOrder $order, string $cyclosOrderId, float $refundAmount, ?string $refundReason = null): array
+    {
+        try {
+            // SFetch order details from Cyclos
+            $orderDetails = $this->getOrderDetails($cyclosOrderId);
+            
+            if (!$orderDetails || empty($orderDetails['id'])) {
+                return [
+                    'success' => false,
+                    'txn_id' => null,
+                    'full_response' => null,
+                    'message' => 'Order not found in Cyclos.',
+                ];
+            }
+
+            Log::info('Fetching order details for refund', [
+                'order_id' => $cyclosOrderId,
+                'order_number' => $orderDetails['number'] ?? null,
+            ]);
+
+            // Extract buyer and seller IDs from order
+            $buyerId = $orderDetails['buyer']['id'] ?? null;
+            $sellerId = $orderDetails['seller']['id'] ?? null;
+
+            if (!$buyerId || !$sellerId) {
+                Log::error('Missing buyer or seller in order', [
+                    'order_id' => $cyclosOrderId,
+                    'buyer_id' => $buyerId,
+                    'seller_id' => $sellerId,
+                ]);
+                return [
+                    'success' => false,
+                    'txn_id' => null,
+                    'full_response' => null,
+                    'message' => 'Buyer or seller ID not found in order.',
+                ];
+            }
+
+            // Validate refund amount doesn't exceed order total
+            // order's total_amount + tax_amount + card_surcharge_amount
+            $orderTotal = $order->total_amount + $order->tax_amount + $order->card_surcharge_amount;
+            if ($refundAmount > $orderTotal) {
+                return [
+                    'success' => false,
+                    'txn_id' => null,
+                    'full_response' => null,
+                    'message' => "Refund amount ({$refundAmount}) exceeds order total ({$orderTotal}).",
+                ];
+            }
+
+            // Create description for the refund transaction
+            $orderNumber = $orderDetails['number'] ?? $cyclosOrderId;
+            $description = $refundReason 
+                ? "Refund for order #{$orderNumber}: {$refundReason}" 
+                : "Refund for order #{$orderNumber}";
+
+            Log::info('Processing Cyclos refund', [
+                'order_id' => $cyclosOrderId,
+                'from_seller' => $sellerId,
+                'to_buyer' => $buyerId,
+                'amount' => $refundAmount,
+                'description' => $description,
+            ]);
+
+            // Transfer tokens from seller back to buyer
+            $transferResult = $this->cyclosPaymentService->transferTokens(
+                $sellerId,      // From: Seller (refunding the money)
+                $buyerId,       // To: Buyer (receiving the refund)
+                $refundAmount,
+                $description
+            );
+
+            if (!$transferResult['success']) {
+                Log::error('Cyclos refund transfer failed', [
+                    'order_id' => $cyclosOrderId,
+                    'error' => $transferResult['message'] ?? 'Unknown error',
+                ]);
+
+                return [
+                    'success' => false,
+                    'txn_id' => null,
+                    'full_response' => $transferResult,
+                    'message' => 'Refund transfer failed: ' . ($transferResult['message'] ?? 'Unknown error'),
+                ];
+            }
+
+            Log::info('Cyclos refund processed successfully', [
+                'order_id' => $cyclosOrderId,
+                'refund_txn_id' => $transferResult['txn_id'] ?? null,
+                'amount' => $refundAmount,
+            ]);
+
+            // Return success with transaction details
+            return [
+                'success' => true,
+                'txn_id' => $transferResult['txn_id'] ?? null,
+                'full_response' => $transferResult['full_response'] ?? $transferResult,
+                'message' => 'Cyclos refund processed successfully.',
+                'data' => [
+                    'order_id' => $cyclosOrderId,
+                    'order_number' => $orderNumber,
+                    'amount' => $refundAmount,
+                    'from_user' => $sellerId,
+                    'to_user' => $buyerId,
+                ],
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Exception in refundOrder', [
+                'order_id' => $cyclosOrderId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'txn_id' => null,
+                'full_response' => null,
+                'message' => 'Exception: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get order details from Cyclos
+     * 
+     * @param string $cyclosOrderId
+     * @return array|null
+     */
+    public function getOrderDetails(string $cyclosOrderId): ?array
+    {
+        try {
+            $url = $this->baseUrl . "/api/orders/{$cyclosOrderId}";
+
+            Log::info('Fetching order details from Cyclos', [
+                'order_id' => $cyclosOrderId,
+                'url' => $url,
+            ]);
+
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->get($url);
+
+            if ($response->failed()) {
+                Log::error('Failed to fetch order details', [
+                    'order_id' => $cyclosOrderId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return null;
+            }
+
+            $data = $response->json();
+            return is_array($data) ? $data : null;
+
+        } catch (\Exception $e) {
+            Log::error('Exception in getOrderDetails', [
+                'order_id' => $cyclosOrderId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
         }
     }
 }

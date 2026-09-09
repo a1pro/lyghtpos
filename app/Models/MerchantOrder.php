@@ -20,6 +20,7 @@ class MerchantOrder extends Model
         'token_amount',
         'total_amount',
         'payment_method',
+        'pos_mobile_payment_method',
         'payment_type',
         'status',
         'payment_status',
@@ -46,6 +47,14 @@ class MerchantOrder extends Model
         'procharge_transaction_id',
         'procharge_invoice_id',
         'procharge_response',
+
+        'refund_mode',
+        'refund_status',
+        'refund_notes',
+        'refund_procharge_txn_id',
+        'refund_procharge_response',
+        'refund_cyclos_token_txn_id',
+        'refund_cyclos_token_response',
 
         'failed_at',
         'failure_message',

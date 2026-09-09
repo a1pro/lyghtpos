@@ -9,6 +9,18 @@
 </button>
 @endif
 
+{{-- Refund Button --}}
+@if($order->status == 'completed' && $order->refund_status != 'refunded')
+<button type="button" class="btn btn-warning" data-toggle="modal" data-target="#refundModal">
+    <i class="fas fa-undo-alt"></i> Refund
+</button>
+@endif
+@if($order->refund_status == 'refunded')
+<button type="button" class="btn btn-success" disabled>
+    <i class="fas fa-check"></i> Refunded
+</button>
+@endif
+
 <a href="{{ route('merchant.orders.index') }}" class="btn btn-secondary">
     <i class="fas fa-arrow-left"></i> Back to Orders
 </a>
@@ -146,14 +158,60 @@
                         ];
                         @endphp
                         {{ $methodLabels[$order->payment_method] ?? ucfirst($order->payment_method) }}
+                        
+                        {{-- Show POS Mobile sub-method if available --}}
+                        @if($order->payment_method == 'pos_mobile' && $order->pos_mobile_payment_method)
+                            @php
+                            $posLabels = [
+                                'procharge' => 'Procharge',
+                                'cyclos_tokens' => 'Cyclos Tokens',
+                                'wallet' => 'Wallet',
+                                'paypal' => 'PayPal',
+                                'token' => 'Token',
+                            ];
+                            @endphp
+                            <small class="text-muted">({{ $posLabels[$order->pos_mobile_payment_method] ?? $order->pos_mobile_payment_method }})</small>
+                        @endif
                     </dd>
 
                     <dt class="col-sm-5">Payment Status:</dt>
                     <dd class="col-sm-7">
-                        <span class="badge {{ $order->payment_status === 'paid' ? 'badge-success' : 'badge-warning' }}">
+                        @php
+                        $paymentStatusClass = match($order->payment_status) {
+                            'paid' => 'badge-success',
+                            'refunded' => 'badge-info',
+                            'failed' => 'badge-danger',
+                            default => 'badge-warning'
+                        };
+                        @endphp
+                        <span class="badge {{ $paymentStatusClass }}">
                             {{ ucfirst($order->payment_status) }}
                         </span>
                     </dd>
+                    
+                    @if($order->refund_status)
+                        <dt class="col-sm-5">Refund Status:</dt>
+                        <dd class="col-sm-7">
+                            @php
+                            $refundStatusClass = match($order->refund_status) {
+                                'refunded' => 'badge-success',
+                                'pending' => 'badge-warning',
+                                'failed' => 'badge-danger',
+                                default => 'badge-warning'
+                            };
+                            @endphp
+                            <span class="badge {{ $refundStatusClass }}">
+                                {{ ucfirst($order->refund_status) }}
+                            </span>
+                        </dd>
+                    @endif
+
+                    @if($order->refund_status && $order->refund_notes)
+                        <dt class="col-sm-5">Refund Notes:</dt>
+                        <dd class="col-sm-7">
+                            {{ ucfirst($order->refund_notes) }}
+                        </dd>
+                    @endif
 
                     <dt class="col-sm-5">Created At:</dt>
                     <dd class="col-sm-7">{{ $order->created_at->format('Y-m-d H:i:s') }}</dd>
@@ -422,6 +480,94 @@
 @endforeach
 @endif
 
+{{-- REFUND MODAL --}}
+<div class="modal fade" id="refundModal" tabindex="-1" role="dialog" aria-labelledby="refundModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="refundModalLabel">
+                    <i class="fas fa-undo-alt"></i> Refund Order #{{ $order->order_number }}
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                @if($isRefundEligible)
+                    <form id="refundForm" action="{{ route('merchant.orders.refund', $order->id) }}" method="POST">
+                        @csrf
+                        <div class="form-group">
+                            <label for="refundAmount">Refund Amount</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">{{ config('settings.currency_symbol', '$') }}</span>
+                                </div>
+                                <input type="number" 
+                                       step="0.01" 
+                                       min="0.01" 
+                                       max="{{ $order->total_amount + ($order->tax_amount ?? 0) + ($order->card_surcharge_amount ?? 0) }}" 
+                                       class="form-control" 
+                                       id="refundAmount" 
+                                       name="refund_amount" 
+                                       value="{{ number_format($order->total_amount + ($order->tax_amount ?? 0) + ($order->card_surcharge_amount ?? 0), 2) }}" 
+                                       required>
+                            </div>
+                            <small class="form-text text-muted">
+                                Maximum refund amount: {{ config('settings.currency_symbol', '$') }} {{ number_format($order->total_amount + ($order->tax_amount ?? 0) + ($order->card_surcharge_amount ?? 0), 2) }}
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="refundReason">Refund Reason (Optional)</label>
+                            <textarea class="form-control" 
+                                      id="refundReason" 
+                                      name="refund_reason" 
+                                      rows="3" 
+                                      placeholder="Enter reason for refund..."></textarea>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            {{ $refundEligibilityMessage }}
+                        </div>
+                    </form>
+                @else
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Refund Not Available</strong>
+                        <p class="mb-0 mt-2">{{ $refundEligibilityMessage }}</p>
+                    </div>
+
+                    @if($order->payment_method == 'pos_mobile')
+                        @php
+                        $posLabels = [
+                            'procharge' => 'Procharge',
+                            'cyclos_tokens' => 'Cyclos Tokens',
+                            'wallet' => 'Wallet',
+                            'paypal' => 'PayPal',
+                            'token' => 'Token',
+                        ];
+                        $subMethodLabel = $posLabels[$order->pos_mobile_payment_method] ?? ucfirst($order->pos_mobile_payment_method);
+                        @endphp
+                        <div class="alert alert-secondary mt-2">
+                            <strong>Payment Method:</strong> POS Mobile - {{ $subMethodLabel }}
+                        </div>
+                    @endif
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                @if($isRefundEligible)
+                    <button type="submit" form="refundForm" class="btn btn-warning" id="refundSubmitBtn">
+                        <i class="fas fa-undo-alt"></i> Process Refund
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Receipt Modal -->
 <div class="modal fade" id="receiptModal" tabindex="-1" role="dialog" aria-labelledby="receiptModalLabel" aria-hidden="true">
@@ -504,5 +650,36 @@
         loader.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading receipt...</p>';
     });
 
+    // Refund Modal - Amount validation
+    $(document).ready(function() {
+        $('#refundModal').on('show.bs.modal', function() {
+            const maxAmount = parseFloat($('#refundAmount').attr('max') || 0);
+            
+            $('#refundAmount').on('input', function() {
+                const value = parseFloat($(this).val()) || 0;
+                if (value > maxAmount) {
+                    $(this).val(maxAmount);
+                }
+                if (value < 0.01) {
+                    $(this).val(0.01);
+                }
+            });
+
+            // Prevent form submission if amount is invalid
+            $('#refundForm').on('submit', function(e) {
+                const value = parseFloat($('#refundAmount').val()) || 0;
+                if (value <= 0 || value > maxAmount) {
+                    e.preventDefault();
+                    alert('Please enter a valid refund amount between 0.01 and ' + maxAmount.toFixed(2));
+                    return false;
+                }
+            });
+        });
+
+        // Reset form when modal is hidden
+        $('#refundModal').on('hidden.bs.modal', function() {
+            $('#refundReason').val('');
+        });
+    });
 </script>
 @endsection
