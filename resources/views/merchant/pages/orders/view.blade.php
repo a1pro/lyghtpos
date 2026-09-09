@@ -213,6 +213,13 @@
                         </dd>
                     @endif
 
+                    @if($order->refund_status == 'refunded' && $order->refund_amount)
+                        <dt class="col-sm-5">Refund Amount:</dt>
+                        <dd class="col-sm-7">
+                            {{ $order->refund_amount ?? 'N/A' }}
+                        </dd>
+                    @endif
+
                     <dt class="col-sm-5">Created At:</dt>
                     <dd class="col-sm-7">{{ $order->created_at->format('Y-m-d H:i:s') }}</dd>
 
