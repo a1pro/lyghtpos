@@ -35,7 +35,7 @@ class PosCustomerOrderService
     public function fetchPendingOrders(string $cyclosUserId)
     {
         try {
-            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'payment_status' => 'pending', 'payment_method'=> 'pos_mobile'])
+            $orders = MerchantOrder::where(['customer_cyclos_id' => $cyclosUserId, 'payment_status' => 'pending', 'payment_method' => 'pos_mobile'])
                 ->with('items:id,merchant_order_id,product_name,quantity,price')
                 ->orderBy('created_at', 'desc')
                 ->get()->toArray();
@@ -51,16 +51,42 @@ class PosCustomerOrderService
     /**
      * Fetch all orders for a particular
      */
-    public function fetchOrdersHistory(string $cyclosUserId)
+    public function fetchOrdersHistory(string $cyclosUserId, int $perPage = 10)
     {
         try {
             $orders = MerchantOrder::where('customer_cyclos_id', $cyclosUserId)
                 ->where('payment_status', '!=', 'pending')
+                ->select([
+                    'id',
+                    'order_number',
+                    'cyclos_order_id',
+                    'merchant_id',
+                    'customer_id',
+                    'customer_cyclos_id',
+                    'total_amount',
+                    'tax_amount',
+                    'card_amount',
+                    'card_surcharge_amount',
+                    'token_amount',
+                    'payment_method',
+                    'pos_mobile_payment_method',
+                    'payment_type',
+                    'status',
+                    'payment_status',
+                    'refund_status',
+                    'notes',
+                    'created_at',
+                    'updated_at',
+                    'transaction_id',
+                    'paid_at',
+                    'failed_at',
+                    'failure_message'
+                ])
                 ->with('items:id,merchant_order_id,product_name,quantity,price')
                 ->orderBy('paid_at', 'desc')
-                ->get()
-                ->toArray();
-            return $orders ?? [];
+                ->paginate($perPage);
+
+            return $orders;
         } catch (\Exception $e) {
             Log::error('Error fetching pending orders', [
                 'error' => $e->getMessage()
@@ -110,7 +136,7 @@ class PosCustomerOrderService
             $taxAmount = $orderDetail->tax_amount ?? 0;
             $totalAmountWithTax = $orderDetail->total_amount + $taxAmount;
 
-            if($balance < $totalAmountWithTax) {
+            if ($balance < $totalAmountWithTax) {
                 throw new \Exception("Insufficient wallet balance. Required: {$totalAmountWithTax}, Available: {$balance}");
             }
 

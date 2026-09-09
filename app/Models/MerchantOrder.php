@@ -49,6 +49,7 @@ class MerchantOrder extends Model
         'procharge_response',
 
         'refund_mode',
+        'refund_amount',
         'refund_status',
         'refund_notes',
         'refund_procharge_txn_id',

@@ -135,6 +135,7 @@ class MerchantOrderController extends Controller
             // Update order to pending status first
             $order->update([
                 'refund_status' => 'pending',
+                'refund_amount' => $request->refund_amount,
                 'refund_notes' => $request->refund_reason,
             ]);
 
@@ -156,6 +157,7 @@ class MerchantOrderController extends Controller
                     'refund_status' => 'refunded',
                     'refund_mode' => $result['refund_mode'],
                     'refund_notes' => $refundReason,
+                    'refund_amount' => $refundAmount,
                 ];
 
                 // Add specific fields based on refund mode

@@ -59,7 +59,7 @@ class PosCustomerOrderController extends Controller
     /**
      * Get complete order history for authenticated customer
      */
-    public function getOrdersHistory()
+    public function getOrdersHistory(Request $request)
     {
         try {
             $cyclosUserId = Auth::user()->cyclos_user_id;
@@ -68,13 +68,21 @@ class PosCustomerOrderController extends Controller
                 throw new \Exception("Cyclos User ID not found for this user");
             }
 
-            $data = $this->customerOrderService->fetchOrdersHistory($cyclosUserId);
+            $perPage = 10;
+
+            $data = $this->customerOrderService->fetchOrdersHistory($cyclosUserId, $perPage);
 
             return response()->json([
                 'success' => true,
                 'status_code' => 200,
                 'message' => 'Order history retrieved successfully',
-                'data' => $data
+                'data' => $data->items(),
+                'pagination' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total()
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
