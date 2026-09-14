@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HandpointTransactionLog;
 use App\Models\MerchantOrder;
 use App\Services\Cyclos\MerchantCyclosOrderService;
+use App\Services\Handpoint\HandpointPaymentService;
 use App\Services\Merchant\MerchantOrderService;
 use App\Services\Merchant\Order\MerchantOrderReceiptService;
 use App\Services\Procharge\ProchargePaymentService;
@@ -20,12 +21,14 @@ class MerchantOrderController extends Controller
     protected MerchantOrderReceiptService $receiptService;
     protected ProchargePaymentService $prochargeService;
     protected MerchantCyclosOrderService $cyclosService;
+    protected HandpointPaymentService $handpointService;
 
-    public function __construct(MerchantOrderReceiptService $receiptService, ProchargePaymentService $prochargeService, MerchantCyclosOrderService $cyclosService)
+    public function __construct(MerchantOrderReceiptService $receiptService, ProchargePaymentService $prochargeService, MerchantCyclosOrderService $cyclosService, HandpointPaymentService $handpointService)
     {
         $this->receiptService = $receiptService;
         $this->prochargeService = $prochargeService;
         $this->cyclosService = $cyclosService;
+        $this->handpointService = $handpointService;
     }
 
     /**
@@ -109,7 +112,7 @@ class MerchantOrderController extends Controller
         }
     }
 
-     /**
+    /**
      * Process refund for an order
      * eligible for refund methods
      *  - payment_method = cash, pos_mobile, cyclos_tokens
@@ -167,6 +170,9 @@ class MerchantOrderController extends Controller
                 } elseif ($result['refund_mode'] === 'procharge') {
                     $updateData['refund_procharge_txn_id'] = $result['txn_id'] ?? null;
                     $updateData['refund_procharge_response'] = $result['full_response'] ?? null;
+                } elseif ($result['refund_mode'] === 'handpoint_card') {
+                    $updateData['refund_handpoint_card_txn_id'] = $result['txn_id'] ?? null;
+                    $updateData['refund_handpoint_card_response'] = $result['full_response'] ?? null;
                 }
 
                 $order->update($updateData);
@@ -184,6 +190,7 @@ class MerchantOrderController extends Controller
                 $order->update([
                     'refund_status' => 'failed',
                     'refund_notes' => $refundReason . ' | Error: ' . ($result['message'] ?? 'Unknown error'),
+                    'refund_error_response' => $result['full_response'] ?? null,
                 ]);
 
                 Log::error('Refund failed', [
@@ -233,9 +240,36 @@ class MerchantOrderController extends Controller
             ];
         }
 
+        // Handpoint Card payment (MOTO / Remote Refund)
+        if ($paymentMethod === 'card') {
+            $orderMerchant = Auth::user()->merchant;
+
+            $refundResult = $this->handpointService->refundTransaction($orderMerchant, $order, $refundAmount);
+
+            if ($refundResult['success']) {
+                return [
+                    'success'       => true,
+                    'refund_mode'   => 'handpoint_card',
+                    'txn_id'        => $refundResult['txn_id'] ?? null,
+                    'full_response' => $refundResult['full_response'] ?? null,
+                    'message'       => $refundResult['message'] ?? 'Handpoint card refund processed.',
+                ];
+            }
+
+            return [
+                'success'       => false,
+                'refund_mode'   => 'handpoint_card',
+                'txn_id'        => null,
+                'full_response' => $refundResult['full_response'] ?? null,
+                'message'       => $refundResult['message'] ?? 'Handpoint refund failed.',
+            ];
+        }
+
         // Cyclos Tokens payment (direct or via POS Mobile)
-        if ($paymentMethod === 'cyclos_tokens' || 
-            ($paymentMethod === 'pos_mobile' && $posMobilePaymentMethod === 'cyclos_tokens')) {
+        if (
+            $paymentMethod === 'cyclos_tokens' ||
+            ($paymentMethod === 'pos_mobile' && $posMobilePaymentMethod === 'cyclos_tokens')
+        ) {
             return $this->processCyclosTokenRefund($order, $refundAmount, $refundReason);
         }
 
@@ -384,6 +418,11 @@ class MerchantOrderController extends Controller
         $paymentMethod = $order->payment_method;
         $posMobilePaymentMethod = $order->pos_mobile_payment_method ?? null;
 
+        // Card (Handpoint) refund eligibility
+        if ($paymentMethod === 'card') {
+            return $this->isHandpointCardRefundable($order);
+        }
+
         // Eligible payment methods
         $eligibleMethods = ['cash', 'cyclos_tokens'];
 
@@ -430,6 +469,17 @@ class MerchantOrderController extends Controller
 
         $methodLabel = $methodLabels[$paymentMethod] ?? ucfirst($paymentMethod);
 
+        // Card (Handpoint)
+        if ($paymentMethod === 'card') {
+            if (!$order->card_transaction_id) {
+                return 'Refund is not available: original Handpoint transaction ID is missing.';
+            }
+            if (strtoupper($order->handpoint_fin_status ?? '') !== 'AUTHORISED') {
+                return 'Refund is not available: original Handpoint transaction is not authorised.';
+            }
+            return 'Refund available for Handpoint Card payments.';
+        }
+
         if ($paymentMethod === 'pos_mobile') {
             $posLabels = [
                 'procharge' => 'Procharge',
@@ -445,5 +495,15 @@ class MerchantOrderController extends Controller
         }
 
         return "Refund is not available for payment method used.";
+    }
+
+    /**
+     * Check if Handpoint card transaction is refundable
+     * Requires card_transaction_id not null and handpoint_fin_status = 'AUTHORISED'
+     */
+    private function isHandpointCardRefundable(MerchantOrder $order): bool
+    {
+        return !empty($order->card_transaction_id)
+            && strtoupper($order->handpoint_fin_status ?? '') === 'AUTHORISED';
     }
 }

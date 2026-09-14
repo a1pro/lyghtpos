@@ -72,6 +72,7 @@ return [
         'currency_symbol' => env('CYCLOS_CURRENCY_SYMBOL', 'TT'),
         'currency_name' => env('CYCLOS_CURRENCY_NAME', 'TradeTokens'),
     ],
+
     'authorize' => [
         'api_login_id' => env('AUTHORIZE_API_LOGIN_ID'),
         'transaction_key' => env('AUTHORIZE_TRANSACTION_KEY'),
@@ -79,7 +80,8 @@ return [
         'currency' => env('AUTHORIZE_CURRENCY', 'USD'),
         'mock_mode' => env('AUTHORIZE_MOCK_MODE', false),
         'fallback_to_mock' => env('AUTHORIZE_FALLBACK_TO_MOCK', true),
-    ],  
+    ],
+
     'paypal' => [
         'mode' => env('PAYPAL_MODE', 'sandbox'),
         'sandbox' => [
@@ -101,4 +103,7 @@ return [
         'fallback_to_mock' => env('PAYPAL_FALLBACK_TO_MOCK', true),
     ],
 
+    'handpoint' => [
+        'base_url' => env('HANDPOINT_BASE_URL', 'https://cloud.handpoint.com'),
+    ],
 ];

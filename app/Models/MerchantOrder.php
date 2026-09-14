@@ -56,6 +56,9 @@ class MerchantOrder extends Model
         'refund_procharge_response',
         'refund_cyclos_token_txn_id',
         'refund_cyclos_token_response',
+        'refund_handpoint_card_txn_id',
+        'refund_handpoint_card_response',
+        'refund_error_response',
 
         'failed_at',
         'failure_message',
