@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\PAX\Merchant\PaxCustomersController;
+use App\Http\Controllers\Api\V1\PAX\Merchant\PaxMerchantProfileController;
+use App\Http\Controllers\Api\V1\PAX\Merchant\PaxProductsController;
 use App\Http\Controllers\Api\V1\POS\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosLoginController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosRegisterController;
@@ -13,6 +16,7 @@ use App\Http\Controllers\Api\V1\POS\Customer\PosTokenBundleController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosCustomerSubscriptionController;
 use App\Http\Controllers\Api\V1\POS\Customer\PosProfileController;
 use App\Http\Controllers\Api\V1\POS\Customer\ProchargePaymentController;
+use App\Http\Controllers\Api\V1\POS\Merchant\PosProductsController;
 use App\Http\Controllers\Api\V1\POS\Settings\PosSettingsController;
 use App\Http\Controllers\Location\LocationController;
 use Illuminate\Support\Facades\Route;
@@ -108,6 +112,34 @@ Route::prefix('pos')->group(function () {
             /** ****************** Customer's Merchant Settings Routes (customer who registered using merchant referral) ****************** */
             Route::prefix('merchant')->name('merchant')->group(function () {
                 Route::get('/settings', [PosCustomerMerchantSettingsController::class, 'getCustomerMerchantSettings']);
+            });
+        });
+
+
+
+
+
+
+        /** ************** Merchant Side Routes ************************ */
+        Route::prefix('merchant')->group(function () {
+
+            /** ****************** Product Routes ****************** */
+            Route::prefix('products')->name('products.')->group(function () {
+                Route::get('/', [PaxProductsController::class, 'getMerchantProducts']);
+                Route::post('/update', [PaxProductsController::class, 'updateMerchantProduct']);
+                Route::get('/categories', [PaxProductsController::class, 'getCategories']);
+            });
+
+            /** ****************** Customer Routes ****************** */
+            Route::prefix('customers')->name('customers.')->group(function () {
+                Route::get('/', [PaxCustomersController::class, 'getMerchantCustomers']);
+                Route::post('/add', [PaxCustomersController::class, 'createMerchantCustomer']);
+            });
+
+            /** ****************** Profile Routes ****************** */
+            Route::prefix('profile')->name('profile')->group(function () {
+                Route::get('/', [PaxMerchantProfileController::class, 'userProfile']);
+                Route::post('/update-address', [PaxMerchantProfileController::class, 'updateMerchantAddress']);
             });
         });
     });

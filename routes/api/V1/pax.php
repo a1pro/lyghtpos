@@ -23,14 +23,14 @@ Route::prefix('pax')->group(function () {
         Route::prefix('user')->group(function () {
             Route::post('logout', [PaxAuthController::class, 'logout']);
 
-            /** ****************** Product Routes ****************** */
+            /** ****************** Product Routes ****************** [CONTROLLER LINKED TO PAX/POS ROUTES] */
             Route::prefix('products')->name('products.')->group(function () {
                 Route::get('/', [PaxProductsController::class, 'getMerchantProducts']);
                 Route::post('/update', [PaxProductsController::class, 'updateMerchantProduct']);
                 Route::get('/categories', [PaxProductsController::class, 'getCategories']);
             });
 
-            /** ****************** Customer Routes ****************** */
+            /** ****************** Customer Routes ****************** [CONTROLLER LINKED TO PAX/POS ROUTES] */
             Route::prefix('customers')->name('customers.')->group(function () {
                 Route::get('/', [PaxCustomersController::class, 'getMerchantCustomers']);
                 Route::post('/add', [PaxCustomersController::class, 'createMerchantCustomer']);
@@ -53,7 +53,7 @@ Route::prefix('pax')->group(function () {
                 Route::put('/card-surcharge', [PaxMerchantSettingsController::class, 'updateCardSurcharge']);
             });
 
-            /** ****************** Merchant Profile Routes ****************** */
+            /** ****************** Merchant Profile Routes ****************** [CONTROLLER LINKED TO PAX/POS ROUTES] */
             Route::prefix('profile')->name('profile')->group(function () {
                 Route::get('/', [PaxMerchantProfileController::class, 'userProfile']);
                 Route::post('/update-address', [PaxMerchantProfileController::class, 'updateMerchantAddress']);

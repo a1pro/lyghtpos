@@ -213,9 +213,11 @@ class PosAuthService
         }
 
         // Check POS role authorization
-        if ($user->role_id != 11) {
+        // 2 - merchant
+        // 11 - customer
+        if (!in_array($user->role_id, [2, 11])) {
             throw ValidationException::withMessages([
-                'email' => ['You are not authorized to access the POS system.'],
+                'email' => ['You are not authorized to access the LYGHT app.'],
             ]);
         }
 
@@ -233,6 +235,7 @@ class PosAuthService
             'user' => collect($user->toArray())->only(['first_name', 'email', 'phone'])->map(function ($value, $key) {
                 return $value;
             }),
+            'role' => $user->role_name,
             'token' => $token,
             'message' => 'POS Login successful',
         ];

@@ -8,6 +8,9 @@ use App\Services\Cyclos\CyclosProductService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Carefull [CONTROLLER LINKED TO PAX/POS ROUTES]
+ */
 class PaxProductsController extends Controller
 {
     protected CyclosProductService $productService;

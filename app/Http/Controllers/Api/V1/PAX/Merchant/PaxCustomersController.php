@@ -9,6 +9,9 @@ use App\Services\Merchant\MerchantCustomerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Carefull [CONTROLLER LINKED TO PAX/POS ROUTES]
+ */
 class PaxCustomersController extends Controller
 {
     protected PaxCustomerService $customerService;

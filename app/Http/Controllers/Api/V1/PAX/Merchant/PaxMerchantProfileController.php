@@ -7,6 +7,9 @@ use App\Http\Requests\Api\PAX\Auth\PaxUpdateMerchantAddressRequest;
 use App\Services\Api\PAX\Merchant\PaxMerchantProfileService;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Carefull [CONTROLLER LINKED TO PAX/POS ROUTES]
+ */
 class PaxMerchantProfileController extends Controller
 {
     protected PaxMerchantProfileService $profileService;
