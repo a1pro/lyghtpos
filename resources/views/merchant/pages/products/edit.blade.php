@@ -37,6 +37,18 @@
                                 </span>
                                 @enderror
                             </div>
+
+                            <div class="form-group">
+                                <label for="barcode">Barcode</label>
+                                <div class="input-group">
+                                    <input type="text" name="barcode" class="form-control @error('barcode') is-invalid @enderror" id="barcode" placeholder="Enter barcode" value="{{ old('description', $product['barcode']) }}">
+                                </div>
+                                @error('barcode')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                                @enderror
+                            </div>
                         </div>
                     </div>
 

@@ -23,6 +23,7 @@ class ProductUpdateRequest extends FormRequest
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'barcode' => ['nullable', 'string', 'max:100'],
             'price' => ['sometimes', 'required', 'numeric', 'min:0'],
             'quantity' => ['sometimes', 'required', 'integer', 'min:0'],
             'unlimited_stock' => ['sometimes', 'boolean'],

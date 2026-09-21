@@ -22,6 +22,8 @@ class CyclosProductService
     protected bool $fallbackToMock;
     protected ?array $marketplaceData = null;
 
+    protected array $adDetailCache = [];
+
     protected MerchantProductService $merchantProductService;
 
     public function __construct(MerchantProductService $merchantProductService)
@@ -29,7 +31,7 @@ class CyclosProductService
         $this->loadSettings();
         $this->validateRequiredConfig();
 
-         $this->merchantProductService = $merchantProductService;
+        $this->merchantProductService = $merchantProductService;
     }
 
     /**
@@ -198,8 +200,9 @@ class CyclosProductService
                 'pagination' => compact('currentPage', 'pageSize', 'totalCount', 'pageCount', 'hasNextPage')
             ]);
 
-            // Helper function to add quantity field and format product
-            $formatProduct = function ($product) {
+            $self = $this;
+
+            $formatProduct = function ($product) use ($self) {
                 if (!is_array($product)) {
                     return $product;
                 }
@@ -212,6 +215,15 @@ class CyclosProductService
                 } else {
                     $product['quantity'] = 0;
                 }
+
+                if (empty($product['customValues']) && !empty($product['id'])) {
+                    $detail = $self->fetchAdDetails((string) $product['id']);
+
+                    if (!empty($detail['customValues']) && is_array($detail['customValues'])) {
+                        $product['barcode'] = $self->extractCustomFieldValue($detail, 'barcode', 'stringValue');
+                    }
+                }
+
 
                 // Ensure we have an ID field
                 if (!isset($product['id']) && isset($product['_id'])) {
@@ -276,6 +288,116 @@ class CyclosProductService
                 'products' => [],
                 'pagination' => []
             ];
+        }
+    }
+
+    /**
+     * Safely extract a custom field value from a Cyclos product's customValues array.
+     *
+     * @param  array   $rawProduct     The raw product array from Cyclos API
+     * @param  string  $internalName   The field internalName to search for (e.g. 'barcode')
+     * @param  string  $valueKey       Which value key to read: 'stringValue', 'enumeratedValues', 'integerValue', 'decimalValue', 'booleanValue', 'dateValue'
+     * @return string|null             The extracted value, or null if not found
+     */
+    protected function extractCustomFieldValue(array $rawProduct, string $internalName, string $valueKey = 'stringValue'): ?string
+    {
+        // 1. Check customValues exists and is an array
+        if (!isset($rawProduct['customValues']) || !is_array($rawProduct['customValues'])) {
+            return null;
+        }
+
+        // 2. Loop through each custom value entry
+        foreach ($rawProduct['customValues'] as $customValue) {
+
+            // 3. Each entry must be an array
+            if (!is_array($customValue)) {
+                continue;
+            }
+
+            // 4. field must exist and be an array
+            if (!isset($customValue['field']) || !is_array($customValue['field'])) {
+                continue;
+            }
+
+            // 5. internalName must exist and match
+            if (
+                !isset($customValue['field']['internalName'])
+                || $customValue['field']['internalName'] !== $internalName
+            ) {
+                continue;
+            }
+
+            // 6. Match found — extract the value based on the type
+            if ($valueKey === 'enumeratedValues') {
+                if (
+                    !empty($customValue['enumeratedValues'])
+                    && is_array($customValue['enumeratedValues'])
+                    && isset($customValue['enumeratedValues'][0]['internalName'])
+                ) {
+                    return (string) $customValue['enumeratedValues'][0]['internalName'];
+                }
+                return null;
+            }
+
+            // 7. For scalar value keys (stringValue, integerValue, etc.)
+            if (isset($customValue[$valueKey]) && $customValue[$valueKey] !== null) {
+                return (string) $customValue[$valueKey];
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Fetch full advertisement details (including customValues) for a given ad ID.
+     * The marketplace search endpoint returns BasicAdVO which omits customValues,
+     * so we must call the single-advertisement endpoint to get them.
+     */
+    protected function fetchAdDetails(string $adId): ?array
+    {
+        // Return cached result if we've already fetched this ad
+        if (array_key_exists($adId, $this->adDetailCache)) {
+            return $this->adDetailCache[$adId];
+        }
+
+        try {
+            $url = $this->baseUrl . "/api/marketplace/{$adId}";
+
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept'  => 'application/json',
+                    'Channel' => $this->channel,
+                ])
+                ->timeout(30)
+                ->get($url);
+
+            if ($response->failed()) {
+                Log::warning('Failed to fetch ad details', [
+                    'ad_id'  => $adId,
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
+
+                $this->adDetailCache[$adId] = null;
+                return null;
+            }
+
+            $data = $response->json();
+
+            $this->adDetailCache[$adId] = is_array($data) ? $data : null;
+
+            return $this->adDetailCache[$adId];
+        } catch (Exception $e) {
+            Log::error('Exception in fetchAdDetails', [
+                'ad_id' => $adId,
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->adDetailCache[$adId] = null;
+            return null;
         }
     }
 

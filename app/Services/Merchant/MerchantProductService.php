@@ -950,6 +950,11 @@ class MerchantProductService
                 'tradeType' => $productData['trade_type'] ?? 'tradeTypeOffer',
             ];
 
+            if (!empty($productData['barcode'])) {
+                $customValues['barcode'] = $productData['barcode'];
+                Log::info('Adding barcode to product', ['barcode' => $productData['barcode']]);
+            }
+
             // Prepare the product data for Cyclos API
             if ($kind == 'simple') {
                 $cyclosProductData = [
@@ -1287,9 +1292,6 @@ class MerchantProductService
             }
         }
 
-        $customValues = $rawProduct['customValues'] ?? [];
-        $barcode = $customValues['barcode'] ?? 'N/A';
-
         // Get quantity - check both possible field names
         $quantity = 0;
         if (isset($rawProduct['stockQuantity'])) {
@@ -1308,12 +1310,14 @@ class MerchantProductService
         // Get currency symbol
         $currencySymbol = $this->getCurrencySymbol($rawProduct['currency'] ?? 'N/A');
 
+        $barcode = $this->extractCustomFieldValue($rawProduct, 'barcode', 'stringValue');
+
         return [
             'id' => $rawProduct['id'] ?? $rawProduct['_id'] ?? null,
             'name' => $rawProduct['name'] ?? 'Unnamed Product',
             'description' => $rawProduct['description'] ?? '',
-            'barcode' => $barcode,
             'product_number' => $rawProduct['productNumber'] ?? 'N/A',
+            'barcode' => $barcode,
             'price' => number_format($price, 2),
             'price_raw' => $price,
             'quantity' => $quantity,
@@ -1334,6 +1338,65 @@ class MerchantProductService
             'updated_at' => $updatedAt,
             'raw' => $rawProduct,
         ];
+    }
+
+    /**
+     * Safely extract a custom field value from a Cyclos product's customValues array.
+     *
+     * @param  array   $rawProduct     The raw product array from Cyclos API
+     * @param  string  $internalName   The field internalName to search for (e.g. 'barcode')
+     * @param  string  $valueKey       Which value key to read: 'stringValue', 'enumeratedValues', 'integerValue', 'decimalValue', 'booleanValue', 'dateValue'
+     * @return string|null             The extracted value, or null if not found
+     */
+    protected function extractCustomFieldValue(array $rawProduct, string $internalName, string $valueKey = 'stringValue'): ?string
+    {
+        // 1. Check customValues exists and is an array
+        if (!isset($rawProduct['customValues']) || !is_array($rawProduct['customValues'])) {
+            return null;
+        }
+
+        // 2. Loop through each custom value entry
+        foreach ($rawProduct['customValues'] as $customValue) {
+
+            // 3. Each entry must be an array
+            if (!is_array($customValue)) {
+                continue;
+            }
+
+            // 4. field must exist and be an array
+            if (!isset($customValue['field']) || !is_array($customValue['field'])) {
+                continue;
+            }
+
+            // 5. internalName must exist and match
+            if (
+                !isset($customValue['field']['internalName'])
+                || $customValue['field']['internalName'] !== $internalName
+            ) {
+                continue;
+            }
+
+            // 6. Match found — extract the value based on the type
+            if ($valueKey === 'enumeratedValues') {
+                if (
+                    !empty($customValue['enumeratedValues'])
+                    && is_array($customValue['enumeratedValues'])
+                    && isset($customValue['enumeratedValues'][0]['internalName'])
+                ) {
+                    return (string) $customValue['enumeratedValues'][0]['internalName'];
+                }
+                return null;
+            }
+
+            // 7. For scalar value keys (stringValue, integerValue, etc.)
+            if (isset($customValue[$valueKey]) && $customValue[$valueKey] !== null) {
+                return (string) $customValue[$valueKey];
+            }
+
+            return null;
+        }
+
+        return null;
     }
 
     /**
