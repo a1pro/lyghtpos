@@ -36,7 +36,7 @@ Route::prefix('pax')->group(function () {
                 Route::post('/add', [PaxCustomersController::class, 'createMerchantCustomer']);
             });
 
-            /** ****************** Order Routes ****************** */
+            /** ****************** Order Routes ****************** [CONTROLLER LINKED TO PAX/POS ROUTES] */
             Route::prefix('orders')->name('orders.')->group(function () {
                 Route::post('/', [PaxOrderController::class, 'createCustomerOrder']);
                 Route::post('/complete', [PaxOrderController::class, 'completeCustomerOrder']);

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxCustomersController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxMerchantProfileController;
+use App\Http\Controllers\Api\V1\PAX\Merchant\PaxOrderController;
 use App\Http\Controllers\Api\V1\PAX\Merchant\PaxProductsController;
 use App\Http\Controllers\Api\V1\POS\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\POS\Auth\PosLoginController;
@@ -140,6 +141,11 @@ Route::prefix('pos')->group(function () {
             Route::prefix('profile')->name('profile')->group(function () {
                 Route::get('/', [PaxMerchantProfileController::class, 'userProfile']);
                 Route::post('/update-address', [PaxMerchantProfileController::class, 'updateMerchantAddress']);
+            });
+
+            /** ****************** Order Routes ****************** */
+            Route::prefix('orders')->name('orders.')->group(function () {
+                Route::post('/', [PaxOrderController::class, 'createCustomerOrder']);
             });
         });
     });

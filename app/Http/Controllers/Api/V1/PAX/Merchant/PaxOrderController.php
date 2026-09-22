@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 
+/**
+ * Carefull [CONTROLLER LINKED TO PAX/POS ROUTES]
+ */
 class PaxOrderController extends Controller
 {
     protected PaxMerchantOrderService $paxMerchantOrderService;
