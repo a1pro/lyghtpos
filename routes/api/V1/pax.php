@@ -47,7 +47,7 @@ Route::prefix('pax')->group(function () {
                 Route::get('/get-receipt', [PaxOrderController::class, 'getReceipt']);
             });
 
-            /** ****************** Merchant Settings Routes ****************** */
+            /** ****************** Merchant Settings Routes ****************** [CONTROLLER LINKED TO PAX/POS ROUTES] */
             Route::prefix('settings')->name('settings')->group(function () {
                 Route::get('/', [PaxMerchantSettingsController::class, 'getMerchantSettings']);
                 Route::put('/card-surcharge', [PaxMerchantSettingsController::class, 'updateCardSurcharge']);
