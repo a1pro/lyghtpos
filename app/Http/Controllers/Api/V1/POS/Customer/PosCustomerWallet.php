@@ -9,6 +9,8 @@ use App\Http\Requests\Api\POS\Customer\POSCustomerWalletRequest;
 use Illuminate\Http\Request;
 use DB;
 use Auth;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
 
 class PosCustomerWallet extends Controller
 {
@@ -108,23 +110,73 @@ class PosCustomerWallet extends Controller
     /**
      * Get transaction history for authenticated customer
      */
-    public function showTransaction()
+    public function showTransaction(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'date_from' => ['nullable', 'date', 'before_or_equal:today'],
+            'date_to'   => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:date_from'],
+            'page_size' => ['nullable', 'integer', 'min:1', 'max:1000'],
+        ], [
+            'date_from.before_or_equal' => 'The start date cannot be in the future.',
+            'date_to.before_or_equal'   => 'The end date cannot be in the future.',
+            'date_to.after_or_equal'    => 'The end date must be after or equal to the start date.',
+            'page_size.min'             => 'Page size must be at least 1.',
+            'page_size.max'             => 'Page size cannot exceed 1000.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'     => false,
+                'status_code' => 422,
+                'message'     => 'Validation failed.',
+                'errors'      => $validator->errors(),
+            ], 422);
+        }
+
+        // ------------------------------------------------------------
+        // Convert to ISO 8601 with milliseconds + Z, matching Cyclos
+        // ------------------------------------------------------------
+        $startDate = null;
+        $endDate   = null;
+
+        if ($request->filled('date_from')) {
+            $startDate = Carbon::parse($request->date_from)
+                ->startOfDay()
+                ->setTimezone('UTC')
+                ->format('Y-m-d\TH:i:s.v\Z');
+        }
+
+        if ($request->filled('date_to')) {
+            $endDate = Carbon::parse($request->date_to)
+                ->endOfDay()
+                ->setTimezone('UTC')
+                ->format('Y-m-d\TH:i:s.v\Z');
+        }
+
         try {
-            $cyclosUserId = Auth::user()->cyclos_user_id;
-            $transaction = $this->cyclosPayment->getUserTransactions($cyclosUserId);
+            $pageSize       = (int) ($request->page_size ?? 20);
+            $cyclosUserId   = Auth::user()->cyclos_user_id;
+
+            $transaction = $this->cyclosPayment->getUserTransactions(
+                $cyclosUserId,
+                $pageSize,
+                0,
+                $startDate,
+                $endDate
+            );
 
             return response()->json([
-                'success' => true,
+                'success'     => true,
                 'status_code' => 200,
-                'message' => 'Transaction History Fetch Successfully',
-                'history' => $transaction
+                'message'     => 'Transaction History Fetch Successfully',
+                'history'     => $transaction,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false,
+                'success'     => false,
                 'status_code' => 500,
-                'message' => 'Something went wrong' . $e->getMessage()
+                'message'     => 'Something went wrong',
+                'error'       => $e->getMessage(),
             ], 500);
         }
     }

@@ -224,17 +224,29 @@ class CyclosPaymentService
     /**
      * Get user transactions from Cyclos
      */
-    public function getUserTransactions(string $cyclosUserId, int $pageSize = 20, int $pageNumber = 0): array
-    {
+    public function getUserTransactions(
+        string $cyclosUserId,
+        int $pageSize = 20,
+        int $pageNumber = 0,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
         try {
             $url = $this->baseUrl . "/api/{$cyclosUserId}/transactions";
 
-            Log::info('Fetching user transactions from Cyclos', [
-                'cyclos_user_id' => $cyclosUserId,
-                'url' => $url,
-                'pageSize' => $pageSize,
-                'currency' => $this->currencyCode,
-            ]);
+            $baseQuery = [
+                'pageSize'   => $pageSize,
+                'pageNumber' => $pageNumber,
+                'direction'  => 'DESC',
+            ];
+
+            $fullUrl = $url . '?' . http_build_query($baseQuery, '', '&', PHP_QUERY_RFC3986);
+
+            // Append datePeriod as TWO repeated params (not an array)
+            if ($startDate && $endDate) {
+                $fullUrl .= '&datePeriod=' . rawurlencode($startDate);
+                $fullUrl .= '&datePeriod=' . rawurlencode($endDate);
+            }
 
             /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::withBasicAuth($this->username, $this->password)
@@ -243,18 +255,7 @@ class CyclosPaymentService
                     'Channel' => $this->channel,
                 ])
                 ->timeout(30)
-                ->get($url, [
-                    'pageSize' => $pageSize,
-                    'pageNumber' => $pageNumber,
-                    'direction' => 'DESC',
-                ]);
-
-            Log::info('Transactions API Response', [
-                'status' => $response->status(),
-                'headers' => [
-                    'X-Total-Count' => $response->header('X-Total-Count'),
-                ],
-            ]);
+                ->get($fullUrl);
 
             if ($response->failed()) {
                 Log::error('Failed to fetch transactions', [
@@ -268,11 +269,6 @@ class CyclosPaymentService
 
             $transactions = $response->json();
             $totalCount = (int) $response->header('X-Total-Count', 0);
-
-            Log::info('Transactions fetched', [
-                'total_count' => $totalCount,
-                'items_count' => is_array($transactions) ? count($transactions) : 0,
-            ]);
 
             return is_array($transactions) ? $transactions : [];
         } catch (\Exception $e) {
@@ -498,7 +494,7 @@ class CyclosPaymentService
     {
         try {
             $paymentTypeId = config('services.cyclos.order_payment_type_id');
-            
+
             $paymentUrl = $this->baseUrl . "/api/{$fromCyclosUserId}/payments";
 
             $paymentData = [
