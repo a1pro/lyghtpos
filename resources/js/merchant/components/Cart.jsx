@@ -4,6 +4,7 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { sum } from "lodash";
 import { debounce } from "lodash";
+import Select from "react-select";
 
 class MerchantCart extends Component {
     constructor(props) {
@@ -28,6 +29,7 @@ class MerchantCart extends Component {
             productsPage: 1,
             productsLastPage: 1,
             hasMore: true,
+            selectedCustomer: null,
         };
 
         this.loadCart = this.loadCart.bind(this);
@@ -45,6 +47,10 @@ class MerchantCart extends Component {
         this.handleScroll = this.handleScroll.bind(this);
         this.debouncedScroll = debounce(this.handleScroll, 200);
         this.productsGridRef = React.createRef();
+        this.loadCustomers = this.loadCustomers.bind(this);
+        this.handleCustomerSearch = debounce(this.handleCustomerSearch.bind(this), 400);
+        this.handleCustomerChange = this.handleCustomerChange.bind(this);
+        this.customersRequestId = 0;
     }
 
     componentDidMount() {
@@ -65,6 +71,59 @@ class MerchantCart extends Component {
         this.debouncedScroll.cancel();
     }
 
+    loadCustomers(search = '') {
+        const requestId = ++this.customersRequestId;   // <-- bump token
+
+        this.setState(prev => ({
+            loading: { ...prev.loading, customers: true }
+        }));
+
+        const params = { limit: 10 };
+        if (search && search.length >= 2) {
+            params.search = search;
+        }
+
+        axios.get(`/merchant/cart/customers`, {
+            params,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        }).then((res) => {
+            // Ignore stale responses
+            if (requestId !== this.customersRequestId) return;
+
+            this.setState(prev => ({
+                customers: res.data,
+                loading: { ...prev.loading, customers: false }
+            }));
+        }).catch((error) => {
+            if (requestId !== this.customersRequestId) return;
+
+            console.error("Error loading customers:", error);
+            this.setState(prev => ({
+                customers: [],
+                loading: { ...prev.loading, customers: false }
+            }));
+        });
+    }
+
+    handleCustomerSearch(inputValue) {
+        if (!inputValue || inputValue.length < 2) {
+            // too short — reload the default 10
+            this.loadCustomers('');
+            return;
+        }
+        this.loadCustomers(inputValue);
+    }
+
+    handleCustomerChange(selectedOption) {
+        this.setState({
+            selectedCustomer: selectedOption,
+            customer_id: selectedOption ? selectedOption.value : ''
+        });
+    }
+
     loadTranslations() {
         axios.get("/locale/cart")
             .then((res) => {
@@ -76,19 +135,19 @@ class MerchantCart extends Component {
             });
     }
 
-    loadCustomers() {
-        axios.get(`/merchant/cart/customers`, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        }).then((res) => {
-            this.setState({ customers: res.data });
-        }).catch((error) => {
-            console.error("Error loading customers:", error);
-            this.setState({ customers: [] });
-        });
-    }
+    // loadCustomers() {
+    //     axios.get(`/merchant/cart/customers`, {
+    //         headers: {
+    //             'Accept': 'application/json',
+    //             'Content-Type': 'application/json'
+    //         }
+    //     }).then((res) => {
+    //         this.setState({ customers: res.data });
+    //     }).catch((error) => {
+    //         console.error("Error loading customers:", error);
+    //         this.setState({ customers: [] });
+    //     });
+    // }
 
     componentWillUnmount() {
         window.removeEventListener('scroll', this.handleScroll);
@@ -379,7 +438,13 @@ class MerchantCart extends Component {
     }
 
     render() {
-        const { cart = [], products = [], customers = [], barcode = "", translations = {}, loading, loadingMore, addingToCart, updatingQty, hasMore } = this.state;
+        const { cart = [], products = [], customers = [], barcode = "", translations = {}, loading, loadingMore, addingToCart, updatingQty, hasMore, selectedCustomer } = this.state;
+        const customerOptions = customers.map((cus) => ({
+            value: cus.id,
+            label: cus.name + (cus.email ? ` — ${cus.email}` : ''),
+            raw: cus
+        }));
+
 
         return (
             <div className="row mb-3">
@@ -399,22 +464,44 @@ class MerchantCart extends Component {
                         </div> */}
                         <div className="col">
                             <div className="d-flex gap-2">
-                                <select
-                                    className="form-control"
-                                    onChange={this.setCustomerId}
-                                    disabled={addingToCart !== null || updatingQty !== null}
-                                    style={{ flex: 1 }}
-                                >
-                                    <option value="">
-                                        {"Select Customer"}
-                                    </option>
-                                    {customers.map((cus) => (
-                                        <option
-                                            key={cus.id}
-                                            value={cus.id}
-                                        >{`${cus.first_name} ${cus.last_name}`}</option>
-                                    ))}
-                                </select>
+                                <div style={{ flex: 1 }}>
+                                <Select
+                                    value={selectedCustomer}
+                                    onChange={this.handleCustomerChange}
+                                    onInputChange={(inputValue, { action }) => {
+                                        if (action === 'input-change') {
+                                            this.handleCustomerSearch(inputValue);
+                                            return inputValue;
+                                        }
+                                        // For all other actions, don't change the input value
+                                        return undefined;
+                                    }}
+                                    options={customerOptions}
+                                    isLoading={loading.customers}
+                                    isClearable={false}
+                                    escapeClearsValue={false}
+                                    isSearchable
+                                    placeholder={"Search customer..."}
+                                    noOptionsMessage={() => "No customers found"}
+                                    loadingMessage={() => "Searching..."}
+                                    filterOption={null}          // server-side filtering
+                                    isDisabled={addingToCart !== null || updatingQty !== null}
+                                    onMenuClose={() => {
+                                        // If user closed without a valid search, reset to default 10
+                                        if (!this.state.selectedCustomer) {
+                                            this.lastCustomerSearch = '';
+                                            this.loadCustomers('');
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        if (!this.state.selectedCustomer) {
+                                            this.lastCustomerSearch = '';
+                                            this.loadCustomers('');
+                                        }
+                                    }}
+                                    
+                                />
+                            </div>
                                 <button
                                     type="button"
                                     className="btn btn-primary"

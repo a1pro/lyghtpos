@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\POS\Customer\PosPayPalPaymentController;
 
 // Public pages 
-Route::get('/privacy-policy', function(){
+Route::get('/privacy-policy', function () {
     return view('pages.privacy-policy');
 });
 
@@ -94,10 +94,10 @@ Route::prefix('admin')->middleware(['auth', 'locale', 'role:admin'])->group(func
     Route::resource('subscription-plans', SubscriptionPlanController::class)->except(['show'])->names('admin.subscription-plans');
 
 
-Route::resource('customer-plans', CustomerPlanController::class)->except(['show'])->names('admin.customer-plans');
+    Route::resource('customer-plans', CustomerPlanController::class)->except(['show'])->names('admin.customer-plans');
 
 
- 
+
 
     // ===================================Merchant List===========================================================
 

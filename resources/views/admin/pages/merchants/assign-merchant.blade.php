@@ -96,7 +96,7 @@
                 
                 <!-- Current Assignment -->
                 @if($assignedMerchant)
-                <div class="alert alert-info">
+                <div class="p-3 mb-2 alert-info">
                     <strong><i class="fas fa-store"></i> Currently Assigned Merchant:</strong><br>
                     @if(isset($assignedMerchant->business_name) && $assignedMerchant->business_name)
                         <strong>{{ $assignedMerchant->business_name }}</strong>
@@ -153,7 +153,7 @@
                 </form>
                 
                 @if($merchants->isEmpty())
-                <div class="alert alert-warning mt-3">
+                <div class="alert-warning mt-3">
                     <i class="fas fa-exclamation-triangle"></i> 
                     <strong>No merchants available!</strong><br>
                     Please create merchant accounts first before assigning them to customers.
@@ -184,7 +184,7 @@
                     <li><i class="fas fa-percent text-danger"></i> Merchant-specific discounts and loyalty programs</li>
                 </ul>
                 <hr>
-                <div class="alert alert-light">
+                <div class="alert-light">
                     <i class="fas fa-clock"></i> <strong>Note:</strong><br>
                     You can change or remove this assignment at any time. The changes will take effect immediately.
                 </div>

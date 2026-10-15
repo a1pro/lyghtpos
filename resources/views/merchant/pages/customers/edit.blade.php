@@ -38,7 +38,7 @@
 
                 <div class="form-group">
                     <label for="email">{{ __('customer.Email') }}</label>
-                    <input type="text" name="email" class="form-control @error('email') is-invalid @enderror" id="email"
+                    <input type="text" readonly name="email" class="form-control @error('email') is-invalid @enderror" id="email"
                            placeholder="{{ __('customer.Email') }}" value="{{ old('email', $customer->email) }}">
                     @error('email')
                     <span class="invalid-feedback" role="alert">
@@ -58,7 +58,7 @@
                     @enderror
                 </div>
 
-                <div class="form-group">
+                {{-- <div class="form-group">
                     <label for="address">{{ __('customer.Address') }}</label>
                     <input type="text" name="address" class="form-control @error('address') is-invalid @enderror"
                            id="address"
@@ -68,21 +68,7 @@
                         <strong>{{ $message }}</strong>
                     </span>
                     @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="avatar">{{ __('customer.Avatar') }}</label>
-                    <div class="custom-file">
-                        <input type="file" class="custom-file-input" name="avatar" id="avatar">
-                        <label class="custom-file-label" for="avatar">{{ __('customer.Choose_file') }}</label>
-                    </div>
-                    @error('avatar')
-                    <span class="invalid-feedback" role="alert">
-                    <strong>{{ $message }}</strong>
-                </span>
-                    @enderror
-                </div>
-
+                </div> --}}
 
                 <button class="btn btn-primary" type="submit">Update</button>
             </form>

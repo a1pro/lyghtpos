@@ -227,6 +227,8 @@ Route::prefix('merchant')->name('merchant.')->middleware(['auth', 'locale', 'rol
     });
 
     Route::resource('customers', CustomerController::class)->names('customers');
+    Route::post('customers/{customer}/resend-credentials', [CustomerController::class, 'resendCredentials'])
+    ->name('customers.resend-credentials');
     Route::resource('suppliers', SupplierController::class)->names('suppliers');
 
     // =============================================

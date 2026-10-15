@@ -3,8 +3,6 @@
 
 You can log in using the following credentials:
 
-**Login URL:** {{ url('/login') }}
-
 **Email:** {{ $user->email }}
 **Password:** {{ $password }}
 

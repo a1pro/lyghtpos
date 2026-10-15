@@ -304,24 +304,38 @@ class MerchantCartController extends Controller
     }
 
     /**
-     * Get Customers / Shoppers for cart
+     * Get Customers / Shoppers for cart with search and limit
      */
     public function getCustomers(Request $request): JsonResponse
     {
         $merchantId = Auth::id();
+        $search = trim($request->input('search', ''));
+        $limit  = (int) $request->input('limit', 10);
 
-        $customers = User::where('merchant_id', $merchantId)
+        $query = User::where('merchant_id', $merchantId)
             ->whereNotNull('cyclos_user_id')
-            ->whereIn('role_id', [8, 11]) // 8 = Favor member, 11 = Merchant Customer
-            ->get(['id', 'first_name', 'last_name', 'cyclos_user_id']);
+            ->whereIn('role_id', [8, 11]); // 8 = Favor member, 11 = Merchant Customer
 
-        // Transform the data to send encrypted cyclos_user_id as id
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'LIKE', "%{$search}%")
+                    ->orWhere('last_name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+            });
+        }
+
+        $customers = $query->orderBy('first_name')
+            ->limit($limit)
+            ->get(['id', 'first_name', 'last_name', 'email', 'cyclos_user_id']);
+
         $transformedCustomers = $customers->map(function ($customer) {
             return [
-                'id' => encryptVal($customer->cyclos_user_id),
+                'id'         => encryptVal($customer->cyclos_user_id),
                 'first_name' => $customer->first_name,
-                'last_name' => $customer->last_name,
-                'name' => $customer->first_name . ' ' . $customer->last_name,
+                'last_name'  => $customer->last_name,
+                'email'      => $customer->email,
+                'name'       => trim($customer->first_name . ' ' . $customer->last_name),
             ];
         });
 

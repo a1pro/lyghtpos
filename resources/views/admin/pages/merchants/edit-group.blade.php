@@ -115,12 +115,12 @@
             </div>
             <div class="card-body">
                 @if(!$user->cyclos_user_id)
-                    <div class="alert alert-warning">
+                    <div class="p-3 alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
                         This user does not have a Cyclos account yet. Please create the Cyclos account first before changing groups.
                     </div>
                 @elseif(empty($availableGroups))
-                    <div class="alert alert-warning">
+                    <div class="p-3 alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
                         No available groups found. Please check Cyclos configuration.
                     </div>
