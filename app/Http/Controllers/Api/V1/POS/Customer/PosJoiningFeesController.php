@@ -33,6 +33,8 @@ class PosJoiningFeesController extends Controller
                 'plans' => $plans->map(function($plan) {
                     return [
                         'id' => $plan->id,
+                        'role' => $plan->role()->first()->name ?? 'N/A',
+                        'status' => $plan->status,
                         'amount' => $plan->amount
                     ];
                 })

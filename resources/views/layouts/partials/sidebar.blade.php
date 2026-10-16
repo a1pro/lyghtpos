@@ -19,7 +19,7 @@
                     </a>
                 </li>
 
-                <!-- Products -->
+                {{-- <!-- Products -->
                 <li class="nav-item">
                     <a href="{{ route('products.index') }}" class="nav-link {{ activeSegment('products') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-th-large"></i>
@@ -33,7 +33,7 @@
                         <i class="nav-icon fas fa-hand-holding-dollar"></i>
                         <p>Payout</p>
                     </a>
-                </li>
+                </li> --}}
 
 
                 <!-- Merchants -->
@@ -60,7 +60,7 @@
                     </a>
                 </li>
 
-                <li class="nav-header">{{ __('Sales') }}</li>
+                {{-- <li class="nav-header">{{ __('Sales') }}</li>
 
                 <!-- POS Cart -->
                 <li class="nav-item">
@@ -76,17 +76,17 @@
                         <i class="nav-icon fas fa-list"></i>
                         <p>{{ __('Order List') }}</p>
                     </a>
-                </li>
+                </li> --}}
 
                 <!-- Customers -->
-                <li class="nav-item">
+                {{-- <li class="nav-item">
                     <a href="{{ route('customers.index') }}" class="nav-link {{ activeSegment('customers') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-users"></i>
                         <p>{{ __('customer.title') }}</p>
                     </a>
-                </li>
+                </li> --}}
 
-                <li class="nav-header">{{ __('Purchases') }}</li>
+                {{-- <li class="nav-header">{{ __('Purchases') }}</li>
 
                 <!-- Purchases (Dropdown) -->
                 <li class="nav-item {{ request()->routeIs('purchases.*') ? 'menu-open' : '' }}">
@@ -119,7 +119,7 @@
                         <i class="nav-icon fas fa-truck"></i>
                         <p>{{ __('Supplier') }}</p>
                     </a>
-                </li>
+                </li> --}}
 
                 <!-- Plans -->
                 <li class="nav-header">Plans</li>
@@ -131,7 +131,7 @@
                 </li>
                 <li class="nav-item">
                     <a href="{{ route('admin.customer-plans.index') }}" class="nav-link {{ request()->routeIs('admin.customer-plans.index') ? 'active' : '' }}">
-                        <i class="fa-solid fa-money-bill-1"></i>
+                        <i class="nav-icon fas fa-money-bill-1"></i>
                         <p>LyghtPOX Plans</p>
                     </a>
                 </li>
