@@ -27,7 +27,7 @@ class PosRegisterRequest extends FormRequest
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20|unique:users,phone',
             'password' => 'required|string|min:6',
-            'referal_code' => 'nullable|string',
+            'referal_code' => 'required|string',
 
             'address' => 'required|string|max:500',
             'city' => 'required|integer|exists:cities,id',
@@ -60,6 +60,7 @@ class PosRegisterRequest extends FormRequest
             'password.string' => 'Password must be a string',
             'password.min' => 'Password must be at least 6 characters',
 
+            'referal_code.required' => 'Referal Code is required',
             'referal_code.string' => 'Referal Code Must be a valid string',
 
             'address.required' => 'Address is required',
